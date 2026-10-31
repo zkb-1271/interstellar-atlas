@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=58';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=58';
-import { createDeepSpace } from './starfield.js?v=58';
-import { SolarSystem } from './solar.js?v=58';
-import { FlightController } from './flight.js?v=58';
-import { UI } from './ui.js?v=58';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=62';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=62';
+import { createDeepSpace } from './starfield.js?v=62';
+import { SolarSystem } from './solar.js?v=62';
+import { FlightController } from './flight.js?v=62';
+import { UI } from './ui.js?v=62';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -46,10 +46,10 @@ const flight = new FlightController(camera, canvas);
 const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：带斜穿画面（参考站构图）
 function computeOverviewCam() {
   // 参考站初始机位（真实渲染管线网格拟合解得）：仰角≈2°贴黄道面、D=162、视线右偏 0.24 rad
-  const L = 110 * Math.PI / 180, D = 162, E = 2;
+  const L = 15 * Math.PI / 180, D = 311, E = 3;
   const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
   const dirToSun = camPos.clone().negate().normalize();
-  const ang = -0.34;
+  const ang = -0.30;
   const f = new THREE.Vector3(
     dirToSun.x * Math.cos(ang) + dirToSun.z * Math.sin(ang),
     dirToSun.y,

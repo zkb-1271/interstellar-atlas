@@ -3,7 +3,7 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=58';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=62';
 
 const DEG = Math.PI / 180;
 
@@ -29,6 +29,26 @@ export function jdToCenturies(jd) {          // J2000 起的儒略世纪数
   return (jd - 2451545.0) / 36525;
 }
 
+// —— 参考站行星位置模型（照抄其 i$ 算法）——
+export function refPosition(el, jd) {
+  const year = 2000 + (jd - 2451545.0) / 365.25;
+  const days = (year - 2000) * 365.25;
+  const a = 360 / el.period;
+  let r = (el.l0 + a * days) * DEG;
+  const o = el.peri * DEG, O = el.node * DEG, inc = el.i * DEG;
+  let d = r - o;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  let f = d;
+  for (let b = 0; b < 5; b++) f -= (f - el.e * Math.sin(f) - d) / (1 - el.e * Math.cos(f));
+  const h = 2 * Math.atan2(Math.sqrt(1 + el.e) * Math.sin(f / 2), Math.sqrt(1 - el.e) * Math.cos(f / 2));
+  const p = el.a * (1 - el.e * Math.cos(f));
+  const g = h + (o - O);
+  const v = p * (Math.cos(O) * Math.cos(g) - Math.sin(O) * Math.sin(g) * Math.cos(inc));
+  const E2 = p * (Math.sin(O) * Math.cos(g) + Math.cos(O) * Math.sin(g) * Math.cos(inc));
+  const x = p * Math.sin(g) * Math.sin(inc);
+  return { lon: Math.atan2(E2, v), lat: Math.atan2(x, Math.hypot(v, E2)), ratio: p / el.a };
+}
+
 // 开普勒方程 M = E - e·sinE，牛顿迭代
 function solveKepler(M, e) {
   let E = M;
@@ -43,58 +63,41 @@ function solveKepler(M, e) {
 // 行星日心黄道坐标（three.js: x,y 平面为黄道面, y 向上）
 // 返回 {pos: THREE-free [x,y,z] 场景单位, lon: 日心黄经 rad}
 export function planetPosition(id, T) {
-  const el = ORBITAL_ELEMENTS[id];
-  const a  = el.a[0] + el.a[1] * T;
-  const e  = el.e[0] + el.e[1] * T;
-  const I  = (el.I[0] + el.I[1] * T) * DEG;
-  const L  = (el.L[0] + el.L[1] * T) * DEG;
-  const w  = (el.w[0] + el.w[1] * T) * DEG;   // 近日点经度 ϖ
-  const O  = (el.O[0] + el.O[1] * T) * DEG;   // 升交点 Ω
-  const wArg = w - O;                          // 近点角距 ω
-  let M = L - w;
-  M = ((M % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
-  const E = solveKepler(M, e);
-  const xv = a * (Math.cos(E) - e);
-  const yv = a * Math.sqrt(1 - e * e) * Math.sin(E);
-
-  const cosO = Math.cos(O), sinO = Math.sin(O);
-  const cosI = Math.cos(I), sinI = Math.sin(I);
-  const cosw = Math.cos(wArg), sinw = Math.sin(wArg);
-
-  const xh = xv * (cosO * cosw - sinO * sinw * cosI) - yv * (cosO * sinw + sinO * cosw * cosI);
-  const yh = xv * (sinO * cosw + cosO * sinw * cosI) - yv * (sinO * sinw - cosO * cosw * cosI);
-  const zh = xv * (sinw * sinI) + yv * (cosw * sinI);
-
-  // 黄道坐标(xh 向春分点, zh 向北) → 场景(x, y=北, z)；距离按参考站查表压缩
-  const rAU = Math.hypot(xh, yh, zh) || 1e-9;
-  const f = auToScene(rAU) / rAU;
-  return { pos: [xh * f, zh * f, -yh * f], r: rAU, lon: Math.atan2(yh, xh) };
+  const jd = T * 36525 + 2451545.0;
+  const el = PLANET_ELEMENTS_REF[id];
+  const ref = refPosition(el, jd);
+  const h = auToScene(el.a) * ref.ratio;
+  return { pos: [Math.cos(ref.lon) * h, Math.sin(ref.lat) * h, Math.sin(ref.lon) * h], r: h, lon: ref.lon };
 }
+const PLANET_ELEMENTS_REF = {
+  mercury: {a:.3871,e:.2056,i:7.005,node:48.331,peri:77.456,l0:252.251,period:87.969},
+  venus: {a:.7233,e:.0068,i:3.395,node:76.68,peri:131.533,l0:181.98,period:224.701},
+  earth: {a:1,e:.0167,i:0,node:0,peri:102.937,l0:100.464,period:365.256},
+  mars: {a:1.5237,e:.0934,i:1.85,node:49.558,peri:336.041,l0:355.433,period:686.98},
+  jupiter: {a:5.2029,e:.0484,i:1.304,node:100.464,peri:14.331,l0:34.351,period:4332.589},
+  saturn: {a:9.5367,e:.0539,i:2.486,node:113.666,peri:93.057,l0:50.077,period:10759.22},
+  uranus: {a:19.1892,e:.0473,i:.773,node:74.006,peri:173.005,l0:314.055,period:30685.4},
+  neptune: {a:30.0699,e:.0086,i:1.77,node:131.784,peri:48.124,l0:304.348,period:60189}
+};
 
-// 轨道椭圆采样（画轨道线用）：给一组平近点角，返回场景坐标点列
+// 轨道椭圆采样// 轨道椭圆采样（画轨道线用）：给一组平近点角，返回场景坐标点列
 export function planetOrbitPoints(id, T, n = 256) {
-  const el = ORBITAL_ELEMENTS[id];
-  const a  = el.a[0] + el.a[1] * T;
-  const e  = el.e[0] + el.e[1] * T;
-  const I  = (el.I[0] + el.I[1] * T) * DEG;
-  const w  = (el.w[0] + el.w[1] * T) * DEG;
-  const O  = (el.O[0] + el.O[1] * T) * DEG;
-  const wArg = w - O;
-  const cosO = Math.cos(O), sinO = Math.sin(O);
-  const cosI = Math.cos(I), sinI = Math.sin(I);
-  const cosw = Math.cos(wArg), sinw = Math.sin(wArg);
+  const el = PLANET_ELEMENTS_REF[id];
+  const O = el.node * DEG, inc = el.i * DEG, w = el.peri * DEG - O;
   const pts = [];
-  for (let i = 0; i < n; i++) {
-    const M = (i / n) * 2 * Math.PI;
-    const E = solveKepler(M, e);
-    const xv = a * (Math.cos(E) - e);
-    const yv = a * Math.sqrt(1 - e * e) * Math.sin(E);
-    const xh = xv * (cosO * cosw - sinO * sinw * cosI) - yv * (cosO * sinw + sinO * cosw * cosI);
-    const yh = xv * (sinO * cosw + cosO * sinw * cosI) - yv * (sinO * sinw - cosO * cosw * cosI);
-    const zh = xv * (sinw * sinI) + yv * (cosw * sinI);
-    const rAU = Math.hypot(xh, yh, zh) || 1e-9;
-    const f = auToScene(rAU) / rAU;
-    pts.push([xh * f, zh * f, -yh * f]);
+  for (let k = 0; k < n; k++) {
+    const M = (k / n) * 2 * Math.PI;
+    let f = M;
+    for (let b = 0; b < 5; b++) f -= (f - el.e * Math.sin(f) - M) / (1 - el.e * Math.cos(f));
+    const h = 2 * Math.atan2(Math.sqrt(1 + el.e) * Math.sin(f / 2), Math.sqrt(1 - el.e) * Math.cos(f / 2));
+    const p = el.a * (1 - el.e * Math.cos(f));
+    const g = h + w;
+    const v = p * (Math.cos(O) * Math.cos(g) - Math.sin(O) * Math.sin(g) * Math.cos(inc));
+    const E2 = p * (Math.sin(O) * Math.cos(g) + Math.cos(O) * Math.sin(g) * Math.cos(inc));
+    const x = p * Math.sin(g) * Math.sin(inc);
+    const lon = Math.atan2(E2, v), lat = Math.atan2(x, Math.hypot(v, E2));
+    const hU = auToScene(p);
+    pts.push([Math.cos(lon) * hU, Math.sin(lat) * hU, Math.sin(lon) * hU]);
   }
   return pts;
 }
