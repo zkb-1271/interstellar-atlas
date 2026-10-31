@@ -69,6 +69,8 @@ const ui = new UI(document.body, {
   onSelectPlanet: (id) => selectPlanet(id),
   onJumpEclipse: (ev) => jumpEclipse(ev),
   onJumpAlignment: (ev) => jumpAlignment(ev),
+  onViewSpot: (id) => setViewSpot(id),
+  onAutoOrbit: (on) => flight.setAutoOrbit(on),
 });
 ui.setActiveSpeed(speedIdx);
 ui.fillEclipses(ECLIPSES);
@@ -78,8 +80,9 @@ setInterval(() => { if (mode === 'deep' && !document.hidden) ui._setQuote(); }, 
 // ---------- 模式切换 ----------
 function goDeep() {
   mode = 'deep';
-  selectedId = null; hoverId = null; eclipseView = null;
+  selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
+  ui.showViewbar(null); flight.setAutoOrbit(false);
   solar.setOrbitsVisible(false);          // 深空只看星野，轨道线收起
   flight.follow(null);
   ui.setMode('deep');
@@ -102,8 +105,9 @@ function enterSolar() {
 
 function goOverview() {
   mode = 'solar';
-  selectedId = null; hoverId = null; eclipseView = null;
+  selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
+  ui.showViewbar(null); flight.setAutoOrbit(false);
   solar.setOrbitsVisible(true);
   flight.follow(null);
   ui.setMode('solar');
@@ -161,8 +165,9 @@ function selectPlanet(id) {
   const b = solar.get(id);
   if (!b) return;
   selectedId = id;
-  eclipseView = null;
+  eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
+  ui.showViewbar(null); flight.setAutoOrbit(false);
   ui.showCard(b.info, id === 'sun' ? 'STAR · SUN' : id === 'moon' ? 'SATELLITE · MOON' : `PLANET · ${b.info.en.toUpperCase()}`);
 
   const p = b.worldPos;
@@ -204,6 +209,8 @@ function parseUTC(date, time) {
   return dateToJD(new Date(Date.UTC(y, m - 1, d, hh, mm)));
 }
 
+let eclipseEvent = null;      // 当前观看的日月食事件
+
 function jumpEclipse(ev) {
   ui.hideEvents();
   mode = 'solar';
@@ -213,35 +220,59 @@ function jumpEclipse(ev) {
   selectedId = null;
   speedIdx = 0; ui.setActiveSpeed(0);
   jd = parseUTC(ev.date, ev.time);
+  eclipseEvent = ev;
+  eclipseView = ev.kind;
+  solar.setEclipseShadows(ev.kind);
+  ui.showViewbar(ev.kind);
+  flight.setAutoOrbit(true);
+  setViewSpot('side');
+}
 
-  const T = (jd - 2451545.0) / 36525;
+// 观景位：同一场景的多套机位，全部支持自动环绕
+function setViewSpot(id) {
+  if (!eclipseEvent) return;
+  ui.setViewActive(id);
+  // 地面视角"站定看天"，默认不环绕；其余机位保持自转
+  const orbitOn = id !== 'ground';
+  flight.setAutoOrbit(orbitOn);
+  ui.setOrbitActive(orbitOn);
   const earth = solar.get('earth');
+  const moon = solar.get('moon');
   const ep = earth.worldPos;
-  const antiSun = ep.clone().normalize();                 // 背阳方向
+  const antiSun = ep.clone().normalize();                        // 背阳方向
+  const perp = new THREE.Vector3().crossVectors(antiSun, new THREE.Vector3(0, 1, 0)).normalize();
+  flight.follow(earth);
 
-  if (ev.kind === 'lunar') {
-    eclipseView = 'lunar';
-    solar.setEclipseShadows('lunar');
-    const perp = new THREE.Vector3().crossVectors(antiSun, new THREE.Vector3(0, 1, 0)).normalize();
-    flight.follow(earth);
-    flight.flyTo({
-      // 侧向机位：同框看到地球、地影锥和钻进锥里的月亮
-      camPos: ep.clone().add(antiSun.clone().multiplyScalar(34)).add(perp.clone().multiplyScalar(38)).add(new THREE.Vector3(0, 10, 0)),
-      target: ep.clone().add(antiSun.clone().multiplyScalar(25)),
-      duration: 2.8, arc: 0.18,
-      onDone: () => flight.setRange(6, 4000),
-    });
+  if (eclipseView === 'lunar') {
+    const moonP = moon.worldPos;
+    const spots = {
+      // 远景：太阳—地球—月影锥整个几何关系
+      far:    { cam: ep.clone().add(antiSun.clone().multiplyScalar(85)).add(perp.clone().multiplyScalar(120)).add(new THREE.Vector3(0, 55, 0)), target: ep.clone(), range: [30, 8000] },
+      // 侧视：地影锥与红月同框
+      side:   { cam: ep.clone().add(antiSun.clone().multiplyScalar(34)).add(perp.clone().multiplyScalar(38)).add(new THREE.Vector3(0, 10, 0)), target: ep.clone().add(antiSun.clone().multiplyScalar(25)), range: [6, 4000] },
+      // 近景：贴着红月
+      close:  { cam: moonP.clone().add(antiSun.clone().multiplyScalar(7)).add(perp.clone().multiplyScalar(5)).add(new THREE.Vector3(0, 2, 0)), target: moonP.clone(), range: [2.6, 1000] },
+      // 地面：站上地球朝月面，看月亮被"吃"掉
+      ground: { cam: ep.clone().add(moonP.clone().sub(ep).normalize().multiplyScalar(2.2 * 1.015)), target: moonP.clone(), range: [1.2, 800] },
+    };
+    const v = spots[id];
+    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.2, arc: 0.12, onDone: () => flight.setRange(...v.range) });
   } else {
-    eclipseView = 'solar';
-    solar.setEclipseShadows('solar');
-    const moon = solar.get('moon');
-    const toEarth = ep.clone().sub(moon.worldPos).normalize();
-    flight.follow(earth);
-    flight.flyTo({
-      camPos: moon.worldPos.clone().add(toEarth.clone().multiplyScalar(13)).add(new THREE.Vector3(0, 1.5, 0)),
-      target: ep.clone(), duration: 2.8, arc: 0.15,
-      onDone: () => flight.setRange(6, 4000),
-    });
+    const moonP = moon.worldPos;
+    const toSun = ep.clone().normalize();                        // 地→日（日面方向）
+    const toEarth = ep.clone().sub(moonP).normalize();
+    const spots = {
+      // 远景：日—月—地全线 + 投向地球的影子
+      far:    { cam: ep.clone().add(toSun.clone().multiplyScalar(85)).add(perp.clone().multiplyScalar(110)).add(new THREE.Vector3(0, 48, 0)), target: ep.clone(), range: [30, 8000] },
+      // 侧视：从太阳侧斜看地球——向阳面上能看到本影斑，月球影子迎面投来
+      side:   { cam: ep.clone().add(toSun.clone().multiplyScalar(30)).add(perp.clone().multiplyScalar(46)).add(new THREE.Vector3(0, 13, 0)), target: ep.clone(), range: [6, 4000] },
+      // 近景：月影锥与地球的接触面
+      close:  { cam: ep.clone().add(toSun.clone().multiplyScalar(20)).add(perp.clone().multiplyScalar(16)).add(new THREE.Vector3(0, 6, 0)), target: ep.clone(), range: [6, 1000] },
+      // 地面：白天面仰望太阳，看月亮吞日
+      ground: { cam: ep.clone().add(toSun.clone().multiplyScalar(2.2 * 1.015)), target: ep.clone().add(toSun.clone().multiplyScalar(50)), range: [1.2, 800] },
+    };
+    const v = spots[id];
+    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.2, arc: 0.12, onDone: () => flight.setRange(...v.range) });
   }
 }
 
@@ -262,8 +293,9 @@ function jumpAlignment(ev) {
   solar.setOrbitsVisible(true);
   ui.setMode('solar');
   ui.hideCard();
-  selectedId = null; eclipseView = null;
+  selectedId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
+  ui.showViewbar(null); flight.setAutoOrbit(false);
   speedIdx = 0; ui.setActiveSpeed(0);
   jd = ev.jd;
 

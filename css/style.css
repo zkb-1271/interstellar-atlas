@@ -207,6 +207,27 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   color: var(--ink-dim); font-size: 17px; cursor: none; }
 #eventsClose:hover { color: var(--gold-bright); }
 
+/* ---------- 天象观景位 ---------- */
+#viewbar {
+  position: fixed; left: 26px; bottom: 22px; z-index: 30;
+  display: flex; gap: 5px; padding: 4px;
+  background: var(--panel); border: 1px solid var(--panel-border);
+  border-radius: 14px; backdrop-filter: blur(12px);
+  opacity: 0; pointer-events: none; transform: translateY(10px);
+  transition: opacity .5s, transform .5s;
+}
+#viewbar.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+#viewbar .vbtn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 7px 14px; border-radius: 10px; border: none; background: none;
+  cursor: none; transition: all .2s;
+}
+#viewbar .vbtn .zh { font-size: 12.5px; letter-spacing: .18em; color: var(--ink-dim); }
+#viewbar .vbtn .en { font-size: 8.5px; letter-spacing: .22em; color: rgba(151, 145, 127, .6); font-family: var(--mono); }
+#viewbar .vbtn:hover .zh { color: var(--ink); }
+#viewbar .vbtn.active { background: rgba(217, 179, 108, .1); box-shadow: inset 0 0 0 1px var(--gold-dim); }
+#viewbar .vbtn.active .zh { color: var(--gold-bright); }
+
 /* ---------- 提示行 ---------- */
 #hint {
   position: fixed; right: 26px; bottom: 30px; z-index: 15;

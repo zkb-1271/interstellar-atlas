@@ -141,12 +141,21 @@ export class SolarSystem {
     this.earthUmbra = mkCone(70, 3.4, 1.9, 0x362014, 0.42);
     this.earthPenumbra = mkCone(110, 4.6, 4.6, 0x241610, 0.20);
     this.moonUmbra = mkCone(30, 1.0, 0.5, 0x241a1e, 0.50);
+    // 日食时月球本影投在地球表面的暗斑
+    this.shadowSpot = new THREE.Mesh(
+      new THREE.CircleGeometry(0.42, 32),
+      new THREE.MeshBasicMaterial({ color: 0x060403, transparent: true, opacity: 0.72, depthWrite: false }));
+    this.shadowSpot.visible = false;
+    this.forceMoonOnAxis = false;
+    this.group.add(this.shadowSpot);
     this.group.add(this.earthUmbra, this.earthPenumbra, this.moonUmbra);
   }
 
   setEclipseShadows(mode) {   // 'lunar' | 'solar' | null
     this.earthUmbra.visible = mode === 'lunar';
     this.earthPenumbra.visible = mode === 'lunar';
+    this.shadowSpot.visible = mode === 'solar';
+    this.forceMoonOnAxis = mode === 'solar';
     this.moonUmbra.visible = mode === 'solar';
   }
 
@@ -182,6 +191,13 @@ export class SolarSystem {
     const me = this.bodies.get('moon');
     me.holder.position.set(earth.worldPos.x + m.pos[0], earth.worldPos.y + m.pos[1], earth.worldPos.z + m.pos[2]);
     me.worldPos.copy(me.holder.position);
+    // 日食视觉吸附：简化月历的误差足以让本影锥尖端错过地球，
+    // 观看日食时把月球贴到日地连线上，保证影子触地（与月食红月同级的夸张）
+    if (this.forceMoonOnAxis) {
+      const toSunE = earth.worldPos.clone().normalize();
+      me.holder.position.copy(earth.worldPos).add(toSunE.multiplyScalar(26));
+      me.worldPos.copy(me.holder.position);
+    }
 
     // 地影锥：贴地球、指向背阳面（锥体沿 -y 延伸，故把 +y 对准太阳方向）
     const sunDir = earth.worldPos.clone().negate().normalize();
@@ -194,6 +210,28 @@ export class SolarSystem {
     // 月影：粗端贴月球，锥体指向地球方向（-y 端朝 -moonDir = 月→地）
     this.moonUmbra.position.copy(mn.worldPos);
     this.moonUmbra.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), moonDir);
+
+    // 本影斑：月球→地球射线与地球球的交点（交不上则隐藏）
+    if (this.shadowSpot.visible) {
+      const R = 2.2;
+      const toE = earth.worldPos.clone().sub(mn.worldPos);
+      const L = toE.length();
+      const dir = toE.multiplyScalar(1 / L);
+      const oc = earth.worldPos.clone().sub(mn.worldPos);   // 月→球心
+      const b = oc.dot(dir);
+      const c = mn.worldPos.distanceToSquared(earth.worldPos) - R * R;
+      const disc = b * b - c;
+      if (disc >= 0 && b > 0) {
+        const t = b - Math.sqrt(disc);
+        if (t > 0 && t < L + R) {
+          const p = mn.worldPos.clone().add(dir.clone().multiplyScalar(t));
+          const nrm = p.clone().sub(earth.worldPos).normalize();
+          this.shadowSpot.position.copy(earth.worldPos).add(nrm.clone().multiplyScalar(R * 1.004));
+          this.shadowSpot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), nrm);
+          this.shadowSpot.visible = true;
+        } else this.shadowSpot.visible = false;
+      } else this.shadowSpot.visible = false;
+    }
 
     this.belt.rotation.y += simSpeed * 0.00035;
   }

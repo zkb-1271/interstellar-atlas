@@ -75,6 +75,7 @@ export class UI {
     this._buildTimebar(root);
     this._buildCard(root);
     this._buildEvents(root);
+    this._buildViewbar(root);
     this._buildHint(root);
 
     // 准星跟随
@@ -245,6 +246,41 @@ export class UI {
     this.hint.id = 'hint';
     root.appendChild(this.hint);
   }
+
+  // ---- 天象观景位 ----
+  _buildViewbar(root) {
+    const bar = el('div');
+    bar.id = 'viewbar';
+    this.viewBtns = {};
+    for (const [id, zh, en] of [['far', '远景', 'FAR'], ['side', '侧视', 'SIDE'], ['close', '近景', 'CLOSE'], ['ground', '地面', 'GROUND']]) {
+      const b = el('button', 'vbtn', `<span class="zh">${zh}</span><span class="en">${en}</span>`);
+      b.addEventListener('click', () => this.cb.onViewSpot(id));
+      this.viewBtns[id] = b;
+      bar.appendChild(b);
+    }
+    const orbitBtn = el('button', 'vbtn orbit active', '<span class="zh">自转</span><span class="en">ORBIT</span>');
+    orbitBtn.addEventListener('click', () => {
+      orbitBtn.classList.toggle('active');
+      this.cb.onAutoOrbit(orbitBtn.classList.contains('active'));
+    });
+    this.orbitBtn = orbitBtn;
+    bar.appendChild(orbitBtn);
+    root.appendChild(bar);
+    this.viewbar = bar;
+  }
+  showViewbar(kind) {   // 'lunar' | 'solar' | null
+    this.viewbar.classList.toggle('show', !!kind);
+    if (kind) {
+      for (const k in this.viewBtns) this.viewBtns[k].classList.remove('active');
+      this.viewBtns.side.classList.add('active');
+      this.orbitBtn.classList.add('active');
+    }
+  }
+  setViewActive(id) {
+    for (const k in this.viewBtns) this.viewBtns[k].classList.remove('active');
+    this.viewBtns[id]?.classList.add('active');
+  }
+  setOrbitActive(on) { this.orbitBtn.classList.toggle('active', on); }
 
   // ---- 模式显隐 ----
   setMode(mode) {   // 'deep' | 'solar'

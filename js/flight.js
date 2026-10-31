@@ -24,6 +24,27 @@ export class FlightController {
     this._lastFollow = new THREE.Vector3();
     this._flight = null;
     this.onFlightDone = null;
+    this.autoOrbit = { on: false, speed: 0.10 };   // 天象观景位自动环绕
+    this._up = new THREE.Vector3(0, 1, 0);
+  }
+
+  setAutoOrbit(on) { this.autoOrbit.on = on; }
+
+  // 自动环绕：非飞行状态下绕观察点缓慢公转
+  _applyAutoOrbit(dt) {
+    if (!this.autoOrbit.on || this._flight) return;
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    const r = offset.length();
+    if (r < 1e-4) return;
+    const ang = this.autoOrbit.speed * dt;
+    const c = Math.cos(ang), s = Math.sin(ang);
+    const up = this._up;
+    const rotated = offset.clone()
+      .multiplyScalar(c)
+      .add(up.clone().cross(offset).multiplyScalar(s))
+      .add(up.clone().multiplyScalar(up.dot(offset) * (1 - c)));
+    this.camera.position.copy(this.controls.target).add(rotated);
+    this.camera.lookAt(this.controls.target);
   }
 
   get isFlying() { return !!this._flight; }
@@ -88,6 +109,7 @@ export class FlightController {
         this._lastFollow.copy(this.followBody.worldPos);
       }
       this.controls.update();
+      this._applyAutoOrbit(dt);
     }
   }
 
