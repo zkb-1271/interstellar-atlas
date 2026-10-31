@@ -3,9 +3,18 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=18';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=35';
+import { CONSTELLATIONS } from './data.js?v=35';
 
 const R = 20000;   // 星球半径（远景球壳）
+const TILT = 0.5;  // 银道面倾角（与银河带一致）
+function skyDir(raH, decD) {
+  const ra = raH * 15 * Math.PI / 180, dec = decD * Math.PI / 180;
+  let x = Math.cos(dec) * Math.cos(ra), y = Math.sin(dec), z = -Math.cos(dec) * Math.sin(ra);
+  const ct = Math.cos(TILT), st = Math.sin(TILT);
+  const y2 = y * ct - x * st, x2 = y * st + x * ct;
+  return new THREE.Vector3(x2, y2, z).normalize();
+}
 
 function rand(seedRef) { seedRef.s = (seedRef.s * 16807 + 11) % 2147483647; return seedRef.s / 2147483647; }
 
@@ -63,7 +72,7 @@ export function createDeepSpace() {
   const ref = { s: 24680 };
   const nebTex1 = new THREE.CanvasTexture(makeNebulaSprite(28));
   const nebTex2 = new THREE.CanvasTexture(makeNebulaSprite(18));
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 36; i++) {
     const ang = rand(ref) * Math.PI * 2;
     const spread = (rand(ref) - 0.5) * 0.5;
     const r = R * 0.92;
@@ -74,13 +83,37 @@ export function createDeepSpace() {
     const x2 = y * Math.sin(tilt) + x * Math.cos(tilt);
     const size = 4000 + rand(ref) * 9000;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: i % 2 ? nebTex1 : nebTex2, transparent: true, opacity: 0.10 + rand(ref) * 0.16,
+      map: i % 2 ? nebTex1 : nebTex2, transparent: true, opacity: 0.24 + rand(ref) * 0.24,
       depthWrite: false, blending: THREE.NormalBlending, rotation: rand(ref) * Math.PI * 2,
     }));
     sp.position.set(x2, y2, z);
     sp.scale.setScalar(size);
     group.add(sp);
   }
+
+  // 星座：连线 + 亮星
+  const constGroup = new THREE.Group();
+  const lineMat = new THREE.LineBasicMaterial({ color: 0xcbb287, transparent: true, opacity: 0.34 });
+  window.__constData = [];
+  for (const c of CONSTELLATIONS) {
+    const dirs = c.stars.map(([ra, dec]) => skyDir(ra, dec).multiplyScalar(R * 0.995));
+    const pts = [];
+    for (const [a, b] of c.lines) { pts.push(dirs[a], dirs[b]); }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    constGroup.add(new THREE.LineSegments(geo, lineMat));
+    // 亮星点
+    const sp = new Float32Array(dirs.length * 3);
+    dirs.forEach((d, i) => { sp[i * 3] = d.x; sp[i * 3 + 1] = d.y; sp[i * 3 + 2] = d.z; });
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+    constGroup.add(new THREE.Points(sg, new THREE.PointsMaterial({
+      map: new THREE.CanvasTexture(makeStarSprite()), color: 0xfff3dd, size: 9,
+      sizeAttenuation: false, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending })));
+    const center = dirs.reduce((acc, d) => acc.add(d.clone().normalize()), new THREE.Vector3()).normalize().multiplyScalar(R * 0.99);
+    window.__constData.push({ id: c.id, en: c.en, cn: c.cn, desc: c.desc, img: c.img, center });
+  }
+  constGroup.name = 'constellations';
+  group.add(constGroup);
 
   return group;
 }

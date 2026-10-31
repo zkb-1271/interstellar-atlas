@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES } from './data.js?v=18';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=18';
-import { createDeepSpace } from './starfield.js?v=18';
-import { SolarSystem } from './solar.js?v=18';
-import { FlightController } from './flight.js?v=18';
-import { UI } from './ui.js?v=18';
+import { PLANETS, ECLIPSES } from './data.js?v=35';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=35';
+import { createDeepSpace } from './starfield.js?v=35';
+import { SolarSystem } from './solar.js?v=35';
+import { FlightController } from './flight.js?v=35';
+import { UI } from './ui.js?v=35';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -41,7 +41,7 @@ const flight = new FlightController(camera, canvas);
 
 // ---------- 视角常量 ----------
 const DEEP_CAM = new THREE.Vector3(9500, 4300, 9500);
-const OVERVIEW_CAM = new THREE.Vector3(0, 2100, 3700);
+const OVERVIEW_CAM = new THREE.Vector3(300, 480, 2300);   // 低角度贴黄道面，太阳偏左（参考站构图）
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 // ---------- 时间 ----------
@@ -71,6 +71,10 @@ const ui = new UI(document.body, {
   onJumpAlignment: (ev) => jumpAlignment(ev),
   onViewSpot: (id) => setViewSpot(id),
   onAutoOrbit: (on) => flight.setAutoOrbit(on),
+  onOpenConst: (id) => {
+    const c = CONSTELLATIONS.find(x => x.id === id);
+    if (c) ui.showConstPanel(c);
+  },
 });
 ui.setActiveSpeed(speedIdx);
 ui.fillEclipses(ECLIPSES);
@@ -98,7 +102,7 @@ function enterSolar() {
   solar.setOrbitsVisible(true);
   ui.setMode('solar');
   flight.flyTo({
-    camPos: OVERVIEW_CAM.clone(), target: ORIGIN.clone(), duration: 4.2, arc: 0.32,
+    camPos: OVERVIEW_CAM.clone(), target: ORIGIN.clone(), duration: 2.6, arc: 0.3,
     onDone: () => flight.setRange(5, 14000),
   });
 }
@@ -349,7 +353,7 @@ function frame(dt) {
 
     const speed = ui.SPEEDS[speedIdx].v;
     jd += speed * dt;
-    solar.update(jd, speed);
+    solar.update(jd, speed, camera);
     solar.camLight.position.copy(camera.position);
     updateEclipseTint();
 

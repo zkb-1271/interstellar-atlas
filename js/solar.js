@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, AU } from './data.js?v=18';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=18';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=18';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=35';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=35';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=35';
 
 export const SUN_RADIUS = 13;
 
@@ -55,11 +55,11 @@ export class SolarSystem {
     mat.color = new THREE.Color(1.6, 1.35, 1.05);   // 提亮喂给 Bloom
     this._register('sun', new THREE.Mesh(geo, mat), { ...SUN_INFO, type: 'star' }, SUN_RADIUS);
 
-    const glow1 = new THREE.Sprite(new THREE.SpriteMaterial({
+    const glow1 = this._glow1 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,190,90,0.95)', 'rgba(255,120,30,0.35)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
     glow1.scale.setScalar(SUN_RADIUS * 6);
-    const glow2 = new THREE.Sprite(new THREE.SpriteMaterial({
+    const glow2 = this._glow2 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,150,60,0.30)', 'rgba(255,90,20,0.10)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
     glow2.scale.setScalar(SUN_RADIUS * 18);
@@ -68,11 +68,19 @@ export class SolarSystem {
 
   _buildPlanet(p) {
     let cv = makePlanetTexture(p.type, 7 + p.id.length * 3);
-    if (p.type === 'rocky' || p.type === 'moon') addCraters(cv, p.type === 'moon' ? 90 : 60);
+    if (p.type === 'rocky' || p.type === 'moon') addCraters(cv, p.type === 'moon' ? 220 : 140);
     const mat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.94, metalness: 0.02 });
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.displayR, 48, 32), mat);
     const entry = this._register(p.id, mesh, p, p.displayR);
     entry.spin = p.spin;
+    entry.moons = (MOONS[p.id] || []).map((md, i) => {
+      const mcv = makePlanetTexture('moon', 30 + i * 11); addCraters(mcv, 60);
+      const mMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(md.r, 24, 16),
+        new THREE.MeshStandardMaterial({ map: tex(mcv), roughness: 0.97 }));
+      this.get(p.id).holder.add(mMesh);     // 挂在 holder：跟随公转位置但不随自转
+      return { mesh: mMesh, orbitR: md.orbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05 };
+    });
 
     if (p.id === 'earth') {
       const clouds = new THREE.Mesh(
@@ -110,21 +118,53 @@ export class SolarSystem {
   }
 
   _buildBelt() {
-    const N = 3200;
-    const pos = new Float32Array(N * 3);
+    // 主环：软圆点粒子，环带密度中间密、内外渐稀，颜色深浅不一
+    const N = 9000;
+    const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+    const c = new THREE.Color();
     for (let i = 0; i < N; i++) {
-      const a = 2.1 + Math.random() * 1.25;                 // AU
+      const t = Math.random();
+      const a = 2.06 + 1.32 * (t * 0.7 + Math.random() * 0.3);         // 中段更密
+      const edge = 1 - Math.abs(t - 0.5) * 2;                          // 边缘渐稀
+      if (Math.random() > 0.25 + edge * 0.75) { i--; continue; }
       const ang = Math.random() * Math.PI * 2;
-      const rr = a * AU * (0.96 + Math.random() * 0.08);
+      const rr = a * AU * (0.97 + Math.random() * 0.06);
       pos[i * 3] = Math.cos(ang) * rr;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 7;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 11;
       pos[i * 3 + 2] = -Math.sin(ang) * rr;
+      c.setHSL(0.08 + Math.random() * 0.04, 0.22 + Math.random() * 0.2, 0.28 + Math.random() * 0.45);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     this.belt = new THREE.Points(geo, new THREE.PointsMaterial({
-      color: 0x8d7f6a, size: 1.1, sizeAttenuation: true, transparent: true, opacity: 0.8, depthWrite: false }));
+      map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.4)')),
+      color: 0xffffff, size: 1.5, sizeAttenuation: true, transparent: true, opacity: 0.85,
+      vertexColors: true, depthWrite: false }));
     this.group.add(this.belt);
+
+    // 黄道微尘带：横贯画面的弥散光尘（参考站的白色微尘层）
+    const M = 5200;
+    const dpos = new Float32Array(M * 3), dcol = new Float32Array(M * 3);
+    for (let i = 0; i < M; i++) {
+      const a = 0.7 + Math.random() * 9;
+      const ang = Math.random() * Math.PI * 2;
+      const rr = a * AU;
+      dpos[i * 3] = Math.cos(ang) * rr;
+      dpos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 60;
+      dpos[i * 3 + 2] = -Math.sin(ang) * rr;
+      const b = 0.25 + Math.random() * 0.55;
+      dcol[i * 3] = b; dcol[i * 3 + 1] = b * 0.96; dcol[i * 3 + 2] = b * 0.88;
+    }
+    const dgeo = new THREE.BufferGeometry();
+    dgeo.setAttribute('position', new THREE.BufferAttribute(dpos, 3));
+    dgeo.setAttribute('color', new THREE.BufferAttribute(dcol, 3));
+    this.dust = new THREE.Points(dgeo, new THREE.PointsMaterial({
+      map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.35)')),
+      size: 2.2, sizeAttenuation: true, transparent: true, opacity: 0.5,
+      vertexColors: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.group.add(this.dust);
   }
 
   _buildShadowCones() {
@@ -167,16 +207,34 @@ export class SolarSystem {
     this.belt.visible = v;
   }
 
-  update(jd, simSpeed) {
+  update(jd, simSpeed, camera) {
     const T = jdToCenturies(jd);
+
+    // 太阳辉光近距离衰减（防止特写时橙雾糊屏）
+    const dSun = camera ? camera.position.length() : 1e9;
+    const sun = this.bodies.get('sun');
+    if (this._glow1) {
+      this._glow1.material.opacity = Math.min(1, dSun / 500) * 0.95;
+      this._glow2.material.opacity = Math.min(1, dSun / 2400) * 0.9;
+    }
+
+    // 行星 LOD：远景放大看得见，特写恢复真实比例
+    const k = Math.min(1, Math.max(0, (dSun - 500) / 2100));
+    const s = 1 + 5 * k * k * (3 - 2 * k);
 
     for (const p of PLANETS) {
       const { pos } = planetPosition(p.id, T);
       const entry = this.bodies.get(p.id);
       entry.holder.position.set(pos[0], pos[1], pos[2]);
+      entry.holder.scale.setScalar(s);
       entry.worldPos.copy(entry.holder.position);
       if (entry.spin) entry.mesh.rotation.y += entry.spin * simSpeed * 0.02;
       if (entry.clouds) entry.clouds.rotation.y += simSpeed * 0.0008;
+      // 卫星公转（局部坐标，随 holder 一起缩放）
+      for (const mo of entry.moons || []) {
+        const ang = (jd / mo.period) * Math.PI * 2 + mo.phase;
+        mo.mesh.position.set(Math.cos(ang) * mo.orbitR, Math.sin(ang * 0.9) * mo.orbitR * mo.incl, -Math.sin(ang) * mo.orbitR);
+      }
     }
 
     const earth = this.bodies.get('earth');
@@ -184,13 +242,14 @@ export class SolarSystem {
     const moonEntry = this.bodies.get('moon');
     if (!moonEntry) {
       const cv = makePlanetTexture('moon', 11); addCraters(cv, 110);
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(1.15, 40, 28),
-        new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.96 }));
-      this._register('moon', mesh, MOON_INFO, 1.15);
+      const mmat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.96, emissiveMap: tex(cv), emissive: new THREE.Color(0, 0, 0) });
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(1.15, 40, 28), mmat);
+      this._register('moon', mesh, MOON_INFO, 1.15, this.get('earth').holder);
     }
     const me = this.bodies.get('moon');
-    me.holder.position.set(earth.worldPos.x + m.pos[0], earth.worldPos.y + m.pos[1], earth.worldPos.z + m.pos[2]);
-    me.worldPos.copy(me.holder.position);
+    me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
+    earth.holder.updateWorldMatrix(true, true);
+    me.holder.getWorldPosition(me.worldPos);
     // 日食视觉吸附：简化月历的误差足以让本影锥尖端错过地球，
     // 观看日食时把月球贴到日地连线上，保证影子触地（与月食红月同级的夸张）
     if (this.forceMoonOnAxis) {

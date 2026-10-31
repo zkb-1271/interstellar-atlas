@@ -2,8 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES } from './data.js?v=18';
-import { fmtDateTime } from './astro.js?v=18';
+import { QUOTES, PLANETS } from './data.js?v=35';
+const PLANET_NAV = PLANETS;
+import { fmtDateTime } from './astro.js?v=35';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -75,6 +76,8 @@ export class UI {
     this._buildTimebar(root);
     this._buildCard(root);
     this._buildEvents(root);
+    this._buildConstPanel(root);
+    this._buildRail(root);
     this._buildViewbar(root);
     this._buildHint(root);
 
@@ -183,7 +186,9 @@ export class UI {
     this.card.querySelector('#pc-kicker').textContent = kicker;
     this.card.querySelector('#pc-cn').textContent = info.cn;
     this.card.querySelector('#pc-en').textContent = info.en;
-    this.card.querySelector('#pc-desc').textContent = info.desc;
+    this.card.querySelector('#pc-desc').innerHTML = (info.sections || [{ t: '', text: info.desc || '' }])
+      .map(sec => sec.t ? `<div class="pc-sec"><h4>${sec.t}</h4><p>${sec.text}</p></div>` : `<p>${sec.text}</p>`)
+      .join('');
     const rows = [
       ['半径', info.radiusKm ? info.radiusKm.toLocaleString() + ' km' : '—'],
       ['表面重力', info.gravity + ' m/s²'],
@@ -241,6 +246,69 @@ export class UI {
   showEvents() { this.eventsPanel.classList.add('show'); }
   hideEvents() { this.eventsPanel.classList.remove('show'); }
 
+  _buildConstPanel(root) {
+    const p = el('div');
+    p.id = 'constPanel';
+    p.innerHTML = `
+      <button id="constClose">✕</button>
+      <div class="const-img" id="cp-img"></div>
+      <h2 id="cp-cn"></h2>
+      <div class="sub" id="cp-en"></div>
+      <p class="const-desc" id="cp-desc"></p>`;
+    root.appendChild(p);
+    this.constPanel = p;
+    p.querySelector('#constClose').addEventListener('click', () => this.hideConstPanel());
+  }
+  showConstPanel(c) {
+    this.constPanel.querySelector('#cp-img').style.backgroundImage = c.img ? `url(${c.img})` : 'none';
+    this.constPanel.querySelector('#cp-img').style.display = c.img ? '' : 'none';
+    this.constPanel.querySelector('#cp-cn').textContent = c.cn;
+    this.constPanel.querySelector('#cp-en').textContent = c.en + ' CONSTELLATION';
+    this.constPanel.querySelector('#cp-desc').textContent = c.desc;
+    this.constPanel.classList.add('show');
+  }
+  hideConstPanel() { this.constPanel.classList.remove('show'); }
+
+  // 深空星座标签（投影更新）
+  updateConstLabels(list, camera, mode) {
+    if (!this.constLabelMap) this.constLabelMap = new Map();
+    const v = new (camera.position.constructor)();
+    for (const c of list) {
+      let div = this.constLabelMap.get(c.id);
+      if (!div) {
+        div = el('div', 'const-label', `<span class="en">${c.en}</span><span class="zh">${c.cn}</span>`);
+        div.addEventListener('click', () => this.cb.onOpenConst(c.id));
+        this.labels.appendChild(div);
+        this.constLabelMap.set(c.id, div);
+      }
+      v.copy(c.center).project(camera);
+      const ok = mode === 'deep' && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
+      div.style.opacity = ok ? '0.85' : '0';
+      div.style.pointerEvents = ok ? 'auto' : 'none';
+      if (ok) {
+        div.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px';
+        div.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px';
+      }
+    }
+  }
+
+  _buildRail(root) {
+    const rail = el('div');
+    rail.id = 'planetRail';
+    rail.innerHTML = '<div class="rail-line"></div>';
+    this.railDots = [];
+    const items = [['sun', '太阳'], ...PLANET_NAV.map(p => [p.id, p.cn])];
+    items.forEach(([id, cn], i) => {
+      const d = el('button', 'rail-dot', `<i></i><span>${cn}</span>`);
+      d.style.top = (i * 34 + 10) + 'px';
+      d.addEventListener('click', () => this.cb.onSelectPlanet(id));
+      rail.appendChild(d);
+      this.railDots.push(d);
+    });
+    root.appendChild(rail);
+    this.rail = rail;
+  }
+
   _buildHint(root) {
     this.hint = el('div', '', '点击行星聚焦 · 拖动环视 · 滚轮缩放');
     this.hint.id = 'hint';
@@ -286,12 +354,14 @@ export class UI {
   setMode(mode) {   // 'deep' | 'solar'
     this.quoteEl.classList.toggle('show', mode === 'deep');
     this.timebar.classList.toggle('show', mode === 'solar');
+    this.rail.classList.toggle('show', mode === 'solar');
     this.homeBtn.style.opacity = mode === 'solar' ? '1' : '0';
     this.homeBtn.style.pointerEvents = mode === 'solar' ? 'auto' : 'none';
     this.tabs.style.opacity = '1';
     this.tabEls.deep.classList.toggle('active', mode === 'deep');
     this.tabEls.solar.classList.toggle('active', mode === 'solar');
     this.hint.classList.toggle('show', mode === 'solar');
+    this.hideConstPanel();
     if (mode === 'deep') { this.hideCard(); this.hideEvents(); }
   }
   setActiveTab(id) {

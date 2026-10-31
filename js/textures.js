@@ -57,12 +57,23 @@ export function makePlanetTexture(type, seed = 7) {
       const nx = x / W * 8, ny = y / H * 4;
       let c = [128, 128, 128];
       if (type === 'rocky' || type === 'moon') {
-        const base = type === 'moon' ? [128, 126, 122] : [138, 128, 116];
-        const dark = type === 'moon' ? [72, 70, 68] : [86, 78, 70];
-        const n = seamless(fbm, nx, ny, 8) * 0.5 + 0.5;
-        c = mix(dark, base, 0.35 + n * 0.65);
-        const m = seamless(fbm2, nx * 0.4 + 9, ny * 0.4, 3.2) * 0.5 + 0.5;
-        c = mix(c, dark, m * 0.4);
+        const isMoon = type === 'moon';
+        const base = isMoon ? [134, 130, 124] : [144, 132, 118];
+        const dark = isMoon ? [82, 78, 75] : [90, 80, 70];
+        const light = isMoon ? [192, 188, 180] : [200, 186, 168];
+        const n1 = seamless(fbm, nx * 1.6, ny * 1.6, 13) * 0.5 + 0.5;
+        const n2 = seamless(fbm2, nx * 5, ny * 5, 40) * 0.5 + 0.5;
+        const n3 = seamless(fbm, nx * 12 + 7, ny * 12, 96) * 0.5 + 0.5;
+        const t = Math.min(1, (n1 * 0.55 + n2 * 0.3 + n3 * 0.15) * 1.25);
+        c = mix(dark, base, t);
+        if (t > 0.62) c = mix(c, light, (t - 0.62) * 1.8);
+        if (isMoon) {                                  // 月海：大块暗斑
+          const mare = seamless(fbm2, nx * 0.55 + 3, ny * 0.55, 4.4) * 0.5 + 0.5;
+          if (mare > 0.60) c = mix(c, [56, 54, 57], Math.min(0.75, (mare - 0.60) * 2.4));
+        }
+        const pit = seamless(fbm2, nx * 22, ny * 22, 176) * 0.5 + 0.5;   // 细密凹坑
+        if (pit > 0.86) c = mix(c, [42, 40, 38], (pit - 0.86) * 2.2);
+        else if (pit < 0.10) c = mix(c, light, (0.10 - pit) * 3);
       } else if (type === 'venus') {
         const n = seamless(fbm, nx * 0.5, ny * 2.2 + Math.sin(nx * 0.8) * 0.6, 4);
         const c1 = [214, 188, 148], c2 = [166, 138, 104];
@@ -126,13 +137,14 @@ export function addCraters(cv, count, seed = 3) {
   const fbm = makeNoise(seed);
   for (let i = 0; i < count; i++) {
     const x = fbm(i * 2.7, i * 1.3, 2) * 0.5 + 0.5, y = fbm(i * 1.1 + 40, i * 2.3, 2) * 0.5 + 0.5;
-    const r = (fbm(i * 3.1, i * 4.7, 1) * 0.5 + 0.5) * 26 + 4;
+    const r = 2 + (fbm(i * 3.1, i * 4.7, 1) * 0.5 + 0.5) * 9;
     const cx = x * cv.width, cy = y * cv.height * 0.9 + cv.height * 0.05;
     for (const ox of [-cv.width, 0, cv.width]) {
-      const g = ctx.createRadialGradient(cx + ox, cy, r * 0.2, cx + ox, cy, r);
-      g.addColorStop(0, 'rgba(0,0,0,0.28)');
-      g.addColorStop(0.75, 'rgba(0,0,0,0.10)');
-      g.addColorStop(0.92, 'rgba(255,255,240,0.16)');
+      const g = ctx.createRadialGradient(cx + ox, cy, r * 0.1, cx + ox, cy, r);
+      g.addColorStop(0, 'rgba(0,0,0,0.15)');
+      g.addColorStop(0.62, 'rgba(0,0,0,0.05)');
+      g.addColorStop(0.80, 'rgba(0,0,0,0)');
+      g.addColorStop(0.92, 'rgba(255,250,240,0.09)');
       g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx + ox, cy, r, 0, Math.PI * 2); ctx.fill();
     }
@@ -227,10 +239,10 @@ export function makeNebulaSprite(hue = 30, size = 512) {
     const a = Math.max(0, 1 - d) * Math.max(0, n - 0.35) * 1.5;
     const i = (y * size + x) * 4;
     const warm = n;
-    img.data[i]     = 150 + warm * 90;
-    img.data[i + 1] = 110 + warm * 60;
-    img.data[i + 2] = 80 + warm * 50;
-    img.data[i + 3] = Math.min(180, a * 255);
+    img.data[i]     = 110 + warm * 145;
+    img.data[i + 1] = 62 + warm * 82;
+    img.data[i + 2] = 38 + warm * 52;
+    img.data[i + 3] = Math.min(215, a * 330);
   }
   ctx.putImageData(img, 0, 0);
   return cv;
