@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES } from './data.js?v=35';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=35';
-import { createDeepSpace } from './starfield.js?v=35';
-import { SolarSystem } from './solar.js?v=35';
-import { FlightController } from './flight.js?v=35';
-import { UI } from './ui.js?v=35';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=38';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=38';
+import { createDeepSpace } from './starfield.js?v=38';
+import { SolarSystem } from './solar.js?v=38';
+import { FlightController } from './flight.js?v=38';
+import { UI } from './ui.js?v=38';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -35,7 +35,10 @@ composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 // ---------- 世界 ----------
-scene.add(createDeepSpace());
+const deepSky = createDeepSpace();
+scene.add(deepSky);
+const constGroup = deepSky.getObjectByName('constellations');
+function setConstVisible(v) { if (constGroup) constGroup.visible = v; }
 const solar = new SolarSystem(scene);
 const flight = new FlightController(camera, canvas);
 
@@ -71,10 +74,8 @@ const ui = new UI(document.body, {
   onJumpAlignment: (ev) => jumpAlignment(ev),
   onViewSpot: (id) => setViewSpot(id),
   onAutoOrbit: (on) => flight.setAutoOrbit(on),
-  onOpenConst: (id) => {
-    const c = CONSTELLATIONS.find(x => x.id === id);
-    if (c) ui.showConstPanel(c);
-  },
+  onOpenConst: (id) => focusConst(id),
+  onConstClose: () => closeConst(),
 });
 ui.setActiveSpeed(speedIdx);
 ui.fillEclipses(ECLIPSES);
@@ -87,7 +88,9 @@ function goDeep() {
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
-  solar.setOrbitsVisible(false);          // 深空只看星野，轨道线收起
+  solar.setOrbitsVisible(false);
+  setConstVisible(true);
+  ui.setRailActive(null);          // 深空只看星野，轨道线收起
   flight.follow(null);
   ui.setMode('deep');
   ui.hideCard();
@@ -100,6 +103,8 @@ function goDeep() {
 function enterSolar() {
   mode = 'solar';
   solar.setOrbitsVisible(true);
+  setConstVisible(false);
+  ui.hideConstPanel();
   ui.setMode('solar');
   flight.flyTo({
     camPos: OVERVIEW_CAM.clone(), target: ORIGIN.clone(), duration: 2.6, arc: 0.3,
@@ -113,6 +118,9 @@ function goOverview() {
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
   solar.setOrbitsVisible(true);
+  setConstVisible(false);
+  ui.hideConstPanel();
+  ui.setRailActive(null);
   flight.follow(null);
   ui.setMode('solar');
   ui.hideCard();
@@ -191,6 +199,7 @@ function selectPlanet(id) {
   const target = p.clone().add(camRight.multiplyScalar(dist * 0.42));
   flight.flyTo({ camPos, target, duration: 1.8, arc: 0.12, onDone: () => flight.setRange(b.displayR * 1.6, 900) });
   flight.follow(b);
+  ui.setRailActive(id);
 }
 
 function closeCard() {
@@ -300,6 +309,8 @@ function jumpAlignment(ev) {
   selectedId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
+  setConstVisible(false);
+  ui.hideConstPanel();
   speedIdx = 0; ui.setActiveSpeed(0);
   jd = ev.jd;
 
@@ -341,6 +352,31 @@ function updateEclipseTint() {
   mat.emissive.setRGB(0.55 * f, 0.13 * f, 0.05 * f);
 }
 
+// ---------- 星座凝视 ----------
+function focusConst(id) {
+  const c = CONSTELLATIONS.find(x => x.id === id);
+  if (!c) return;
+  ui.showConstPanel(c);
+  const data = (window.__constData || []).find(x => x.id === id);
+  if (!data) return;
+  const dir = data.center.clone().normalize();
+  const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+  flight.follow(null);
+  flight.flyTo({
+    camPos: dir.clone().multiplyScalar(6200).add(side.clone().multiplyScalar(900)).add(new THREE.Vector3(0, 400, 0)),
+    target: dir.clone().multiplyScalar(18500),
+    duration: 2.4, arc: 0.1,
+    onDone: () => flight.setRange(1500, 26000),
+  });
+}
+function closeConst() {
+  ui.hideConstPanel();
+  flight.flyTo({
+    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 2.2, arc: 0.25,
+    onDone: () => flight.setRange(50, 30000),
+  });
+}
+
 // ---------- 主循环 ----------
 const clock = new THREE.Clock();
 let elapsed = 0;
@@ -365,6 +401,7 @@ function frame(dt) {
 
     ui.updateDate(jd);
     ui.updateOverlay(solar.bodies, camera, mode, hoverId, selectedId, innerWidth, innerHeight);
+  ui.updateConstLabels(window.__constData || [], camera, mode);
 
     composer.render();
   } catch (err) {

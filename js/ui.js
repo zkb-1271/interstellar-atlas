@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=35';
+import { QUOTES, PLANETS } from './data.js?v=38';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=35';
+import { fmtDateTime } from './astro.js?v=38';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -257,7 +257,7 @@ export class UI {
       <p class="const-desc" id="cp-desc"></p>`;
     root.appendChild(p);
     this.constPanel = p;
-    p.querySelector('#constClose').addEventListener('click', () => this.hideConstPanel());
+    p.querySelector('#constClose').addEventListener('click', () => { this.hideConstPanel(); this.cb.onConstClose && this.cb.onConstClose(); });
   }
   showConstPanel(c) {
     this.constPanel.querySelector('#cp-img').style.backgroundImage = c.img ? `url(${c.img})` : 'none';
@@ -300,7 +300,9 @@ export class UI {
     const items = [['sun', '太阳'], ...PLANET_NAV.map(p => [p.id, p.cn])];
     items.forEach(([id, cn], i) => {
       const d = el('button', 'rail-dot', `<i></i><span>${cn}</span>`);
-      d.style.top = (i * 34 + 10) + 'px';
+      d.style.top = (i * 40 + 16) + 'px';
+      d.style.animationDelay = (0.15 + i * 0.07) + 's';
+      d.dataset.id = id;
       d.addEventListener('click', () => this.cb.onSelectPlanet(id));
       rail.appendChild(d);
       this.railDots.push(d);
@@ -349,6 +351,9 @@ export class UI {
     this.viewBtns[id]?.classList.add('active');
   }
   setOrbitActive(on) { this.orbitBtn.classList.toggle('active', on); }
+  setRailActive(id) {
+    for (const d of this.railDots) d.classList.toggle('active', d.dataset.id === id);
+  }
 
   // ---- 模式显隐 ----
   setMode(mode) {   // 'deep' | 'solar'

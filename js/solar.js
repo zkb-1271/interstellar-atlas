@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=35';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=35';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=35';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=38';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=38';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=38';
 
 export const SUN_RADIUS = 13;
 
