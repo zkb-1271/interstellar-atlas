@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=67';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=67';
-import { createDeepSpace } from './starfield.js?v=67';
-import { SolarSystem } from './solar.js?v=67';
-import { FlightController } from './flight.js?v=67';
-import { UI } from './ui.js?v=67';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=73';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=73';
+import { createDeepSpace } from './starfield.js?v=73';
+import { SolarSystem } from './solar.js?v=73';
+import { FlightController } from './flight.js?v=73';
+import { UI } from './ui.js?v=73';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -45,16 +45,10 @@ const flight = new FlightController(camera, canvas);
 // ---------- 视角常量 ----------
 const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：带斜穿画面（参考站构图）
 function computeOverviewCam() {
-  // 参考站初始机位（真实渲染管线网格拟合解得）：仰角≈2°贴黄道面、D=162、视线右偏 0.24 rad
-  const L = 208 * Math.PI / 180, D = 360, E = 22;
-  const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
-  const dirToSun = camPos.clone().negate().normalize();
-  const ang = 0.10;
-  const f = new THREE.Vector3(
-    dirToSun.x * Math.cos(ang) + dirToSun.z * Math.sin(ang),
-    dirToSun.y,
-    -dirToSun.x * Math.sin(ang) + dirToSun.z * Math.cos(ang));
-  const target = camPos.clone().add(f.multiplyScalar(50));
+  // 参考站相机（WebGL view 矩阵运行时捕获反解）：dist=900、仰角 8.2°（z-up 场景换算 y-up）
+  const camPos = new THREE.Vector3(72.7, 33, -107.8);
+  // 视线穿过太阳右侧（参考图太阳在画面左缘 0.02）
+  const target = new THREE.Vector3(50, 21, -84);
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);
