@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=74';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=74';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=74';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=81';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=81';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=81';
 
 export const SUN_RADIUS = 3.27;
 
@@ -361,6 +361,9 @@ export class SolarSystem {
     const dSun = camera ? camera.position.length() : 1e9;
     // 带粒子尺寸（照抄 $z）
     if (this.beltMat) this.beltMat.uniforms.uBaseSize.value = Math.min(2.2, Math.max(0.8, 1.4 * Math.pow(Math.max(dSun, 1) / 240, -0.18)));
+    // 太阳：远景放大保可见（30px 半径@任何距离）
+    const sunE = this.bodies.get('sun');
+    sunE.mesh.scale.setScalar(Math.min(30, Math.max(1, 110000 / Math.max(dSun, 0.5))));
     const sun = this.bodies.get('sun');
     if (this._glow1) {
       this._glow1.material.opacity = Math.min(1, dSun / 500) * 0.95;
@@ -369,16 +372,14 @@ export class SolarSystem {
 
     // 最小屏幕尺寸钳制（参考站行为）：行星/太阳永不小于数像素
     const fovT = Math.tan((camera ? camera.fov : 60) * Math.PI / 360);
-    const minPxScale = (displayR, dist, minPx) => {
-      const rpx = displayR / (Math.max(dist, 0.01) * fovT) * (window.innerHeight / 2);
-      return Math.min(13, Math.max(1, minPx / Math.max(rpx, 0.001)));
-    };
+    const bodyScale = (displayR, dist) =>
+      Math.min(30, Math.max(1, (displayR * 48000) / Math.max(dist, 0.5)));
 
     for (const p of PLANETS) {
       const { pos } = planetPosition(p.id, T);
       const entry = this.bodies.get(p.id);
       entry.holder.position.set(pos[0], pos[1], pos[2]);
-      entry.holder.scale.setScalar(minPxScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 100, 7, 26));
+      entry.mesh.scale.setScalar(bodyScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 900));
       entry.worldPos.copy(entry.holder.position);
       // 自转：按真实自转周期 + 模拟儒略日计算相位（参考站同思路，逆行自转取负）
       if (p.rotationHours) {
@@ -405,6 +406,7 @@ export class SolarSystem {
     }
     const me = this.bodies.get('moon');
     me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
+    if (camera) me.mesh.scale.setScalar(Math.min(30, Math.max(1, (0.264 * 48000) / Math.max(camera.position.distanceTo(me.worldPos), 0.5))));
     earth.holder.updateWorldMatrix(true, true);
     me.holder.getWorldPosition(me.worldPos);
     // 日食视觉吸附：简化月历的误差足以让本影锥尖端错过地球，

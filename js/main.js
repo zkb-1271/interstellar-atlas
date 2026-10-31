@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=74';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=74';
-import { createDeepSpace } from './starfield.js?v=74';
-import { SolarSystem } from './solar.js?v=74';
-import { FlightController } from './flight.js?v=74';
-import { UI } from './ui.js?v=74';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=81';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=81';
+import { createDeepSpace } from './starfield.js?v=81';
+import { SolarSystem } from './solar.js?v=81';
+import { FlightController } from './flight.js?v=81';
+import { UI } from './ui.js?v=81';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -46,9 +46,9 @@ const flight = new FlightController(camera, canvas);
 const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：带斜穿画面（参考站构图）
 function computeOverviewCam() {
   // 参考站相机（WebGL view 矩阵运行时捕获反解）：dist=900、仰角 8.2°（z-up 场景换算 y-up）
-  const camPos = new THREE.Vector3(72.7, 33, -107.8);
-  // 视线穿过太阳右侧（参考图太阳在画面左缘 0.02）
-  const target = new THREE.Vector3(50, 21, -84);
+  // 参考站捕获相机（dist=900，z-up→y-up 换算：从黄道面下方 887 处低角度平视）
+  const camPos = new THREE.Vector3(74.6, -887.7, 128.4);
+  const target = new THREE.Vector3(150, 0, 60);
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);
@@ -197,7 +197,7 @@ function selectPlanet(id) {
   flight.setAutoOrbitSpeed(0.06);
 
   const p = b.worldPos;
-  const dist = b.displayR * 4.6 + 2.5;
+  const dist = b.displayR * 90 + 6;
   let dir;
   if (id === 'sun') dir = camera.position.clone().sub(p).normalize();
   else dir = p.clone().sub(ORIGIN).normalize();          // 由日向外
@@ -211,7 +211,7 @@ function selectPlanet(id) {
   const viewDir = p.clone().sub(camPos).normalize();
   const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
   const target = p.clone().add(camRight.multiplyScalar(dist * 0.42));
-  flight.flyTo({ camPos, target, duration: 2.2, arc: 0, onDone: () => flight.setRange(b.displayR * 1.6, 900) });
+  flight.flyTo({ camPos, target, duration: 2.2, arc: 0, onDone: () => flight.setRange(b.displayR * 12, 2000) });
   flight.follow(b);
   ui.setRailActive(id);
 }
@@ -230,10 +230,10 @@ function setViewAngle(v) {
   else dir = perp.clone().add(toSun.clone().multiplyScalar(0.15)).normalize();  // 晨昏线
   flight.follow(b);
   flight.flyTo({
-    camPos: p.clone().add(dir.multiplyScalar(dist)),
+    camPos: p.clone().add(dir.multiplyScalar(b.displayR * 90 + 6)),
     target: p.clone(),
     duration: 1.8, arc: 0.08,
-    onDone: () => flight.setRange(b.displayR * 1.6, 900),
+    onDone: () => flight.setRange(b.displayR * 12, 2000),
   });
 }
 
