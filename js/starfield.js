@@ -3,8 +3,8 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=38';
-import { CONSTELLATIONS } from './data.js?v=38';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=43';
+import { CONSTELLATIONS } from './data.js?v=43';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -30,7 +30,7 @@ function starColor(t) {
   return [a[1][0] + (b[1][0] - a[1][0]) * f, a[1][1] + (b[1][1] - a[1][1]) * f, a[1][2] + (b[1][2] - a[1][2]) * f];
 }
 
-function buildStarLayer(count, size, opacity, seed, bandBias = 0, warm = 0) {
+function buildStarLayer(count, size, opacity, seed, bandBias = 0, warm = 0, yThick = 0.16) {
   const ref = { s: seed };
   const pos = new Float32Array(count * 3);
   const col = new Float32Array(count * 3);
@@ -39,7 +39,7 @@ function buildStarLayer(count, size, opacity, seed, bandBias = 0, warm = 0) {
     let x = rand(ref) * 2 - 1, y = rand(ref) * 2 - 1, z = rand(ref) * 2 - 1;
     const l = Math.hypot(x, y, z) || 1; x /= l; y /= l; z /= l;
     if (bandBias > 0 && rand(ref) < bandBias) {
-      y *= 0.06 + rand(ref) * 0.10;                       // 压扁
+      y *= yThick * (0.4 + rand(ref) * 0.9);                       // 压扁
       const tilt = 0.5;                                   // 银道面倾斜
       const y2 = y * Math.cos(tilt) - x * Math.sin(tilt);
       const x2 = y * Math.sin(tilt) + x * Math.cos(tilt);
@@ -68,9 +68,10 @@ export function createDeepSpace() {
   group.add(buildStarLayer(2600, 1.8, 0.9, 54321, 0.55));    // 银河带
   group.add(buildStarLayer(700, 2.6, 1.0, 999, 0.75));       // 银河亮星
   group.add(buildStarLayer(180, 4.2, 1.0, 777, 0));          // 近景亮星
-  // 白色微尘：参考站那种细碎密集的星尘
-  group.add(buildStarLayer(9000, 1.15, 0.85, 31337, 0.88, 0.5));
-  group.add(buildStarLayer(5000, 1.9, 0.95, 42424, 0.82, 0.35));
+  // 白色微尘：参考站那种细碎密集的星尘（颗粒是银河的骨架）
+  group.add(buildStarLayer(16000, 1.0, 1.0, 31337, 0.92, 0.72));
+  group.add(buildStarLayer(9000, 1.7, 1.0, 42424, 0.88, 0.55));
+  group.add(buildStarLayer(3600, 2.6, 1.0, 51515, 0.8, 0.4));
 
   // 银河云块：亮云（暖）+ 暗尘带，沿银道成串分布
   const ref = { s: 24680 };
@@ -83,29 +84,66 @@ export function createDeepSpace() {
     const x = Math.cos(ang) * r, z = Math.sin(ang) * r, y = yFrac * r;
     return new THREE.Vector3(y * st + x * ct, y * ct - x * st, z);
   };
-  for (let i = 0; i < 64; i++) {                 // 亮云
+  const palettes = [0xc8a078, 0x9a704c, 0x7d828e, 0x6a7080, 0x8a8a96, 0x9a8296];  // 暖棕为主+冷灰中调（采样对齐）
+  for (let i = 0; i < 120; i++) {                // 亮云：贴带 + 密集
     const ang = rand(ref) * Math.PI * 2;
-    const yF = (rand(ref) - 0.5) * 0.10;
-    const size = 2600 + rand(ref) * 5200;
+    const yF = (rand(ref) - 0.5) * 0.055;
+    const size = 1100 + rand(ref) * 4600;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: [nebTex1, nebTex2, nebTex3][i % 3], transparent: true,
-      opacity: 0.26 + rand(ref) * 0.3, depthWrite: false,
+      map: [nebTex1, nebTex2, nebTex3][i % 3],
+      color: palettes[Math.floor(rand(ref) * palettes.length)],
+      transparent: true, opacity: 0.14 + rand(ref) * 0.24, depthWrite: false,
       blending: THREE.AdditiveBlending, rotation: rand(ref) * Math.PI * 2,
     }));
     sp.position.copy(bandPos(ang, yF, 0.93));
     sp.scale.setScalar(size);
     group.add(sp);
   }
-  for (let i = 0; i < 20; i++) {                 // 暗尘带（正常混合的深色块，制造明暗纹理）
-    const ang = rand(ref) * Math.PI * 2;
-    const yF = (rand(ref) - 0.5) * 0.05;
-    const size = 1800 + rand(ref) * 3400;
+  for (let i = 0; i < 10; i++) {                 // 亮核：少量高亮奶白色团
+    const ang = 0.4 + rand(ref) * 2.4;           // 集中在一段弧上，形成"银河核心区"
+    const yF = (rand(ref) - 0.5) * 0.028;
+    const size = 700 + rand(ref) * 1500;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: nebTex2, color: 0x0d0805, transparent: true, opacity: 0.34 + rand(ref) * 0.2,
+      map: nebTex1, color: 0xffe9c8, transparent: true,
+      opacity: 0.30 + rand(ref) * 0.28, depthWrite: false,
+      blending: THREE.AdditiveBlending, rotation: rand(ref) * Math.PI * 2,
+    }));
+    sp.position.copy(bandPos(ang, yF, 0.93));
+    sp.scale.setScalar(size);
+    group.add(sp);
+  }
+  for (let i = 0; i < 34; i++) {                 // 暗尘带
+    const ang = rand(ref) * Math.PI * 2;
+    const yF = (rand(ref) - 0.5) * 0.035;
+    const size = 900 + rand(ref) * 2600;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: nebTex2, color: 0x120a06, transparent: true, opacity: 0.38 + rand(ref) * 0.22,
       depthWrite: false, blending: THREE.NormalBlending, rotation: rand(ref) * Math.PI * 2,
     }));
-    sp.position.copy(bandPos(ang, yF, 0.92));
+    sp.position.copy(bandPos(ang, yF, 0.925));
     sp.scale.setScalar(size);
+    group.add(sp);
+  }
+  for (let i = 0; i < 48; i++) {                 // 带底连续雾
+    const ang = i / 48 * Math.PI * 2 + rand(ref) * 0.06;
+    const yF = (rand(ref) - 0.5) * 0.05;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: [nebTex1, nebTex2][i % 2], color: i % 3 ? 0x7a5a42 : 0x5a5862, transparent: true,
+      opacity: 0.10 + rand(ref) * 0.08, depthWrite: false, blending: THREE.AdditiveBlending,
+      rotation: rand(ref) * Math.PI * 2,
+    }));
+    sp.position.copy(bandPos(ang, yF, 0.93));
+    sp.scale.setScalar(2200 + rand(ref) * 2600);
+    group.add(sp);
+  }
+  for (let i = 0; i < 8; i++) {                  // 大底光：把整条带统一进一层微光
+    const ang = i / 8 * Math.PI * 2;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: nebTex1, color: 0x6a5442, transparent: true, opacity: 0.07, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    sp.position.copy(bandPos(ang, 0, 0.93));
+    sp.scale.setScalar(9500);
     group.add(sp);
   }
 

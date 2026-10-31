@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=38';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=38';
-import { createDeepSpace } from './starfield.js?v=38';
-import { SolarSystem } from './solar.js?v=38';
-import { FlightController } from './flight.js?v=38';
-import { UI } from './ui.js?v=38';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=43';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=43';
+import { createDeepSpace } from './starfield.js?v=43';
+import { SolarSystem } from './solar.js?v=43';
+import { FlightController } from './flight.js?v=43';
+import { UI } from './ui.js?v=43';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -43,8 +43,8 @@ const solar = new SolarSystem(scene);
 const flight = new FlightController(camera, canvas);
 
 // ---------- 视角常量 ----------
-const DEEP_CAM = new THREE.Vector3(9500, 4300, 9500);
-const OVERVIEW_CAM = new THREE.Vector3(300, 480, 2300);   // 低角度贴黄道面，太阳偏左（参考站构图）
+const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：带斜穿画面（参考站构图）
+const OVERVIEW_CAM = new THREE.Vector3(520, 250, 1250);    // 参考图比例：仰角~11°，轨道线冲出画面，太阳偏左
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 // ---------- 时间 ----------
@@ -107,7 +107,7 @@ function enterSolar() {
   ui.hideConstPanel();
   ui.setMode('solar');
   flight.flyTo({
-    camPos: OVERVIEW_CAM.clone(), target: ORIGIN.clone(), duration: 2.6, arc: 0.3,
+    camPos: OVERVIEW_CAM.clone(), target: new THREE.Vector3(430, -20, 0), duration: 2.6, arc: 0.3,
     onDone: () => flight.setRange(5, 14000),
   });
 }
@@ -125,7 +125,7 @@ function goOverview() {
   ui.setMode('solar');
   ui.hideCard();
   ui.hideEvents();
-  flight.flyTo({ camPos: OVERVIEW_CAM.clone(), target: ORIGIN.clone(), duration: 2.6, arc: 0.25 });
+  flight.flyTo({ camPos: OVERVIEW_CAM.clone(), target: new THREE.Vector3(430, -20, 0), duration: 2.6, arc: 0.25 });
 }
 
 // ---------- 拾取 ----------

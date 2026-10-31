@@ -235,14 +235,16 @@ export function makeNebulaSprite(hue = 30, size = 512) {
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const dx = (x - size / 2) / (size / 2), dy = (y - size / 2) / (size / 2);
     const d = Math.sqrt(dx * dx + dy * dy);
-    const n = fbm(x / 90, y / 90, 5) * 0.5 + 0.5;
-    const a = Math.max(0, 1 - d) * Math.max(0, n - 0.35) * 1.5;
+    const n = fbm(x / 70, y / 70, 5) * 0.5 + 0.5;
+    const n2 = fbm(x / 24 + 9, y / 24, 3) * 0.5 + 0.5;          // 细结构
+    const a = Math.max(0, 1 - d);
+    const alpha = Math.pow(Math.max(0, n * 0.75 + n2 * 0.25 - 0.32), 1.25) * Math.pow(a, 1.5) * 2.6;
     const i = (y * size + x) * 4;
-    const warm = n;
-    img.data[i]     = 110 + warm * 145;
-    img.data[i + 1] = 62 + warm * 82;
-    img.data[i + 2] = 38 + warm * 52;
-    img.data[i + 3] = Math.min(215, a * 330);
+    const warm = n * 0.7 + n2 * 0.3;
+    img.data[i]     = 120 + warm * 135;
+    img.data[i + 1] = 68 + warm * 95;
+    img.data[i + 2] = 42 + warm * 62;
+    img.data[i + 3] = Math.min(235, alpha * 255);
   }
   ctx.putImageData(img, 0, 0);
   return cv;

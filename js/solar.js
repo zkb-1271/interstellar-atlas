@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=38';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=38';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=38';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=43';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=43';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=43';
 
 export const SUN_RADIUS = 13;
 
@@ -112,7 +112,7 @@ export class SolarSystem {
       p3 => new THREE.Vector3(p3[0], p3[1], p3[2]));
     const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
     const orbit = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({
-      color: 0x9a8a68, transparent: true, opacity: 0.32 }));
+      color: 0xcabfa4, transparent: true, opacity: 0.42 }));
     this.group.add(orbit);
     entry.orbit = orbit;
   }
@@ -140,7 +140,7 @@ export class SolarSystem {
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     this.belt = new THREE.Points(geo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.4)')),
-      color: 0xffffff, size: 1.5, sizeAttenuation: true, transparent: true, opacity: 0.85,
+      color: 0xffffff, size: 2.3, sizeAttenuation: true, transparent: true, opacity: 1.0,
       vertexColors: true, depthWrite: false }));
     this.group.add(this.belt);
 
@@ -162,7 +162,7 @@ export class SolarSystem {
     dgeo.setAttribute('color', new THREE.BufferAttribute(dcol, 3));
     this.dust = new THREE.Points(dgeo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.35)')),
-      size: 2.2, sizeAttenuation: true, transparent: true, opacity: 0.5,
+      size: 3.0, sizeAttenuation: true, transparent: true, opacity: 0.6,
       vertexColors: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     this.group.add(this.dust);
   }
@@ -221,6 +221,7 @@ export class SolarSystem {
     // 行星 LOD：远景放大看得见，特写恢复真实比例
     const k = Math.min(1, Math.max(0, (dSun - 500) / 2100));
     const s = 1 + 5 * k * k * (3 - 2 * k);
+    sun.holder.scale.setScalar(1 + 2.2 * k * k * (3 - 2 * k));
 
     for (const p of PLANETS) {
       const { pos } = planetPosition(p.id, T);
