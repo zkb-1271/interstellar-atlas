@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=73';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=73';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=73';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=74';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=74';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=74';
 
 export const SUN_RADIUS = 3.27;
 
@@ -142,53 +142,176 @@ export class SolarSystem {
   }
 
   _buildBelt() {
-    // 主环：软圆点粒子，环带密度中间密、内外渐稀，颜色深浅不一
-    const N = 16000;
-    const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
-    const c = new THREE.Color();
-    for (let i = 0; i < N; i++) {
-      const t = Math.random();
-      const a = 2.06 + 1.32 * (t * 0.7 + Math.random() * 0.3);         // 中段更密
-      const edge = 1 - Math.abs(t - 0.5) * 2;                          // 边缘渐稀
-      if (Math.random() > 0.25 + edge * 0.75) { i--; continue; }
-      const ang = Math.random() * Math.PI * 2;
-      const rr = auToScene(a) * (0.97 + Math.random() * 0.06);
-      pos[i * 3] = Math.cos(ang) * rr;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 2.4;
-      pos[i * 3 + 2] = -Math.sin(ang) * rr;
-      c.setHSL(0.08 + Math.random() * 0.04, 0.22 + Math.random() * 0.2, 0.28 + Math.random() * 0.45);
-      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    this.belt = new THREE.Points(geo, new THREE.PointsMaterial({
-      map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.4)')),
-      color: 0xffffff, size: 2.6, sizeAttenuation: false, transparent: true, opacity: 1.0,
-      vertexColors: true, depthWrite: false }));
+    // ===== 照抄参考站实现 =====
+    // u$ 带生成：count、rIn、rOut、厚度、seed、{gaps, bias}
+    const u$ = (t, e, n, i, a, r = {}) => {
+      const o = new Float32Array(t * 3);
+      let sd = a;
+      const rand = () => { sd = (sd * 1664525 + 1013904223) % 4294967296; return sd / 4294967296; };
+      const gaps = r.gaps ?? false, bias = r.bias ?? 0.6;
+      let f = 0, h = 0;
+      while (f < t && h < t * 12) {
+        h++;
+        const pw = Math.pow(rand(), bias);
+        const g = e + (n - e) * pw;
+        if (gaps) {
+          const x = (g - e) / Math.max(n - e, 1e-4);
+          if (Math.min(Math.abs(x - 0.28), Math.abs(x - 0.55), Math.abs(x - 0.76)) < 0.028 && rand() > 0.22) continue;
+        }
+        const v = rand() * Math.PI * 2, E = 0.85 + rand() * 0.3;
+        o[f * 3] = Math.cos(v) * g * E;
+        o[f * 3 + 1] = (rand() - 0.5) * i;
+        o[f * 3 + 2] = Math.sin(v) * g * E;
+        f++;
+      }
+      return o.subarray(0, f * 3);
+    };
+    // V$ 属性填充：aSize/aReveal/aTint
+    const fillAttrs = (geo, tint) => {
+      const count = geo.getAttribute('position').count;
+      const aSize = new Float32Array(count), aReveal = new Float32Array(count), aTint = new Float32Array(count * 3);
+      let sd = tint.seed;
+      const rand = () => { sd = (sd * 1664525 + 1013904223) % 4294967296; return sd / 4294967296; };
+      for (let i = 0; i < count; i++) {
+        aSize[i] = 0.72 + rand() * 0.62;
+        aReveal[i] = Math.pow(rand(), 1.35);
+        const f = rand();
+        aTint[i * 3] = tint.rgb[0] * (0.86 + f * 0.28);
+        aTint[i * 3 + 1] = tint.rgb[1] * (0.86 + f * 0.24);
+        aTint[i * 3 + 2] = tint.rgb[2] * (0.88 + (1 - f) * 0.24);
+      }
+      geo.setAttribute('aSize', new THREE.BufferAttribute(aSize, 1));
+      geo.setAttribute('aReveal', new THREE.BufferAttribute(aReveal, 1));
+      geo.setAttribute('aTint', new THREE.BufferAttribute(aTint, 3));
+    };
+    const particleShader = {
+      vertexShader: `
+        attribute float aSize;
+        attribute float aReveal;
+        attribute vec3 aTint;
+        uniform float uPixelRatio;
+        uniform float uBaseSize;
+        uniform float uDetail;
+        uniform float uOpacity;
+        varying vec3 vTint;
+        varying float vAlpha;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mv;
+          float appear = smoothstep(aReveal - 0.1, aReveal + 0.02, uDetail);
+          vAlpha = appear * uOpacity;
+          vTint = aTint;
+          gl_PointSize = max(0.9, uBaseSize * aSize) * uPixelRatio;
+        }`,
+      fragmentShader: `
+        varying vec3 vTint;
+        varying float vAlpha;
+        void main() {
+          if (vAlpha <= 0.004) discard;
+          gl_FragColor = vec4(vTint, vAlpha);
+        }`,
+    };
+
+    // 主带：内=火星轨道+2+火星半径，外=木星轨道−2−木星半径（照抄 Mg/Rg）
+    const inner = auToScene(1.524) + 0.349 + 2;
+    const outer = auToScene(5.203) - 1.246 - 2;
+    const beltPos = u$(16000, inner, outer, 0.8, 20260901, { gaps: true, bias: 0.72 });
+    const beltGeo = new THREE.BufferGeometry();
+    beltGeo.setAttribute('position', new THREE.BufferAttribute(beltPos, 3));
+    fillAttrs(beltGeo, { rgb: [0.56, 0.54, 0.5], seed: 90210 });
+    const beltMat = new THREE.ShaderMaterial({
+      vertexShader: particleShader.vertexShader,
+      fragmentShader: particleShader.fragmentShader,
+      uniforms: {
+        uPixelRatio: { value: Math.min(devicePixelRatio, 2) },
+        uBaseSize: { value: 1.45 },
+        uDetail: { value: 1 },
+        uOpacity: { value: 0.17 },
+      },
+      transparent: true, depthWrite: false,
+    });
+    this.belt = new THREE.Points(beltGeo, beltMat);
+    this.beltMat = beltMat;
     this.group.add(this.belt);
 
-    // 黄道微尘带：横贯画面的弥散光尘（参考站的白色微尘层）
-    const M = 5200;
-    const dpos = new Float32Array(M * 3), dcol = new Float32Array(M * 3);
-    for (let i = 0; i < M; i++) {
-      const a = 0.7 + Math.random() * 9;
-      const ang = Math.random() * Math.PI * 2;
-      const rr = auToScene(a);
-      dpos[i * 3] = Math.cos(ang) * rr;
-      dpos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 16;
-      dpos[i * 3 + 2] = -Math.sin(ang) * rr;
-      const b = 0.25 + Math.random() * 0.55;
-      dcol[i * 3] = b; dcol[i * 3 + 1] = b * 0.96; dcol[i * 3 + 2] = b * 0.88;
-    }
-    const dgeo = new THREE.BufferGeometry();
-    dgeo.setAttribute('position', new THREE.BufferAttribute(dpos, 3));
-    dgeo.setAttribute('color', new THREE.BufferAttribute(dcol, 3));
-    this.dust = new THREE.Points(dgeo, new THREE.PointsMaterial({
-      map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.35)')),
-      size: 1.8, sizeAttenuation: false, transparent: true, opacity: 0.7,
-      vertexColors: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-    this.group.add(this.dust);
+    // 带雾：噪声 + Kirkwood 三缝（照抄 Zxe）
+    const gapW = (outer - inner) * 0.05;
+    const fogMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uOpacity: { value: 0.09 },
+        uColor: { value: new THREE.Color('#8d8371') },
+        uInner: { value: inner },
+        uOuter: { value: outer },
+        uGapWidth: { value: gapW },
+        uGapA: { value: auToScene(2.5) },
+        uGapB: { value: auToScene(2.82) },
+        uGapC: { value: auToScene(3.27) },
+      },
+      vertexShader: `
+        varying vec2 vLocal;
+        void main() {
+          vLocal = position.xy;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform float uOpacity;
+        uniform vec3 uColor;
+        uniform float uInner;
+        uniform float uOuter;
+        uniform float uGapWidth;
+        uniform float uGapA;
+        uniform float uGapB;
+        uniform float uGapC;
+        varying vec2 vLocal;
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+        float noise(vec2 p) {
+          vec2 i = floor(p); vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+                     mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+        }
+        float gap(float radius, float center) {
+          return clamp(abs(radius - center) / uGapWidth, 0.06, 1.0);
+        }
+        void main() {
+          float radius = length(vLocal);
+          if (radius < uInner || radius > uOuter) discard;
+          float t = (radius - uInner) / max(uOuter - uInner, 0.0001);
+          float angle = atan(vLocal.y, vLocal.x);
+          float edge = smoothstep(0.0, 0.16, t) * (1.0 - smoothstep(0.72, 1.0, t));
+          float density = noise(vec2(angle * 2.4, t * 3.2)) * 0.65 + noise(vec2(angle * 7.5, t * 9.0)) * 0.35;
+          float gaps = gap(radius, uGapA) * gap(radius, uGapB) * gap(radius, uGapC);
+          float alpha = edge * (0.3 + 0.7 * density) * gaps * uOpacity;
+          if (alpha <= 0.002) discard;
+          gl_FragColor = vec4(uColor, alpha);
+        }`,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const fog = new THREE.Mesh(new THREE.RingGeometry(inner, outer, 256, 12), fogMat);
+    fog.rotation.x = Math.PI / 2;               // RingGeometry xy → xz 黄道面
+    this.group.add(fog);
+    this.beltFog = fog;
+
+    // 柯伊伯带：14000 颗、356-401、厚 9、灰蓝
+    const kIn = auToScene(30.07) + 0.804 + 6, kOut = kIn + 45;
+    const kuiperPos = u$(14000, kIn, kOut, 9, 77123, { bias: 0.62 });
+    const kuiperGeo = new THREE.BufferGeometry();
+    kuiperGeo.setAttribute('position', new THREE.BufferAttribute(kuiperPos, 3));
+    fillAttrs(kuiperGeo, { rgb: [0.62, 0.72, 0.86], seed: 31337 });
+    const kuiperMat = new THREE.ShaderMaterial({
+      vertexShader: particleShader.vertexShader,
+      fragmentShader: particleShader.fragmentShader,
+      uniforms: {
+        uPixelRatio: { value: Math.min(devicePixelRatio, 2) },
+        uBaseSize: { value: 1.45 },
+        uDetail: { value: 1 },
+        uOpacity: { value: 0.12 },
+      },
+      transparent: true, depthWrite: false,
+    });
+    this.kuiper = new THREE.Points(kuiperGeo, kuiperMat);
+    this.kuiper.visible = false;
+    this.group.add(this.kuiper);
   }
 
   _buildShadowCones() {
@@ -236,6 +359,8 @@ export class SolarSystem {
 
     // 太阳辉光近距离衰减（防止特写时橙雾糊屏）
     const dSun = camera ? camera.position.length() : 1e9;
+    // 带粒子尺寸（照抄 $z）
+    if (this.beltMat) this.beltMat.uniforms.uBaseSize.value = Math.min(2.2, Math.max(0.8, 1.4 * Math.pow(Math.max(dSun, 1) / 240, -0.18)));
     const sun = this.bodies.get('sun');
     if (this._glow1) {
       this._glow1.material.opacity = Math.min(1, dSun / 500) * 0.95;
