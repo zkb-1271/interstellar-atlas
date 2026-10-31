@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=52';
+import { QUOTES, PLANETS } from './data.js?v=54';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=52';
+import { fmtDateTime } from './astro.js?v=54';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -74,7 +74,9 @@ export class UI {
     this._buildTopbar(root);
     this._buildQuote(root);
     this._buildTimebar(root);
+    this._buildFocusTitle(root);
     this._buildCard(root);
+    this._buildDirPanel(root);
     this._buildEvents(root);
     this._buildConstPanel(root);
     this._buildRail(root);
@@ -163,26 +165,81 @@ export class UI {
     this.SPEEDS = SPEEDS;
   }
 
+  _buildFocusTitle(root) {
+    const t = el('div');
+    t.id = 'focusTitle';
+    t.innerHTML = `<div class="ft-cat" id="ft-cat">行星</div><div class="ft-name" id="ft-name">地球</div><div class="ft-rule"></div><div class="ft-en" id="ft-en">EARTH</div>`;
+    root.appendChild(t);
+    this.focusTitle = t;
+  }
+  showFocusTitle(info, cat) {
+    this.focusTitle.querySelector('#ft-cat').textContent = cat;
+    this.focusTitle.querySelector('#ft-name').textContent = info.cn;
+    this.focusTitle.querySelector('#ft-en').textContent = info.en;
+    this.focusTitle.classList.add('show');
+  }
+  hideFocusTitle() { this.focusTitle.classList.remove('show'); }
+
+  _buildDirPanel(root) {
+    const p = el('aside');
+    p.id = 'dirPanel';
+    p.innerHTML = `<div class="dir-head">目录 <span id="dir-count">04</span></div><ol id="dir-list"></ol>`;
+    root.appendChild(p);
+    this.dirPanel = p;
+  }
+  showDirPanel(info) {
+    const items = [...(info.sections || []).map(x => x.t), '资料来源'];
+    const list = this.dirPanel.querySelector('#dir-list');
+    list.innerHTML = items.map((t, i) =>
+      `<li class="${i === 0 ? 'active' : ''}"><span class="no">${String(i + 1).padStart(2, '0')}</span>${t}</li>`).join('');
+    this.dirPanel.querySelector('#dir-count').textContent = String(items.length).padStart(2, '0');
+    list.querySelectorAll('li').forEach((li, i) => li.addEventListener('click', () => {
+      list.querySelectorAll('li').forEach(x => x.classList.remove('active'));
+      li.classList.add('active');
+      this.card.querySelectorAll('.pc-sec')[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+    this.dirPanel.classList.add('show');
+  }
+  hideDirPanel() { this.dirPanel.classList.remove('show'); }
+
   _buildCard(root) {
     const c = el('aside');
     c.id = 'planetCard';
     c.innerHTML = `
-      <button id="cardClose">✕</button>
-      <div class="kicker" id="pc-kicker"></div>
+      <div class="pc-head">
+        <span class="pc-kicker" id="pc-kicker"></span>
+        <span class="pc-auto" id="pc-auto">动效 · 自动</span>
+        <button id="cardClose">关闭 ×</button>
+      </div>
       <h1 id="pc-cn"></h1>
-      <div class="en" id="pc-en"></div>
-      <div class="rule"></div>
-      <div class="desc" id="pc-desc"></div>
-      <div class="stats" id="pc-stats"></div>
-      <div class="navrow"><button id="pc-prev">← 上一颗</button><button id="pc-next">下一颗 →</button></div>`;
+      <div class="pc-en" id="pc-en"></div>
+      <div class="pc-sub" id="pc-sub"></div>
+      <div class="pc-block">
+        <div class="pc-block-k">探索这颗星球</div>
+        <div class="pc-explore" id="pc-explore"></div>
+      </div>
+      <div class="pc-block">
+        <div class="pc-block-k">观察这个世界</div>
+        <div class="pc-views">
+          <button data-v="sun">向阳面</button><button data-v="terminator">晨昏线</button><button data-v="dark">背光面</button>
+        </div>
+        <div class="pc-navrow"><button id="pc-prev">← 上一颗</button><span>地理标注</span><button id="pc-next">下一颗 →</button></div>
+      </div>
+      <div class="pc-desc" id="pc-desc"></div>
+      <div class="stats" id="pc-stats"></div>`;
     root.appendChild(c);
     this.card = c;
     c.querySelector('#cardClose').addEventListener('click', () => this.cb.onCloseCard());
     c.querySelector('#pc-prev').addEventListener('click', () => this.cb.onPlanetNav(-1));
     c.querySelector('#pc-next').addEventListener('click', () => this.cb.onPlanetNav(1));
+    c.querySelectorAll('.pc-views button').forEach(b => b.addEventListener('click', () => {
+      c.querySelectorAll('.pc-views button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      this.cb.onViewAngle(b.dataset.v);
+    }));
   }
 
-  showCard(info, kicker) {
+    showCard(info, kicker) {
     this.card.querySelector('#pc-kicker').textContent = kicker;
     this.card.querySelector('#pc-cn').textContent = info.cn;
     this.card.querySelector('#pc-en').textContent = info.en;
@@ -200,7 +257,7 @@ export class UI {
     this.card.querySelector('#pc-stats').innerHTML = rows.map(r => `<div class="stat"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
     this.card.classList.add('show');
   }
-  hideCard() { this.card.classList.remove('show'); }
+  hideCard() { this.card.classList.remove('show'); this.hideDirPanel(); this.hideFocusTitle(); }
 
   _buildEvents(root) {
     const p = el('div');
@@ -299,7 +356,8 @@ export class UI {
     this.railDots = [];
     const items = [['sun', '太阳'], ...PLANET_NAV.map(p => [p.id, p.cn])];
     items.forEach(([id, cn], i) => {
-      const d = el('button', 'rail-dot', `<i></i><span>${cn}</span>`);
+      const au = id === 'sun' ? '—' : (PLANET_NAV.find(x => x.id === id)?.au?.toFixed(2) + ' AU' || '');
+      const d = el('button', 'rail-dot', `<i></i><span class="rn">${cn}</span><span class="ra">${au}</span>`);
       d.style.top = (i * 40 + 16) + 'px';
       d.style.animationDelay = (0.15 + i * 0.07) + 's';
       d.dataset.id = id;
@@ -351,8 +409,14 @@ export class UI {
     this.viewBtns[id]?.classList.add('active');
   }
   setOrbitActive(on) { this.orbitBtn.classList.toggle('active', on); }
+    setAutoOrbitView(on) { this.card.querySelector('#pc-auto').classList.toggle('on', on); }
   setRailActive(id) {
-    for (const d of this.railDots) d.classList.toggle('active', d.dataset.id === id);
+    for (const d of this.railDots) {
+      const on = d.dataset.id === id;
+      d.classList.toggle('active', on);
+      d.querySelector('.ra').style.display = on ? '' : 'none';
+      d.querySelector('.rn').style.opacity = on || d.dataset.id === 'sun' ? '1' : '';
+    }
   }
 
   // ---- 模式显隐 ----

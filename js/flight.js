@@ -29,6 +29,7 @@ export class FlightController {
   }
 
   setAutoOrbit(on) { this.autoOrbit.on = on; }
+  setAutoOrbitSpeed(v) { this.autoOrbit.speed = v; }
 
   // 自动环绕：非飞行状态下绕观察点缓慢公转
   _applyAutoOrbit(dt) {

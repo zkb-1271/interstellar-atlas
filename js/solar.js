@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=52';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=52';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=52';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=54';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=54';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=54';
 
 export const SUN_RADIUS = 3.27;
 
@@ -73,11 +73,11 @@ export class SolarSystem {
     const glow1 = this._glow1 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,190,90,0.95)', 'rgba(255,120,30,0.35)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    glow1.scale.setScalar(SUN_RADIUS * 6);
+    glow1.scale.setScalar(SUN_RADIUS * 10);
     const glow2 = this._glow2 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,150,60,0.30)', 'rgba(255,90,20,0.10)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    glow2.scale.setScalar(SUN_RADIUS * 18);
+    glow2.scale.setScalar(SUN_RADIUS * 26);
     this.bodies.get('sun').holder.add(glow1, glow2);
   }
 
@@ -136,7 +136,7 @@ export class SolarSystem {
       p3 => new THREE.Vector3(p3[0], p3[1], p3[2]));
     const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
     const orbit = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({
-      color: 0xaab6c8, transparent: true, opacity: 0.45 }));
+      color: 0xc4d0e4, transparent: true, opacity: 0.6 }));
     this.group.add(orbit);
     entry.orbit = orbit;
   }
@@ -253,7 +253,7 @@ export class SolarSystem {
       const { pos } = planetPosition(p.id, T);
       const entry = this.bodies.get(p.id);
       entry.holder.position.set(pos[0], pos[1], pos[2]);
-      entry.holder.scale.setScalar(minPxScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 100, 9));
+      entry.holder.scale.setScalar(minPxScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 100, 12));
       entry.worldPos.copy(entry.holder.position);
       // 自转：按真实自转周期 + 模拟儒略日计算相位（参考站同思路，逆行自转取负）
       if (p.rotationHours) {

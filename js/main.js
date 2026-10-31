@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=52';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=52';
-import { createDeepSpace } from './starfield.js?v=52';
-import { SolarSystem } from './solar.js?v=52';
-import { FlightController } from './flight.js?v=52';
-import { UI } from './ui.js?v=52';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=54';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=54';
+import { createDeepSpace } from './starfield.js?v=54';
+import { SolarSystem } from './solar.js?v=54';
+import { FlightController } from './flight.js?v=54';
+import { UI } from './ui.js?v=54';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -30,7 +30,7 @@ const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.01, 8
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.72, 0.55, 0.82);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.5, 0.9);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -53,18 +53,18 @@ function computeOverviewCam() {
     mx += Math.cos(p.lon); my += Math.sin(p.lon);
   }
   const L = Math.atan2(my, mx) - Math.PI / 2;
-  const D = 230, E = 56;
+  const D = 600, E = 150;
   const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
   const dirToSun = camPos.clone().negate().normalize();
   const right = new THREE.Vector3().crossVectors(dirToSun, new THREE.Vector3(0, 1, 0)).normalize();
-  const target = right.multiplyScalar(43).add(new THREE.Vector3(0, -2, 0));
+  const target = right.multiplyScalar(150).add(new THREE.Vector3(0, -8, 0));
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 // ---------- 时间 ----------
-let jd = dateToJD(new Date());
-let speedIdx = 3;
+let jd = dateToJD(new Date(Date.UTC(1974, 3, 12)));   // 参考站默认历元 1974.28
+let speedIdx = 0;                                     // 默认静止
 
 // ---------- 状态 ----------
 let mode = 'deep';            // 'deep' | 'solar'
@@ -88,6 +88,7 @@ const ui = new UI(document.body, {
   onJumpEclipse: (ev) => jumpEclipse(ev),
   onJumpAlignment: (ev) => jumpAlignment(ev),
   onViewSpot: (id) => setViewSpot(id),
+  onViewAngle: (v) => setViewAngle(v),
   onAutoOrbit: (on) => flight.setAutoOrbit(on),
   onOpenConst: (id) => focusConst(id),
   onConstClose: () => closeConst(),
@@ -196,8 +197,13 @@ function selectPlanet(id) {
   selectedId = id;
   eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
-  ui.showViewbar(null); flight.setAutoOrbit(false);
-  ui.showCard(b.info, id === 'sun' ? 'STAR · SUN' : id === 'moon' ? 'SATELLITE · MOON' : `PLANET · ${b.info.en.toUpperCase()}`);
+  ui.showViewbar(null); flight.setAutoOrbit(true);
+  ui.setAutoOrbitView(true);
+  const cat = id === 'sun' ? '恒星' : id === 'moon' ? '卫星' : '行星';
+  ui.showFocusTitle(b.info, cat);
+  ui.showCard(b.info, `${cat === '恒星' ? 'STAR' : cat === '卫星' ? 'SATELLITE' : 'PLANET'} · ${b.info.en.toUpperCase()}`);
+  ui.showDirPanel(b.info);
+  flight.setAutoOrbitSpeed(0.06);
 
   const p = b.worldPos;
   const dist = b.displayR * 4.6 + 2.5;
@@ -219,11 +225,34 @@ function selectPlanet(id) {
   ui.setRailActive(id);
 }
 
+// 观察视角：相对太阳的三个方位（向阳面/晨昏线/背光面）
+function setViewAngle(v) {
+  const b = solar.get(selectedId);
+  if (!b) return;
+  const p = b.worldPos;
+  const toSun = p.clone().normalize();                       // 行星→太阳
+  const perp = new THREE.Vector3().crossVectors(toSun, new THREE.Vector3(0, 1, 0)).normalize();
+  const dist = b.displayR * 4.2 + 1.5;
+  let dir;
+  if (v === 'sun') dir = toSun.clone();                      // 向阳面：从太阳看
+  else if (v === 'dark') dir = toSun.clone().negate();       // 背光面
+  else dir = perp.clone().add(toSun.clone().multiplyScalar(0.15)).normalize();  // 晨昏线
+  flight.follow(b);
+  flight.flyTo({
+    camPos: p.clone().add(dir.multiplyScalar(dist)),
+    target: p.clone(),
+    duration: 1.8, arc: 0.08,
+    onDone: () => flight.setRange(b.displayR * 1.6, 900),
+  });
+}
+
 function closeCard() {
   selectedId = null;
   ui.hideCard();
+  ui.hideFocusTitle();
+  flight.setAutoOrbit(false);
   flight.follow(null);
-  flight.setRange(5, 14000);
+  flight.setRange(2, 14000);
 }
 
 function navPlanet(dir) {
