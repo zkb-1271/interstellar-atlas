@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=62';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=62';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=62';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=67';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=67';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=67';
 
 export const SUN_RADIUS = 3.27;
 
@@ -73,11 +73,11 @@ export class SolarSystem {
     const glow1 = this._glow1 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,190,90,0.95)', 'rgba(255,120,30,0.35)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    glow1.scale.setScalar(SUN_RADIUS * 10);
+    glow1.scale.setScalar(SUN_RADIUS * 4);
     const glow2 = this._glow2 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,150,60,0.30)', 'rgba(255,90,20,0.10)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    glow2.scale.setScalar(SUN_RADIUS * 26);
+    glow2.scale.setScalar(SUN_RADIUS * 10);
     this.bodies.get('sun').holder.add(glow1, glow2);
   }
 
@@ -136,14 +136,14 @@ export class SolarSystem {
       p3 => new THREE.Vector3(p3[0], p3[1], p3[2]));
     const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
     const orbit = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({
-      color: 0xc4d0e4, transparent: true, opacity: 0.6 }));
+      color: 0xaab6c8, transparent: true, opacity: 0.16 }));
     this.group.add(orbit);
     entry.orbit = orbit;
   }
 
   _buildBelt() {
     // 主环：软圆点粒子，环带密度中间密、内外渐稀，颜色深浅不一
-    const N = 9000;
+    const N = 16000;
     const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
     const c = new THREE.Color();
     for (let i = 0; i < N; i++) {
@@ -164,7 +164,7 @@ export class SolarSystem {
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     this.belt = new THREE.Points(geo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.4)')),
-      color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 1.0,
+      color: 0xffffff, size: 2.6, sizeAttenuation: false, transparent: true, opacity: 1.0,
       vertexColors: true, depthWrite: false }));
     this.group.add(this.belt);
 
@@ -186,7 +186,7 @@ export class SolarSystem {
     dgeo.setAttribute('color', new THREE.BufferAttribute(dcol, 3));
     this.dust = new THREE.Points(dgeo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.35)')),
-      size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.6,
+      size: 1.8, sizeAttenuation: false, transparent: true, opacity: 0.7,
       vertexColors: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     this.group.add(this.dust);
   }
@@ -253,7 +253,7 @@ export class SolarSystem {
       const { pos } = planetPosition(p.id, T);
       const entry = this.bodies.get(p.id);
       entry.holder.position.set(pos[0], pos[1], pos[2]);
-      entry.holder.scale.setScalar(minPxScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 100, 12));
+      entry.holder.scale.setScalar(minPxScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 100, 7, 26));
       entry.worldPos.copy(entry.holder.position);
       // 自转：按真实自转周期 + 模拟儒略日计算相位（参考站同思路，逆行自转取负）
       if (p.rotationHours) {
