@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=81';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=81';
-import { createDeepSpace } from './starfield.js?v=81';
-import { SolarSystem } from './solar.js?v=81';
-import { FlightController } from './flight.js?v=81';
-import { UI } from './ui.js?v=81';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=88';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=88';
+import { createDeepSpace } from './starfield.js?v=88';
+import { SolarSystem } from './solar.js?v=88';
+import { FlightController } from './flight.js?v=88';
+import { UI } from './ui.js?v=88';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -47,8 +47,13 @@ const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：�
 function computeOverviewCam() {
   // 参考站相机（WebGL view 矩阵运行时捕获反解）：dist=900、仰角 8.2°（z-up 场景换算 y-up）
   // 参考站捕获相机（dist=900，z-up→y-up 换算：从黄道面下方 887 处低角度平视）
-  const camPos = new THREE.Vector3(74.6, -887.7, 128.4);
-  const target = new THREE.Vector3(150, 0, 60);
+  // 参考站 rig 捕获值（z-up→y-up 直接换算）
+  // 参考站模型 + 参考图六点拟合解（D132/E0/L57/tR-0.6，贴黄道面低角度）
+  const L = 57 * Math.PI / 180, D = 132;
+  const camPos = new THREE.Vector3(Math.cos(L) * D, 0, -Math.sin(L) * D);
+  camPos.y = 14;
+  // 视线方位 = 太阳方位 − 43°（太阳落在画面左缘 0.06 半宽处，几何计算）
+  const target = new THREE.Vector3(78.2, 21, -73.2);
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);

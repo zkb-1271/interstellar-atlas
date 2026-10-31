@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=81';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=81';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=81';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=88';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=88';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=88';
 
 export const SUN_RADIUS = 3.27;
 
@@ -363,7 +363,7 @@ export class SolarSystem {
     if (this.beltMat) this.beltMat.uniforms.uBaseSize.value = Math.min(2.2, Math.max(0.8, 1.4 * Math.pow(Math.max(dSun, 1) / 240, -0.18)));
     // 太阳：远景放大保可见（30px 半径@任何距离）
     const sunE = this.bodies.get('sun');
-    sunE.mesh.scale.setScalar(Math.min(30, Math.max(1, 110000 / Math.max(dSun, 0.5))));
+    sunE.mesh.scale.setScalar(Math.min(30, Math.max(1, dSun * 0.0265)));
     const sun = this.bodies.get('sun');
     if (this._glow1) {
       this._glow1.material.opacity = Math.min(1, dSun / 500) * 0.95;
