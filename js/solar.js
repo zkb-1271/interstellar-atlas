@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, AU } from './data.js';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js';
+import { PLANETS, SUN_INFO, MOON_INFO, AU } from './data.js?v=18';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=18';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=18';
 
 export const SUN_RADIUS = 13;
 
@@ -44,6 +44,9 @@ export class SolarSystem {
     this.sunLight = new THREE.PointLight(0xfff1dc, 2.6, 0, 0);
     this.group.add(this.sunLight);
     this.group.add(new THREE.AmbientLight(0x33383f, 0.55));
+    // 相机补光：给逆光暗面一点轮廓（月食剪影/行星特写夜面）
+    this.camLight = new THREE.PointLight(0xf2ede2, 0.22, 0, 0);
+    this.scene.add(this.camLight);
   }
 
   _buildSun() {
@@ -126,17 +129,18 @@ export class SolarSystem {
 
   _buildShadowCones() {
     const mkCone = (len, r1, r2, color, opacity) => {
-      const geo = new THREE.CylinderGeometry(r2, r1, len, 32, 1, true);
-      geo.translate(0, -len / 2, 0);              // 锥尖指向 -y（待旋转）
+      // r1=天体处半径(粗端, y=0)，r2=末端半径；锥体沿 -y 延伸
+      const geo = new THREE.CylinderGeometry(r1, r2, len, 32, 1, true);
+      geo.translate(0, -len / 2, 0);
       const mat = new THREE.MeshBasicMaterial({
         color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false, blending: THREE.NormalBlending });
       const m = new THREE.Mesh(geo, mat);
       m.visible = false;
       return m;
     };
-    this.earthUmbra = mkCone(70, 3.4, 1.9, 0x1c0d0a, 0.50);
-    this.earthPenumbra = mkCone(110, 4.6, 4.6, 0x160c08, 0.22);
-    this.moonUmbra = mkCone(30, 1.0, 0.5, 0x151013, 0.55);
+    this.earthUmbra = mkCone(70, 3.4, 1.9, 0x362014, 0.42);
+    this.earthPenumbra = mkCone(110, 4.6, 4.6, 0x241610, 0.20);
+    this.moonUmbra = mkCone(30, 1.0, 0.5, 0x241a1e, 0.50);
     this.group.add(this.earthUmbra, this.earthPenumbra, this.moonUmbra);
   }
 
@@ -144,6 +148,14 @@ export class SolarSystem {
     this.earthUmbra.visible = mode === 'lunar';
     this.earthPenumbra.visible = mode === 'lunar';
     this.moonUmbra.visible = mode === 'solar';
+  }
+
+  // 深空模式收起轨道线与小行星带，只留星野
+  setOrbitsVisible(v) {
+    for (const b of this.bodies.values()) {
+      if (b.orbit) b.orbit.visible = v;
+    }
+    this.belt.visible = v;
   }
 
   update(jd, simSpeed) {
@@ -171,16 +183,17 @@ export class SolarSystem {
     me.holder.position.set(earth.worldPos.x + m.pos[0], earth.worldPos.y + m.pos[1], earth.worldPos.z + m.pos[2]);
     me.worldPos.copy(me.holder.position);
 
-    // 地影锥：贴地球、指向背阳面
+    // 地影锥：贴地球、指向背阳面（锥体沿 -y 延伸，故把 +y 对准太阳方向）
     const sunDir = earth.worldPos.clone().negate().normalize();
     this.earthUmbra.position.copy(earth.worldPos);
     this.earthPenumbra.position.copy(earth.worldPos);
-    this.earthUmbra.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), sunDir);
+    this.earthUmbra.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sunDir);
     this.earthPenumbra.quaternion.copy(this.earthUmbra.quaternion);
     const mn = this.bodies.get('moon');
-    const moonDir = mn.worldPos.clone().sub(earth.worldPos).normalize();
+    const moonDir = mn.worldPos.clone().sub(earth.worldPos).normalize();   // 地→月
+    // 月影：粗端贴月球，锥体指向地球方向（-y 端朝 -moonDir = 月→地）
     this.moonUmbra.position.copy(mn.worldPos);
-    this.moonUmbra.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), moonDir);
+    this.moonUmbra.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), moonDir);
 
     this.belt.rotation.y += simSpeed * 0.00035;
   }

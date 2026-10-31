@@ -1,0 +1,355 @@
+// ============================================================
+//  main.js — 总调度：渲染 / 模式状态机 / 拾取 / 时间 / 天象编排
+// ============================================================
+
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+import { PLANETS, ECLIPSES } from './data.js?v=18';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=18';
+import { createDeepSpace } from './starfield.js?v=18';
+import { SolarSystem } from './solar.js?v=18';
+import { FlightController } from './flight.js?v=18';
+import { UI } from './ui.js?v=18';
+
+// ---------- 渲染基础 ----------
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020204);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 60000);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.72, 0.55, 0.82);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// ---------- 世界 ----------
+scene.add(createDeepSpace());
+const solar = new SolarSystem(scene);
+const flight = new FlightController(camera, canvas);
+
+// ---------- 视角常量 ----------
+const DEEP_CAM = new THREE.Vector3(9500, 4300, 9500);
+const OVERVIEW_CAM = new THREE.Vector3(0, 2100, 3700);
+const ORIGIN = new THREE.Vector3(0, 0, 0);
+
+// ---------- 时间 ----------
+let jd = dateToJD(new Date());
+let speedIdx = 3;
+
+// ---------- 状态 ----------
+let mode = 'deep';            // 'deep' | 'solar'
+let selectedId = null;        // 聚焦的天体
+let hoverId = null;
+let eclipseView = null;       // 'lunar' | 'solar' | null
+let alignCache = null;
+
+// ---------- UI ----------
+const ui = new UI(document.body, {
+  onEnterSolar: () => enterSolar(),
+  onGoSolar: () => goOverview(),
+  onTab: (id) => { if (id === 'deep') goDeep(); else goOverview(); },
+  onOpenEvents: () => openEvents(),
+  onCloseEvents: () => ui.hideEvents(),
+  onSpeed: (i) => { speedIdx = i; ui.setActiveSpeed(i); },
+  onToday: () => { jd = dateToJD(new Date()); },
+  onCloseCard: () => closeCard(),
+  onPlanetNav: (dir) => navPlanet(dir),
+  onSelectPlanet: (id) => selectPlanet(id),
+  onJumpEclipse: (ev) => jumpEclipse(ev),
+  onJumpAlignment: (ev) => jumpAlignment(ev),
+});
+ui.setActiveSpeed(speedIdx);
+ui.fillEclipses(ECLIPSES);
+ui.setMode('deep');
+setInterval(() => { if (mode === 'deep' && !document.hidden) ui._setQuote(); }, 12000);
+
+// ---------- 模式切换 ----------
+function goDeep() {
+  mode = 'deep';
+  selectedId = null; hoverId = null; eclipseView = null;
+  solar.setEclipseShadows(null);
+  solar.setOrbitsVisible(false);          // 深空只看星野，轨道线收起
+  flight.follow(null);
+  ui.setMode('deep');
+  ui.hideCard();
+  flight.flyTo({
+    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.6, arc: 0.4,
+    onDone: () => flight.setRange(50, 30000),
+  });
+}
+
+function enterSolar() {
+  mode = 'solar';
+  solar.setOrbitsVisible(true);
+  ui.setMode('solar');
+  flight.flyTo({
+    camPos: OVERVIEW_CAM.clone(), target: ORIGIN.clone(), duration: 4.2, arc: 0.32,
+    onDone: () => flight.setRange(5, 14000),
+  });
+}
+
+function goOverview() {
+  mode = 'solar';
+  selectedId = null; hoverId = null; eclipseView = null;
+  solar.setEclipseShadows(null);
+  solar.setOrbitsVisible(true);
+  flight.follow(null);
+  ui.setMode('solar');
+  ui.hideCard();
+  ui.hideEvents();
+  flight.flyTo({ camPos: OVERVIEW_CAM.clone(), target: ORIGIN.clone(), duration: 2.6, arc: 0.25 });
+}
+
+// ---------- 拾取 ----------
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downXY = null;
+
+canvas.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', e => {
+  if (!downXY) return;
+  const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
+  downXY = null;
+  if (moved < 5 && hoverId && mode === 'solar' && !flight.isFlying) selectPlanet(hoverId);
+});
+canvas.addEventListener('pointermove', e => {
+  pointer.x = (e.clientX / innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / innerHeight) * 2 + 1;
+}, { passive: true });
+
+function updateHover() {
+  if (mode !== 'solar' || flight.isFlying) { setHover(null); return; }
+  raycaster.setFromCamera(pointer, camera);
+  const meshes = [...solar.bodies.values()].map(b => b.mesh);
+  const hits = raycaster.intersectObjects(meshes, false);
+  setHover(hits.length ? hits[0].object.userData.bodyId : null);
+}
+function setHover(id) {
+  if (hoverId === id) return;
+  hoverId = id;
+  ui.hoverId = id;
+  ui.setReticleHover(!!id);
+  canvas.style.cursor = id ? 'none' : 'none';
+}
+
+// ---------- 聚焦天体 ----------
+const planetIds = PLANETS.map(p => p.id);
+
+function selectPlanet(id) {
+  const b = solar.get(id);
+  if (!b) return;
+  selectedId = id;
+  eclipseView = null;
+  solar.setEclipseShadows(null);
+  ui.showCard(b.info, id === 'sun' ? 'STAR · SUN' : id === 'moon' ? 'SATELLITE · MOON' : `PLANET · ${b.info.en.toUpperCase()}`);
+
+  const p = b.worldPos;
+  const dist = b.displayR * 4.6 + 2.5;
+  let dir;
+  if (id === 'sun') dir = camera.position.clone().sub(p).normalize();
+  else dir = p.clone().sub(ORIGIN).normalize();          // 由日向外
+  const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+  const camPos = p.clone()
+    .add(dir.clone().multiplyScalar(dist * 0.45))
+    .add(side.clone().multiplyScalar(dist * 0.8))
+    .add(new THREE.Vector3(0, dist * 0.4, 0));
+
+  // 目标点向相机右方偏移，让行星落在画面左侧、不被档案卡遮住
+  const target = p.clone().add(side.multiplyScalar(b.displayR * 2.4));
+  flight.flyTo({ camPos, target, duration: 1.8, arc: 0.12, onDone: () => flight.setRange(b.displayR * 1.6, 900) });
+  flight.follow(b);
+}
+
+function closeCard() {
+  selectedId = null;
+  ui.hideCard();
+  flight.follow(null);
+  flight.setRange(5, 14000);
+}
+
+function navPlanet(dir) {
+  const cur = planetIds.indexOf(selectedId);
+  const next = planetIds[(((cur === -1 ? 0 : cur) + dir) % planetIds.length + planetIds.length) % planetIds.length];
+  selectPlanet(next);
+}
+
+// ---------- 日月食 ----------
+function parseUTC(date, time) {
+  const [y, m, d] = date.split('-').map(Number);
+  const [hh, mm] = time.split(':').map(Number);
+  return dateToJD(new Date(Date.UTC(y, m - 1, d, hh, mm)));
+}
+
+function jumpEclipse(ev) {
+  ui.hideEvents();
+  mode = 'solar';
+  solar.setOrbitsVisible(true);
+  ui.setMode('solar');
+  ui.hideCard();
+  selectedId = null;
+  speedIdx = 0; ui.setActiveSpeed(0);
+  jd = parseUTC(ev.date, ev.time);
+
+  const T = (jd - 2451545.0) / 36525;
+  const earth = solar.get('earth');
+  const ep = earth.worldPos;
+  const antiSun = ep.clone().normalize();                 // 背阳方向
+
+  if (ev.kind === 'lunar') {
+    eclipseView = 'lunar';
+    solar.setEclipseShadows('lunar');
+    const perp = new THREE.Vector3().crossVectors(antiSun, new THREE.Vector3(0, 1, 0)).normalize();
+    flight.follow(earth);
+    flight.flyTo({
+      // 侧向机位：同框看到地球、地影锥和钻进锥里的月亮
+      camPos: ep.clone().add(antiSun.clone().multiplyScalar(34)).add(perp.clone().multiplyScalar(38)).add(new THREE.Vector3(0, 10, 0)),
+      target: ep.clone().add(antiSun.clone().multiplyScalar(25)),
+      duration: 2.8, arc: 0.18,
+      onDone: () => flight.setRange(6, 4000),
+    });
+  } else {
+    eclipseView = 'solar';
+    solar.setEclipseShadows('solar');
+    const moon = solar.get('moon');
+    const toEarth = ep.clone().sub(moon.worldPos).normalize();
+    flight.follow(earth);
+    flight.flyTo({
+      camPos: moon.worldPos.clone().add(toEarth.clone().multiplyScalar(13)).add(new THREE.Vector3(0, 1.5, 0)),
+      target: ep.clone(), duration: 2.8, arc: 0.15,
+      onDone: () => flight.setRange(6, 4000),
+    });
+  }
+}
+
+// ---------- 行星连珠 ----------
+function openEvents() {
+  ui.showEvents();
+  if (!alignCache) {
+    setTimeout(() => {
+      alignCache = findAlignments(Math.floor(jd), 3650, 2);
+      ui.fillAlignments(alignCache, fmtDate);
+    }, 60);
+  }
+}
+
+function jumpAlignment(ev) {
+  ui.hideEvents();
+  mode = 'solar';
+  solar.setOrbitsVisible(true);
+  ui.setMode('solar');
+  ui.hideCard();
+  selectedId = null; eclipseView = null;
+  solar.setEclipseShadows(null);
+  speedIdx = 0; ui.setActiveSpeed(0);
+  jd = ev.jd;
+
+  const T = (jd - 2451545.0) / 36525;
+  const earth = solar.get('earth');
+  const ids = ['mercury', 'venus', 'mars', 'jupiter', 'saturn'];
+  const dirs = ids.map(id => {
+    const p = planetPosition(id, T);
+    return new THREE.Vector3(p.pos[0] - earth.worldPos.x, p.pos[1] - earth.worldPos.y, p.pos[2] - earth.worldPos.z).normalize();
+  });
+  const mean = dirs.reduce((a, b) => a.add(b), new THREE.Vector3()).normalize();
+  const perp = new THREE.Vector3().crossVectors(mean, new THREE.Vector3(0, 1, 0)).normalize();
+  flight.follow(earth);
+  flight.flyTo({
+    camPos: earth.worldPos.clone().add(mean.clone().multiplyScalar(150)).add(perp.clone().multiplyScalar(280)).add(new THREE.Vector3(0, 120, 0)),
+    target: earth.worldPos.clone().add(mean.clone().multiplyScalar(160)),
+    duration: 3.0, arc: 0.2, onDone: () => flight.setRange(10, 6000),
+  });
+}
+
+// 月食染色：月亮钻进地影 → 半影变暗、本影染成红铜色
+const _axis = new THREE.Vector3(), _rel = new THREE.Vector3();
+function updateEclipseTint() {
+  const moon = solar.get('moon'), earth = solar.get('earth');
+  const mat = moon.mesh.material;
+  if (eclipseView !== 'lunar') { mat.color.setScalar(1); mat.emissive.setScalar(0); return; }
+  _axis.copy(earth.worldPos).normalize();               // 背阳方向
+  _rel.copy(moon.worldPos).sub(earth.worldPos);
+  const t = _rel.dot(_axis);
+  const perp = _rel.addScaledVector(_axis, -t).length();
+  let f = 0;                                            // 0 照常 → 1 全食
+  if (t > 0 && t < 70) {
+    const R = 3.4 - 1.5 * t / 70;                       // 本影半径
+    if (perp < R) f = 1;
+    else if (perp < 4.6) f = 1 - (perp - R) / (4.6 - R);
+  }
+  mat.color.setRGB(1 - 0.55 * f, 1 - 0.82 * f, 1 - 0.90 * f);
+  // 全食红铜色自发光，不依赖光照
+  mat.emissive.setRGB(0.55 * f, 0.13 * f, 0.05 * f);
+}
+
+// ---------- 主循环 ----------
+const clock = new THREE.Clock();
+let elapsed = 0;
+let lastFrameAt = performance.now();
+
+function frame(dt) {
+  try {
+    elapsed += dt;
+
+    const speed = ui.SPEEDS[speedIdx].v;
+    jd += speed * dt;
+    solar.update(jd, speed);
+    solar.camLight.position.copy(camera.position);
+    updateEclipseTint();
+
+    // 给每个 mesh 挂上 bodyId 供拾取
+    for (const [id, b] of solar.bodies) b.mesh.userData.bodyId = id;
+
+    flight.update(dt);
+    updateHover();
+
+    ui.updateDate(jd);
+    ui.updateOverlay(solar.bodies, camera, mode, hoverId, selectedId, innerWidth, innerHeight);
+
+    composer.render();
+  } catch (err) {
+    window.__frameErr = (window.__frameErr || []).concat(String(err && err.stack || err).slice(0, 400));
+  }
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  lastFrameAt = performance.now();
+  frame(Math.min(clock.getDelta(), 0.1));
+}
+loop();
+
+// 兜底心跳：页签被节流（后台/遮挡）导致 rAF 饿死时，用低频定时器驱动飞行等时间线
+setInterval(() => {
+  if (performance.now() - lastFrameAt > 350) frame(Math.min(clock.getDelta(), 0.4));
+}, 140);
+
+// ---------- 自适应 ----------
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- 启动 ----------
+camera.position.copy(DEEP_CAM);
+camera.lookAt(ORIGIN);
+flight.setTarget(ORIGIN);
+flight.setRange(50, 30000);
+solar.setOrbitsVisible(false);
+setTimeout(() => document.getElementById('loading').classList.add('done'), 900);
+
+// 调试/验收句柄
+window.__scene = { camera, flight, solar, setMode: (m) => { mode = m; }, get state() { return { mode, jd, speedIdx, eclipseView, selectedId }; } };

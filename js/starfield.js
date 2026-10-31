@@ -3,7 +3,7 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=18';
 
 const R = 20000;   // 星球半径（远景球壳）
 

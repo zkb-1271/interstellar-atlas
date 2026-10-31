@@ -3,7 +3,7 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=18';
 
 const DEG = Math.PI / 180;
 
@@ -92,7 +92,8 @@ export function moonPosition(T) {
   const lam = Lm + 6.289 * DEG * Math.sin(Mm);         // 黄经
   const bet = 5.128 * DEG * Math.sin(F);               // 黄纬
   const rKM = 385001 - 20905 * Math.cos(Mm);           // 距离 km
-  const r = rKM / 149597870.7 * AU;                    // 场景单位
+  // 视觉轨道半径 26 单位（真实比例仅 0.257，行星尺寸已夸张，月轨同步放大）
+  const r = 26 * rKM / 385000;
   const cl = Math.cos(bet);
   const x = r * cl * Math.cos(lam), ye = r * cl * Math.sin(lam), z = r * Math.sin(bet);
   return { pos: [x, z, -ye], r, lon: lam };
@@ -116,30 +117,30 @@ function circSpread(lons) {   // 一组角度的最小覆盖弧长
   return 2 * Math.PI - maxGap;
 }
 
-// 在 [jd0, jd1] 内搜索"五星连珠"（水金火木土，地心视黄经跨度最小）的日期
+// 在 [jd0, jd0+days] 内搜索"五星连珠"（水金火木土）：
+// 取地心视黄经跨度的局部谷值（跨度越小越"连"），十年内最小也有 ~65°，故放宽至 135°
 export function findAlignments(jd0, days = 3650, step = 2) {
   const ids = ['mercury', 'venus', 'mars', 'jupiter', 'saturn'];
-  const out = [];
-  let best = null;
+  const vals = [];
   for (let d = 0; d <= days; d += step) {
     const T = jdToCenturies(jd0 + d);
-    const lons = ids.map(id => geocentricLon(id, T));
-    const spread = circSpread(lons) / DEG;
-    const score = spread;
-    if (!best || score < best.spread) {
-      if (best) out.push(best);
-      best = { jd: jd0 + d, spread };
-    } else if (score > best.spread + 12 && out.length && out[out.length - 1] !== best) {
-      out.push(best); best = null;
+    const spread = circSpread(ids.map(id => geocentricLon(id, T))) / DEG;
+    vals.push([d, spread]);
+  }
+  const valleys = [];
+  for (let i = 1; i < vals.length - 1; i++) {
+    if (vals[i][1] <= vals[i - 1][1] && vals[i][1] <= vals[i + 1][1] && vals[i][1] <= 135) {
+      valleys.push({ jd: jd0 + vals[i][0], spread: vals[i][1] });
     }
   }
-  if (best) out.push(best);
-  // 过滤：只留跨度 < 60° 的显著事件，按时间去重（间隔 > 60 天）
+  // 相邻谷去重（间隔 < 90 天留更小的），按时间取前 6
   const kept = [];
-  for (const ev of out.sort((a, b) => a.jd - b.jd)) {
-    if (ev.spread > 60) continue;
+  for (const ev of valleys) {
     const last = kept[kept.length - 1];
-    if (last && ev.jd - last.jd < 60) { if (ev.spread < last.spread) kept[kept.length - 1] = ev; continue; }
+    if (last && ev.jd - last.jd < 90) {
+      if (ev.spread < last.spread) kept[kept.length - 1] = ev;
+      continue;
+    }
     kept.push(ev);
   }
   return kept.slice(0, 6);

@@ -2,8 +2,8 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES } from './data.js';
-import { fmtDateTime } from './astro.js';
+import { QUOTES } from './data.js?v=18';
+import { fmtDateTime } from './astro.js?v=18';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -46,13 +46,16 @@ export class UI {
     this.svg.id = 'overlay';
     this.hoverRing = document.createElementNS(NS, 'g');
     this.hoverRing.innerHTML = `
-      <circle r="20" fill="none" stroke="rgba(217,179,108,0.9)" stroke-width="1.2"/>
-      <circle r="20" fill="rgba(217,179,108,0.06)"/>
-      <line x1="-27" y1="0" x2="-21" y2="0" stroke="rgba(217,179,108,0.9)"/>
-      <line x1="21" y1="0" x2="27" y2="0" stroke="rgba(217,179,108,0.9)"/>
-      <line x1="0" y1="-27" x2="0" y2="-21" stroke="rgba(217,179,108,0.9)"/>
-      <line x1="0" y1="21" x2="0" y2="27" stroke="rgba(217,179,108,0.9)"/>`;
+      <circle r="20" fill="rgba(217,179,108,0.05)" stroke="none"/>
+      <circle r="20" fill="none" stroke="rgba(217,179,108,0.85)" stroke-width="1.1"/>
+      <line x1="-32" y1="0" x2="-24" y2="0" stroke="rgba(217,179,108,0.85)"/>
+      <line x1="24" y1="0" x2="32" y2="0" stroke="rgba(217,179,108,0.85)"/>
+      <line x1="0" y1="-32" x2="0" y2="-24" stroke="rgba(217,179,108,0.85)"/>
+      <line x1="0" y1="24" x2="0" y2="32" stroke="rgba(217,179,108,0.85)"/>`;
     this.svg.appendChild(this.hoverRing);
+    this.ringFill = this.hoverRing.querySelectorAll('circle')[0];
+    this.ringCircle = this.hoverRing.querySelectorAll('circle')[1];
+    this.ringTicks = this.hoverRing.querySelectorAll('line');
     this.leader = document.createElementNS(NS, 'line');
     this.leader.setAttribute('stroke', 'rgba(217,179,108,0.55)');
     this.leader.setAttribute('stroke-width', '1');
@@ -69,7 +72,6 @@ export class UI {
 
     this._buildTopbar(root);
     this._buildQuote(root);
-    this._buildEnterBtn(root);
     this._buildTimebar(root);
     this._buildCard(root);
     this._buildEvents(root);
@@ -117,6 +119,10 @@ export class UI {
     const q = el('div');
     q.id = 'quote';
     this.quoteEl = q;
+    this.enterBtn = null;
+    q.addEventListener('click', e => {
+      if (e.target.closest('#enterBtn')) this.cb.onEnterSolar();
+    });
     root.appendChild(q);
     this._quoteIdx = Math.floor(Math.random() * QUOTES.length);
     this._setQuote();
@@ -127,15 +133,8 @@ export class UI {
     this.quoteEl.innerHTML = `
       <div class="kicker">ASTRONOMICAL VOICES · 天文学思想长廊</div>
       <div class="text">“${t.text}”</div>
-      <div class="who">— <b>${t.who}</b> · ${t.year}</div>`;
-  }
-
-  _buildEnterBtn(root) {
-    const b = el('button', '', `<span class="zh">进入太阳系</span><span class="en">ENTER THE SOLAR SYSTEM</span><span class="pulse"></span>`);
-    b.id = 'enterBtn';
-    b.addEventListener('click', () => this.cb.onEnterSolar());
-    root.appendChild(b);
-    this.enterBtn = b;
+      <div class="who">— <b>${t.who}</b> · ${t.year}</div>
+      <button id="enterBtn"><span class="zh">进入太阳系</span><span class="en">ENTER THE SOLAR SYSTEM</span><span class="arrow">→</span></button>`;
   }
 
   _buildTimebar(root) {
@@ -156,6 +155,7 @@ export class UI {
     today.addEventListener('click', () => this.cb.onToday());
     bar.append(this.bigDate, this.speedsEl, today);
     root.appendChild(bar);
+    this.timebar = bar;
     this.SPEEDS = SPEEDS;
   }
 
@@ -206,7 +206,7 @@ export class UI {
       <h3>日月食 · ECLIPSES</h3>
       <div id="ev-eclipses"></div>
       <h3>行星连珠 · ALIGNMENTS</h3>
-      <div id="ev-aligns"><div class="row" style="color:var(--ink-dim);font-size:12px">正在扫描未来十年天象……</div></div>`;
+      <div id="ev-aligns"><div class="row" style="color:var(--ink-dim);font-size:12px">正在扫描未来十年五星（水金火木土）天象……</div></div>`;
     root.appendChild(p);
     this.eventsPanel = p;
     p.querySelector('#eventsClose').addEventListener('click', () => this.cb.onCloseEvents());
@@ -248,7 +248,6 @@ export class UI {
 
   // ---- 模式显隐 ----
   setMode(mode) {   // 'deep' | 'solar'
-    this.enterBtn.classList.toggle('show', mode === 'deep');
     this.quoteEl.classList.toggle('show', mode === 'deep');
     this.timebar.classList.toggle('show', mode === 'solar');
     this.homeBtn.style.opacity = mode === 'solar' ? '1' : '0';
@@ -266,7 +265,7 @@ export class UI {
 
   // ---- 每帧更新 ----
   updateDate(jd) {
-    this.clock.innerHTML = `<b>UTC</b> ${fmtDateTime(jd).slice(11)}`;
+    this.clock.innerHTML = `<b>UTC</b> ${fmtDateTime(jd).slice(11, 16)}`;
     const main = this.bigDate.querySelector('#jd-main');
     const sub = this.bigDate.querySelector('#jd-sub');
     const dt = fmtDateTime(jd);
@@ -290,7 +289,12 @@ export class UI {
         this.labelMap.set(id, rec);
       }
       v.copy(b.worldPos).project(camera);
-      const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15;
+      const sx0 = (v.x * 0.5 + 0.5) * width, sy0 = (-v.y * 0.5 + 0.5) * height;
+      // 估算天体屏幕半径（占屏过大时隐藏标签，特写不需要）
+      const dist0 = camera.position.distanceTo(b.worldPos);
+      const fov0 = camera.fov * Math.PI / 180;
+      const rpx0 = (b.displayR / (dist0 * Math.tan(fov0 / 2))) * (height / 2);
+      const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15 && rpx0 < 110;
       if (!visible) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; continue; }
       const sx = (v.x * 0.5 + 0.5) * width, sy = (-v.y * 0.5 + 0.5) * height;
 
@@ -307,9 +311,18 @@ export class UI {
       rec.div.style.transform = 'translate(0,-50%)';
       rec._sx = sx; rec._sy = sy; rec._rpx = rpx;
 
-      if (id === hoverId && rpx > 2) {
+      if (id === hoverId && rpx > 2 && rpx < 90) {
+        const rr = Math.max(rpx * 1.45 + 8, 16);
+        const tk = rr + 7;
         this.hoverRing.style.display = '';
-        this.hoverRing.setAttribute('transform', `translate(${sx},${sy}) scale(${Math.max(rpx * 1.5 + 10, 18) / 20})`);
+        this.hoverRing.setAttribute('transform', `translate(${sx},${sy})`);
+        this.ringFill.setAttribute('r', rr);
+        this.ringCircle.setAttribute('r', rr);
+        const seg = [[-tk - 7, 0, -tk, 0], [tk, 0, tk + 7, 0], [0, -tk - 7, 0, -tk], [0, tk, 0, tk + 7]];
+        this.ringTicks.forEach((ln, i) => {
+          ln.setAttribute('x1', seg[i][0]); ln.setAttribute('y1', seg[i][1]);
+          ln.setAttribute('x2', seg[i][2]); ln.setAttribute('y2', seg[i][3]);
+        });
         this.leader.style.display = '';
         this.leader.setAttribute('x1', sx + rpx * 0.8);
         this.leader.setAttribute('y1', sy - rpx * 0.8);
