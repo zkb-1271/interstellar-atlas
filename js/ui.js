@@ -1,0 +1,328 @@
+// ============================================================
+//  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
+// ============================================================
+
+import { QUOTES } from './data.js';
+import { fmtDateTime } from './astro.js';
+
+const NS = 'http://www.w3.org/2000/svg';
+
+function el(tag, cls, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  return e;
+}
+
+const SPEEDS = [
+  { v: 0, label: '∥ 暂停' },
+  { v: 1 / 86400, label: '实时' },
+  { v: 0.5, label: '半日/秒' },
+  { v: 2, label: '2天/秒' },
+  { v: 20, label: '20天/秒' },
+  { v: 120, label: '120天/秒' },
+];
+
+export class UI {
+  constructor(root, callbacks) {
+    this.cb = callbacks;
+    this.hoverId = null;
+
+    // 准星光标
+    this.reticle = el('div', '', `
+      <svg width="34" height="34" viewBox="0 0 34 34">
+        <g stroke="rgba(235,225,205,0.9)" stroke-width="1">
+          <line x1="17" y1="2"  x2="17" y2="10"/><line x1="17" y1="24" x2="17" y2="32"/>
+          <line x1="2"  y1="17" x2="10" y2="17"/><line x1="24" y1="17" x2="32" y2="17"/>
+          <circle class="ring" cx="17" cy="17" r="13" fill="none" stroke="rgba(217,179,108,0.85)" stroke-width="1.1"/>
+        </g>
+        <circle cx="17" cy="17" r="1.6" fill="rgba(240,217,168,1)"/>
+      </svg>`);
+    this.reticle.id = 'reticle';
+    root.appendChild(this.reticle);
+
+    // SVG 覆盖层（标签连线 / 悬停金环）
+    this.svg = document.createElementNS(NS, 'svg');
+    this.svg.id = 'overlay';
+    this.hoverRing = document.createElementNS(NS, 'g');
+    this.hoverRing.innerHTML = `
+      <circle r="20" fill="none" stroke="rgba(217,179,108,0.9)" stroke-width="1.2"/>
+      <circle r="20" fill="rgba(217,179,108,0.06)"/>
+      <line x1="-27" y1="0" x2="-21" y2="0" stroke="rgba(217,179,108,0.9)"/>
+      <line x1="21" y1="0" x2="27" y2="0" stroke="rgba(217,179,108,0.9)"/>
+      <line x1="0" y1="-27" x2="0" y2="-21" stroke="rgba(217,179,108,0.9)"/>
+      <line x1="0" y1="21" x2="0" y2="27" stroke="rgba(217,179,108,0.9)"/>`;
+    this.svg.appendChild(this.hoverRing);
+    this.leader = document.createElementNS(NS, 'line');
+    this.leader.setAttribute('stroke', 'rgba(217,179,108,0.55)');
+    this.leader.setAttribute('stroke-width', '1');
+    this.svg.appendChild(this.leader);
+    this.hoverRing.style.display = 'none';
+    this.leader.style.display = 'none';
+    root.appendChild(this.svg);
+
+    // 天体标签容器
+    this.labels = el('div');
+    this.labels.id = 'labels';
+    root.appendChild(this.labels);
+    this.labelMap = new Map();   // id → {div, en, cn}
+
+    this._buildTopbar(root);
+    this._buildQuote(root);
+    this._buildEnterBtn(root);
+    this._buildTimebar(root);
+    this._buildCard(root);
+    this._buildEvents(root);
+    this._buildHint(root);
+
+    // 准星跟随
+    window.addEventListener('mousemove', e => {
+      this.reticle.style.left = e.clientX + 'px';
+      this.reticle.style.top = e.clientY + 'px';
+    }, { passive: true });
+  }
+
+  _buildTopbar(root) {
+    const bar = el('header');
+    bar.id = 'topbar';
+    this.homeBtn = el('div', '', '<span class="dot"></span>太阳系');
+    this.homeBtn.id = 'homeBtn';
+    this.homeBtn.addEventListener('click', () => this.cb.onGoSolar());
+    this.homeBtn.style.opacity = '0';
+    this.homeBtn.style.pointerEvents = 'none';
+    this.homeBtn.style.transition = 'opacity .8s';
+
+    this.tabs = el('nav');
+    this.tabs.id = 'tabs';
+    this.tabs.style.opacity = '0';
+    this.tabs.style.transition = 'opacity .8s';
+    this.tabEls = {};
+    for (const [id, label] of [['deep', '深空'], ['solar', '太阳系'], ['events', '天象']]) {
+      const b = el('button', 'tab', label);
+      b.addEventListener('click', () => {
+        if (id === 'events') this.cb.onOpenEvents();
+        else this.cb.onTab(id);
+      });
+      this.tabEls[id] = b;
+      this.tabs.appendChild(b);
+    }
+
+    this.clock = el('div');
+    this.clock.id = 'clock';
+    bar.append(this.homeBtn, this.tabs, this.clock);
+    root.appendChild(bar);
+  }
+
+  _buildQuote(root) {
+    const q = el('div');
+    q.id = 'quote';
+    this.quoteEl = q;
+    root.appendChild(q);
+    this._quoteIdx = Math.floor(Math.random() * QUOTES.length);
+    this._setQuote();
+  }
+  _setQuote() {
+    const t = QUOTES[this._quoteIdx % QUOTES.length];
+    this._quoteIdx++;
+    this.quoteEl.innerHTML = `
+      <div class="kicker">ASTRONOMICAL VOICES · 天文学思想长廊</div>
+      <div class="text">“${t.text}”</div>
+      <div class="who">— <b>${t.who}</b> · ${t.year}</div>`;
+  }
+
+  _buildEnterBtn(root) {
+    const b = el('button', '', `<span class="zh">进入太阳系</span><span class="en">ENTER THE SOLAR SYSTEM</span><span class="pulse"></span>`);
+    b.id = 'enterBtn';
+    b.addEventListener('click', () => this.cb.onEnterSolar());
+    root.appendChild(b);
+    this.enterBtn = b;
+  }
+
+  _buildTimebar(root) {
+    const bar = el('div');
+    bar.id = 'timebar';
+    this.bigDate = el('div', '', `<span id="jd-main">—</span><small id="jd-sub"></small>`);
+    this.bigDate.id = 'bigDate';
+    this.speedsEl = el('div');
+    this.speedsEl.id = 'speeds';
+    this.speedBtns = SPEEDS.map((s, i) => {
+      const b = el('button', '', s.label);
+      b.addEventListener('click', () => this.cb.onSpeed(i));
+      this.speedsEl.appendChild(b);
+      return b;
+    });
+    const today = el('button', '', '回到今天');
+    today.id = 'todayBtn';
+    today.addEventListener('click', () => this.cb.onToday());
+    bar.append(this.bigDate, this.speedsEl, today);
+    root.appendChild(bar);
+    this.SPEEDS = SPEEDS;
+  }
+
+  _buildCard(root) {
+    const c = el('aside');
+    c.id = 'planetCard';
+    c.innerHTML = `
+      <button id="cardClose">✕</button>
+      <div class="kicker" id="pc-kicker"></div>
+      <h1 id="pc-cn"></h1>
+      <div class="en" id="pc-en"></div>
+      <div class="rule"></div>
+      <div class="desc" id="pc-desc"></div>
+      <div class="stats" id="pc-stats"></div>
+      <div class="navrow"><button id="pc-prev">← 上一颗</button><button id="pc-next">下一颗 →</button></div>`;
+    root.appendChild(c);
+    this.card = c;
+    c.querySelector('#cardClose').addEventListener('click', () => this.cb.onCloseCard());
+    c.querySelector('#pc-prev').addEventListener('click', () => this.cb.onPlanetNav(-1));
+    c.querySelector('#pc-next').addEventListener('click', () => this.cb.onPlanetNav(1));
+  }
+
+  showCard(info, kicker) {
+    this.card.querySelector('#pc-kicker').textContent = kicker;
+    this.card.querySelector('#pc-cn').textContent = info.cn;
+    this.card.querySelector('#pc-en').textContent = info.en;
+    this.card.querySelector('#pc-desc').textContent = info.desc;
+    const rows = [
+      ['半径', info.radiusKm ? info.radiusKm.toLocaleString() + ' km' : '—'],
+      ['表面重力', info.gravity + ' m/s²'],
+      ['公转周期', info.periodDays >= 365 ? (info.periodDays / 365.25).toFixed(1) + ' 年' : info.periodDays + ' 天'],
+      ['自转周期', Math.abs(info.rotationHours ?? 0) ? Math.abs(info.rotationHours / 24).toFixed(1) + ' 天' + (info.rotationHours < 0 ? '（逆行）' : '') : '—'],
+      ['温度', info.tempC],
+      ['卫星', info.moons ?? '—'],
+    ];
+    this.card.querySelector('#pc-stats').innerHTML = rows.map(r => `<div class="stat"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+    this.card.classList.add('show');
+  }
+  hideCard() { this.card.classList.remove('show'); }
+
+  _buildEvents(root) {
+    const p = el('div');
+    p.id = 'eventsPanel';
+    p.innerHTML = `
+      <button id="eventsClose">✕</button>
+      <h2>天象剧场</h2>
+      <div class="sub">CELESTIAL EVENTS · 按真实轨道历表回放</div>
+      <h3>日月食 · ECLIPSES</h3>
+      <div id="ev-eclipses"></div>
+      <h3>行星连珠 · ALIGNMENTS</h3>
+      <div id="ev-aligns"><div class="row" style="color:var(--ink-dim);font-size:12px">正在扫描未来十年天象……</div></div>`;
+    root.appendChild(p);
+    this.eventsPanel = p;
+    p.querySelector('#eventsClose').addEventListener('click', () => this.cb.onCloseEvents());
+  }
+
+  fillEclipses(list) {
+    const box = this.eventsPanel.querySelector('#ev-eclipses');
+    box.innerHTML = '';
+    for (const ev of list) {
+      const row = el('div', 'row', `
+        <span class="date">${ev.date}</span>
+        <span class="what">${ev.label}<small>${ev.en}</small></span>
+        <button class="go">跳转观看</button>`);
+      row.querySelector('.go').addEventListener('click', () => this.cb.onJumpEclipse(ev));
+      box.appendChild(row);
+    }
+  }
+  fillAlignments(list, fmt) {
+    const box = this.eventsPanel.querySelector('#ev-aligns');
+    box.innerHTML = '';
+    if (!list.length) { box.innerHTML = '<div class="row" style="color:var(--ink-dim);font-size:12px">未来十年内没有 <40° 的显著连珠。</div>'; return; }
+    for (const ev of list) {
+      const row = el('div', 'row', `
+        <span class="date">${fmt(ev.jd)}</span>
+        <span class="what">五星连珠<small>FIVE-PLANET ALIGNMENT · 跨度 ${ev.spread.toFixed(0)}°</small></span>
+        <button class="go">跳转观看</button>`);
+      row.querySelector('.go').addEventListener('click', () => this.cb.onJumpAlignment(ev));
+      box.appendChild(row);
+    }
+  }
+  showEvents() { this.eventsPanel.classList.add('show'); }
+  hideEvents() { this.eventsPanel.classList.remove('show'); }
+
+  _buildHint(root) {
+    this.hint = el('div', '', '点击行星聚焦 · 拖动环视 · 滚轮缩放');
+    this.hint.id = 'hint';
+    root.appendChild(this.hint);
+  }
+
+  // ---- 模式显隐 ----
+  setMode(mode) {   // 'deep' | 'solar'
+    this.enterBtn.classList.toggle('show', mode === 'deep');
+    this.quoteEl.classList.toggle('show', mode === 'deep');
+    this.timebar.classList.toggle('show', mode === 'solar');
+    this.homeBtn.style.opacity = mode === 'solar' ? '1' : '0';
+    this.homeBtn.style.pointerEvents = mode === 'solar' ? 'auto' : 'none';
+    this.tabs.style.opacity = '1';
+    this.tabEls.deep.classList.toggle('active', mode === 'deep');
+    this.tabEls.solar.classList.toggle('active', mode === 'solar');
+    this.hint.classList.toggle('show', mode === 'solar');
+    if (mode === 'deep') { this.hideCard(); this.hideEvents(); }
+  }
+  setActiveTab(id) {
+    for (const k in this.tabEls) this.tabEls[k].classList.remove('active');
+    this.tabEls[id]?.classList.add('active');
+  }
+
+  // ---- 每帧更新 ----
+  updateDate(jd) {
+    this.clock.innerHTML = `<b>UTC</b> ${fmtDateTime(jd).slice(11)}`;
+    const main = this.bigDate.querySelector('#jd-main');
+    const sub = this.bigDate.querySelector('#jd-sub');
+    const dt = fmtDateTime(jd);
+    main.textContent = dt.slice(0, 10);
+    sub.textContent = dt.slice(11) + ' · 模拟时间';
+  }
+  setActiveSpeed(i) { this.speedBtns.forEach((b, j) => b.classList.toggle('active', i === j)); }
+
+  // 标签 + 悬停金环（主循环调用）
+  updateOverlay(bodies, camera, mode, hoverId, selectedId, width, height) {
+    const v = new (bodies.get('sun').worldPos.constructor)();
+    let ringShown = false;
+
+    for (const [id, b] of bodies) {
+      let rec = this.labelMap.get(id);
+      if (!rec) {
+        const div = el('div', 'body-label', `<span class="en">${b.info.en}</span><span class="cn">${b.info.cn}</span>`);
+        div.addEventListener('click', () => this.cb.onSelectPlanet(id));
+        this.labels.appendChild(div);
+        rec = { div };
+        this.labelMap.set(id, rec);
+      }
+      v.copy(b.worldPos).project(camera);
+      const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15;
+      if (!visible) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; continue; }
+      const sx = (v.x * 0.5 + 0.5) * width, sy = (-v.y * 0.5 + 0.5) * height;
+
+      // 估算天体屏幕半径
+      const dist = camera.position.distanceTo(b.worldPos);
+      const fov = camera.fov * Math.PI / 180;
+      const rpx = (b.displayR / (dist * Math.tan(fov / 2))) * (height / 2);
+
+      rec.div.style.opacity = id === selectedId ? '1' : (id === hoverId ? '1' : '0.72');
+      rec.div.style.pointerEvents = 'auto';
+      const lx = sx + Math.max(rpx, 4) + 16, ly = sy - Math.max(rpx, 4) * 0.3;
+      rec.div.style.left = lx + 'px';
+      rec.div.style.top = sy + 'px';
+      rec.div.style.transform = 'translate(0,-50%)';
+      rec._sx = sx; rec._sy = sy; rec._rpx = rpx;
+
+      if (id === hoverId && rpx > 2) {
+        this.hoverRing.style.display = '';
+        this.hoverRing.setAttribute('transform', `translate(${sx},${sy}) scale(${Math.max(rpx * 1.5 + 10, 18) / 20})`);
+        this.leader.style.display = '';
+        this.leader.setAttribute('x1', sx + rpx * 0.8);
+        this.leader.setAttribute('y1', sy - rpx * 0.8);
+        this.leader.setAttribute('x2', lx - 6);
+        this.leader.setAttribute('y2', ly);
+        ringShown = true;
+      }
+    }
+    if (!ringShown) { this.hoverRing.style.display = 'none'; this.leader.style.display = 'none'; }
+  }
+
+  setReticleHover(on) {
+    this.reticle.classList.toggle('hovering', on);
+    this.reticle.querySelector('.ring').style.opacity = on ? '1' : '';
+  }
+}
