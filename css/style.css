@@ -86,9 +86,10 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 /* ---------- 深空引言 ---------- */
 #quote {
   position: fixed; left: 34px; top: 110px; z-index: 15; max-width: 420px;
-  opacity: 0; transition: opacity 1s; pointer-events: none;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 1s, visibility 0s 1.1s;
 }
-#quote.show { opacity: 1; }
+#quote.show { opacity: 1; visibility: visible; transition: opacity 1s; }
 #quote .kicker {
   font-size: 11px; letter-spacing: .42em; color: var(--ink-dim);
   margin-bottom: 14px; font-family: var(--mono);

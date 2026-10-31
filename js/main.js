@@ -113,7 +113,6 @@ function goOverview() {
 }
 
 // ---------- 拾取 ----------
-const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 let downXY = null;
 
@@ -129,12 +128,23 @@ canvas.addEventListener('pointermove', e => {
   pointer.y = -(e.clientY / innerHeight) * 2 + 1;
 }, { passive: true });
 
+// 屏幕空间容差拾取：总览时行星只有几个像素，几何射线点不中，
+// 改为"鼠标到天体屏幕投影点的距离 < max(行星屏幕半径+6, 14px)"判定
+const _hv = new THREE.Vector3();
 function updateHover() {
   if (mode !== 'solar' || flight.isFlying) { setHover(null); return; }
-  raycaster.setFromCamera(pointer, camera);
-  const meshes = [...solar.bodies.values()].map(b => b.mesh);
-  const hits = raycaster.intersectObjects(meshes, false);
-  setHover(hits.length ? hits[0].object.userData.bodyId : null);
+  let bestId = null, bestD = Infinity;
+  for (const [id, b] of solar.bodies) {
+    _hv.copy(b.worldPos).project(camera);
+    if (_hv.z > 1 || Math.abs(_hv.x) > 1.2 || Math.abs(_hv.y) > 1.2) continue;
+    const dx = (_hv.x - pointer.x) * innerWidth / 2;
+    const dy = (_hv.y - pointer.y) * innerHeight / 2;
+    const d = Math.hypot(dx, dy);
+    const dist = camera.position.distanceTo(b.worldPos);
+    const rpx = (b.displayR / (dist * Math.tan(camera.fov * Math.PI / 360))) * (innerHeight / 2);
+    if (d < Math.max(rpx + 6, 14) && d < bestD) { bestD = d; bestId = id; }
+  }
+  setHover(bestId);
 }
 function setHover(id) {
   if (hoverId === id) return;
@@ -166,8 +176,10 @@ function selectPlanet(id) {
     .add(side.clone().multiplyScalar(dist * 0.8))
     .add(new THREE.Vector3(0, dist * 0.4, 0));
 
-  // 目标点向相机右方偏移，让行星落在画面左侧、不被档案卡遮住
-  const target = p.clone().add(side.multiplyScalar(b.displayR * 2.4));
+  // 目标点沿"相机右方向"偏移，让行星落在画面左侧、不被档案卡遮住
+  const viewDir = p.clone().sub(camPos).normalize();
+  const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
+  const target = p.clone().add(camRight.multiplyScalar(dist * 0.42));
   flight.flyTo({ camPos, target, duration: 1.8, arc: 0.12, onDone: () => flight.setRange(b.displayR * 1.6, 900) });
   flight.follow(b);
 }
@@ -301,6 +313,7 @@ let lastFrameAt = performance.now();
 function frame(dt) {
   try {
     elapsed += dt;
+    window.__frames = (window.__frames || 0) + 1;
 
     const speed = ui.SPEEDS[speedIdx].v;
     jd += speed * dt;

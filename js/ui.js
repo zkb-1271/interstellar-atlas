@@ -279,6 +279,7 @@ export class UI {
     const v = new (bodies.get('sun').worldPos.constructor)();
     let ringShown = false;
 
+    const shown = [];   // 可见标签，用于重叠避让
     for (const [id, b] of bodies) {
       let rec = this.labelMap.get(id);
       if (!rec) {
@@ -289,27 +290,35 @@ export class UI {
         this.labelMap.set(id, rec);
       }
       v.copy(b.worldPos).project(camera);
-      const sx0 = (v.x * 0.5 + 0.5) * width, sy0 = (-v.y * 0.5 + 0.5) * height;
-      // 估算天体屏幕半径（占屏过大时隐藏标签，特写不需要）
       const dist0 = camera.position.distanceTo(b.worldPos);
       const fov0 = camera.fov * Math.PI / 180;
       const rpx0 = (b.displayR / (dist0 * Math.tan(fov0 / 2))) * (height / 2);
       const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15 && rpx0 < 110;
-      if (!visible) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; continue; }
+      if (!visible) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; rec._vis = false; continue; }
       const sx = (v.x * 0.5 + 0.5) * width, sy = (-v.y * 0.5 + 0.5) * height;
+      shown.push({ id, rec, sx, sy, rpx: rpx0, dist: dist0 });
+      rec._vis = true;
+      rec._sx = sx; rec._sy = sy; rec._rpx = rpx0;
+    }
 
-      // 估算天体屏幕半径
-      const dist = camera.position.distanceTo(b.worldPos);
-      const fov = camera.fov * Math.PI / 180;
-      const rpx = (b.displayR / (dist * Math.tan(fov / 2))) * (height / 2);
+    // 标签避让：按远近排序，近的优先；与已显示标签距离 < 30px 的隐藏（远的让近的）
+    shown.sort((a, b) => a.dist - b.dist);
+    const kept = [];
+    for (const item of shown) {
+      const clash = kept.some(k => Math.hypot(k.sx - item.sx, k.sy - item.sy) < 30);
+      item._hide = clash;
+      if (!clash) kept.push(item);
+    }
 
+    for (const item of shown) {
+      const { id, rec, sx, sy, rpx } = item;
+      if (item._hide) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; continue; }
       rec.div.style.opacity = id === selectedId ? '1' : (id === hoverId ? '1' : '0.72');
       rec.div.style.pointerEvents = 'auto';
       const lx = sx + Math.max(rpx, 4) + 16, ly = sy - Math.max(rpx, 4) * 0.3;
       rec.div.style.left = lx + 'px';
       rec.div.style.top = sy + 'px';
       rec.div.style.transform = 'translate(0,-50%)';
-      rec._sx = sx; rec._sy = sy; rec._rpx = rpx;
 
       if (id === hoverId && rpx > 2 && rpx < 90) {
         const rr = Math.max(rpx * 1.45 + 8, 16);
