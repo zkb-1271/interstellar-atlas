@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=54';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=54';
-import { createDeepSpace } from './starfield.js?v=54';
-import { SolarSystem } from './solar.js?v=54';
-import { FlightController } from './flight.js?v=54';
-import { UI } from './ui.js?v=54';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=56';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=56';
+import { createDeepSpace } from './starfield.js?v=56';
+import { SolarSystem } from './solar.js?v=56';
+import { FlightController } from './flight.js?v=56';
+import { UI } from './ui.js?v=56';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -53,11 +53,11 @@ function computeOverviewCam() {
     mx += Math.cos(p.lon); my += Math.sin(p.lon);
   }
   const L = Math.atan2(my, mx) - Math.PI / 2;
-  const D = 600, E = 150;
+  const D = 45, E = 15;
   const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
   const dirToSun = camPos.clone().negate().normalize();
   const right = new THREE.Vector3().crossVectors(dirToSun, new THREE.Vector3(0, 1, 0)).normalize();
-  const target = right.multiplyScalar(150).add(new THREE.Vector3(0, -8, 0));
+  const target = right.multiplyScalar(26).add(new THREE.Vector3(0, -1.2, 0));
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);
@@ -125,7 +125,7 @@ function enterSolar() {
   const oc = computeOverviewCam();
   flight.flyTo({
     camPos: oc.camPos, target: oc.target, duration: 2.6, arc: 0.3,
-    onDone: () => flight.setRange(5, 14000),
+    onDone: () => flight.setRange(6, 26000),
   });
 }
 
@@ -220,7 +220,7 @@ function selectPlanet(id) {
   const viewDir = p.clone().sub(camPos).normalize();
   const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
   const target = p.clone().add(camRight.multiplyScalar(dist * 0.42));
-  flight.flyTo({ camPos, target, duration: 1.8, arc: 0.12, onDone: () => flight.setRange(b.displayR * 1.6, 900) });
+  flight.flyTo({ camPos, target, duration: 2.2, arc: 0, onDone: () => flight.setRange(b.displayR * 1.6, 900) });
   flight.follow(b);
   ui.setRailActive(id);
 }

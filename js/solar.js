@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=54';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=54';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=54';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=56';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=56';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=56';
 
 export const SUN_RADIUS = 3.27;
 
@@ -164,7 +164,7 @@ export class SolarSystem {
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     this.belt = new THREE.Points(geo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.4)')),
-      color: 0xffffff, size: 0.55, sizeAttenuation: true, transparent: true, opacity: 1.0,
+      color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 1.0,
       vertexColors: true, depthWrite: false }));
     this.group.add(this.belt);
 
@@ -186,7 +186,7 @@ export class SolarSystem {
     dgeo.setAttribute('color', new THREE.BufferAttribute(dcol, 3));
     this.dust = new THREE.Points(dgeo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.35)')),
-      size: 0.8, sizeAttenuation: true, transparent: true, opacity: 0.6,
+      size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.6,
       vertexColors: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     this.group.add(this.dust);
   }
@@ -246,7 +246,7 @@ export class SolarSystem {
     const fovT = Math.tan((camera ? camera.fov : 60) * Math.PI / 360);
     const minPxScale = (displayR, dist, minPx) => {
       const rpx = displayR / (Math.max(dist, 0.01) * fovT) * (window.innerHeight / 2);
-      return Math.min(14, Math.max(1, minPx / Math.max(rpx, 0.001)));
+      return Math.min(13, Math.max(1, minPx / Math.max(rpx, 0.001)));
     };
 
     for (const p of PLANETS) {
