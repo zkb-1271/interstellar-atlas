@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=56';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=56';
-import { createDeepSpace } from './starfield.js?v=56';
-import { SolarSystem } from './solar.js?v=56';
-import { FlightController } from './flight.js?v=56';
-import { UI } from './ui.js?v=56';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=58';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=58';
+import { createDeepSpace } from './starfield.js?v=58';
+import { SolarSystem } from './solar.js?v=58';
+import { FlightController } from './flight.js?v=58';
+import { UI } from './ui.js?v=58';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -45,19 +45,16 @@ const flight = new FlightController(camera, canvas);
 // ---------- 视角常量 ----------
 const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：带斜穿画面（参考站构图）
 function computeOverviewCam() {
-  // 相机方位 = 外行星平均经度 +90°，行星横向一字排开（参考站构图）
-  const T = (jd - 2451545.0) / 36525;
-  let mx = 0, my = 0;
-  for (const id of ['jupiter', 'saturn', 'uranus', 'neptune']) {
-    const p = planetPosition(id, T);
-    mx += Math.cos(p.lon); my += Math.sin(p.lon);
-  }
-  const L = Math.atan2(my, mx) - Math.PI / 2;
-  const D = 45, E = 15;
+  // 参考站初始机位（真实渲染管线网格拟合解得）：仰角≈2°贴黄道面、D=162、视线右偏 0.24 rad
+  const L = 110 * Math.PI / 180, D = 162, E = 2;
   const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
   const dirToSun = camPos.clone().negate().normalize();
-  const right = new THREE.Vector3().crossVectors(dirToSun, new THREE.Vector3(0, 1, 0)).normalize();
-  const target = right.multiplyScalar(26).add(new THREE.Vector3(0, -1.2, 0));
+  const ang = -0.34;
+  const f = new THREE.Vector3(
+    dirToSun.x * Math.cos(ang) + dirToSun.z * Math.sin(ang),
+    dirToSun.y,
+    -dirToSun.x * Math.sin(ang) + dirToSun.z * Math.cos(ang));
+  const target = camPos.clone().add(f.multiplyScalar(50));
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);
