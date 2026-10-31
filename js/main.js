@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=48';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=48';
-import { createDeepSpace } from './starfield.js?v=48';
-import { SolarSystem } from './solar.js?v=48';
-import { FlightController } from './flight.js?v=48';
-import { UI } from './ui.js?v=48';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=52';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=52';
+import { createDeepSpace } from './starfield.js?v=52';
+import { SolarSystem } from './solar.js?v=52';
+import { FlightController } from './flight.js?v=52';
+import { UI } from './ui.js?v=52';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -26,7 +26,7 @@ renderer.toneMappingExposure = 1.05;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020204);
 
-const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 60000);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.01, 80000);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -53,11 +53,11 @@ function computeOverviewCam() {
     mx += Math.cos(p.lon); my += Math.sin(p.lon);
   }
   const L = Math.atan2(my, mx) - Math.PI / 2;
-  const D = 2300, E = 300;
+  const D = 230, E = 56;
   const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
   const dirToSun = camPos.clone().negate().normalize();
   const right = new THREE.Vector3().crossVectors(dirToSun, new THREE.Vector3(0, 1, 0)).normalize();
-  const target = right.multiplyScalar(430).add(new THREE.Vector3(0, -20, 0));
+  const target = right.multiplyScalar(43).add(new THREE.Vector3(0, -2, 0));
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);
@@ -277,13 +277,13 @@ function setViewSpot(id) {
     const moonP = moon.worldPos;
     const spots = {
       // 远景：太阳—地球—月影锥整个几何关系
-      far:    { cam: ep.clone().add(antiSun.clone().multiplyScalar(85)).add(perp.clone().multiplyScalar(120)).add(new THREE.Vector3(0, 55, 0)), target: ep.clone(), range: [30, 8000] },
+      far:    { cam: ep.clone().add(antiSun.clone().multiplyScalar(17.6)).add(perp.clone().multiplyScalar(24.8)).add(new THREE.Vector3(0, 11.4, 0)), target: ep.clone(), range: [6, 8000] },
       // 侧视：地影锥与红月同框
-      side:   { cam: ep.clone().add(antiSun.clone().multiplyScalar(34)).add(perp.clone().multiplyScalar(38)).add(new THREE.Vector3(0, 10, 0)), target: ep.clone().add(antiSun.clone().multiplyScalar(25)), range: [6, 4000] },
+      side:   { cam: ep.clone().add(antiSun.clone().multiplyScalar(7)).add(perp.clone().multiplyScalar(7.9)).add(new THREE.Vector3(0, 2.1, 0)), target: ep.clone().add(antiSun.clone().multiplyScalar(5.2)), range: [1.2, 4000] },
       // 近景：贴着红月
-      close:  { cam: moonP.clone().add(antiSun.clone().multiplyScalar(7)).add(perp.clone().multiplyScalar(5)).add(new THREE.Vector3(0, 2, 0)), target: moonP.clone(), range: [2.6, 1000] },
+      close:  { cam: moonP.clone().add(antiSun.clone().multiplyScalar(1.45)).add(perp.clone().multiplyScalar(1.04)).add(new THREE.Vector3(0, 0.41, 0)), target: moonP.clone(), range: [0.55, 1000] },
       // 地面：站上地球朝月面，看月亮被"吃"掉
-      ground: { cam: ep.clone().add(moonP.clone().sub(ep).normalize().multiplyScalar(2.2 * 1.015)), target: moonP.clone(), range: [1.2, 800] },
+      ground: { cam: ep.clone().add(moonP.clone().sub(ep).normalize().multiplyScalar(0.455 * 1.015)), target: moonP.clone(), range: [0.25, 800] },
     };
     const v = spots[id];
     flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.2, arc: 0.12, onDone: () => flight.setRange(...v.range) });
@@ -293,13 +293,13 @@ function setViewSpot(id) {
     const toEarth = ep.clone().sub(moonP).normalize();
     const spots = {
       // 远景：日—月—地全线 + 投向地球的影子
-      far:    { cam: ep.clone().add(toSun.clone().multiplyScalar(85)).add(perp.clone().multiplyScalar(110)).add(new THREE.Vector3(0, 48, 0)), target: ep.clone(), range: [30, 8000] },
+      far:    { cam: ep.clone().add(toSun.clone().multiplyScalar(17.6)).add(perp.clone().multiplyScalar(22.8)).add(new THREE.Vector3(0, 9.9, 0)), target: ep.clone(), range: [6, 8000] },
       // 侧视：从太阳侧斜看地球——向阳面上能看到本影斑，月球影子迎面投来
-      side:   { cam: ep.clone().add(toSun.clone().multiplyScalar(30)).add(perp.clone().multiplyScalar(46)).add(new THREE.Vector3(0, 13, 0)), target: ep.clone(), range: [6, 4000] },
+      side:   { cam: ep.clone().add(toSun.clone().multiplyScalar(6.2)).add(perp.clone().multiplyScalar(9.5)).add(new THREE.Vector3(0, 2.7, 0)), target: ep.clone(), range: [1.2, 4000] },
       // 近景：月影锥与地球的接触面
-      close:  { cam: ep.clone().add(toSun.clone().multiplyScalar(20)).add(perp.clone().multiplyScalar(16)).add(new THREE.Vector3(0, 6, 0)), target: ep.clone(), range: [6, 1000] },
+      close:  { cam: ep.clone().add(toSun.clone().multiplyScalar(4.1)).add(perp.clone().multiplyScalar(3.3)).add(new THREE.Vector3(0, 1.24, 0)), target: ep.clone(), range: [1.2, 1000] },
       // 地面：白天面仰望太阳，看月亮吞日
-      ground: { cam: ep.clone().add(toSun.clone().multiplyScalar(2.2 * 1.015)), target: ep.clone().add(toSun.clone().multiplyScalar(50)), range: [1.2, 800] },
+      ground: { cam: ep.clone().add(toSun.clone().multiplyScalar(0.455 * 1.015)), target: ep.clone().add(toSun.clone().multiplyScalar(10)), range: [0.25, 800] },
     };
     const v = spots[id];
     flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.2, arc: 0.12, onDone: () => flight.setRange(...v.range) });
@@ -342,9 +342,9 @@ function jumpAlignment(ev) {
   const perp = new THREE.Vector3().crossVectors(mean, new THREE.Vector3(0, 1, 0)).normalize();
   flight.follow(earth);
   flight.flyTo({
-    camPos: earth.worldPos.clone().add(mean.clone().multiplyScalar(150)).add(perp.clone().multiplyScalar(280)).add(new THREE.Vector3(0, 120, 0)),
-    target: earth.worldPos.clone().add(mean.clone().multiplyScalar(160)),
-    duration: 3.0, arc: 0.2, onDone: () => flight.setRange(10, 6000),
+    camPos: earth.worldPos.clone().add(mean.clone().multiplyScalar(31)).add(perp.clone().multiplyScalar(58)).add(new THREE.Vector3(0, 24.8, 0)),
+    target: earth.worldPos.clone().add(mean.clone().multiplyScalar(33)),
+    duration: 3.0, arc: 0.2, onDone: () => flight.setRange(2, 6000),
   });
 }
 
@@ -359,10 +359,10 @@ function updateEclipseTint() {
   const t = _rel.dot(_axis);
   const perp = _rel.addScaledVector(_axis, -t).length();
   let f = 0;                                            // 0 照常 → 1 全食
-  if (t > 0 && t < 70) {
-    const R = 3.4 - 1.5 * t / 70;                       // 本影半径
+  if (t > 0 && t < 14.5) {
+    const R = 0.70 - 0.31 * t / 14.5;                   // 本影半径
     if (perp < R) f = 1;
-    else if (perp < 4.6) f = 1 - (perp - R) / (4.6 - R);
+    else if (perp < 0.95) f = 1 - (perp - R) / (0.95 - R);
   }
   mat.color.setRGB(1 - 0.55 * f, 1 - 0.82 * f, 1 - 0.90 * f);
   // 全食红铜色自发光，不依赖光照

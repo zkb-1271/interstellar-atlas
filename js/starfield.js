@@ -3,8 +3,8 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=48';
-import { CONSTELLATIONS } from './data.js?v=48';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=52';
+import { CONSTELLATIONS } from './data.js?v=52';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -69,7 +69,7 @@ export function createDeepSpace() {
   skyTex.colorSpace = THREE.SRGBColorSpace;
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(R * 0.985, 64, 40),
-    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide }));
+    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, color: 0xd4d0ca }));
   group.add(sky);
 
   group.add(buildStarLayer(3500, 1.1, 0.75, 12345, 0));      // 弥散远景

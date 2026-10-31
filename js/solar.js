@@ -4,11 +4,11 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=48';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=48';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=48';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=52';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=52';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=52';
 
-export const SUN_RADIUS = 13;
+export const SUN_RADIUS = 3.27;
 
 const texLoader = new THREE.TextureLoader();
 function loadRealMap(url, mat) {
@@ -110,7 +110,7 @@ export class SolarSystem {
       entry.clouds = clouds;
     }
     if (p.ring) {
-      const inner = p.displayR * 1.30, outer = p.displayR * 2.35;
+      const inner = p.displayR * 1.12, outer = p.displayR * 2.35;
       const geo = new THREE.RingGeometry(inner, outer, 128, 1);
       // 让 UV.x 沿半径展开
       const pos = geo.attributes.position, uv = geo.attributes.uv;
@@ -152,9 +152,9 @@ export class SolarSystem {
       const edge = 1 - Math.abs(t - 0.5) * 2;                          // 边缘渐稀
       if (Math.random() > 0.25 + edge * 0.75) { i--; continue; }
       const ang = Math.random() * Math.PI * 2;
-      const rr = a * AU * (0.97 + Math.random() * 0.06);
+      const rr = auToScene(a) * (0.97 + Math.random() * 0.06);
       pos[i * 3] = Math.cos(ang) * rr;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 11;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 2.4;
       pos[i * 3 + 2] = -Math.sin(ang) * rr;
       c.setHSL(0.08 + Math.random() * 0.04, 0.22 + Math.random() * 0.2, 0.28 + Math.random() * 0.45);
       col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
@@ -164,7 +164,7 @@ export class SolarSystem {
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     this.belt = new THREE.Points(geo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.4)')),
-      color: 0xffffff, size: 2.3, sizeAttenuation: true, transparent: true, opacity: 1.0,
+      color: 0xffffff, size: 0.55, sizeAttenuation: true, transparent: true, opacity: 1.0,
       vertexColors: true, depthWrite: false }));
     this.group.add(this.belt);
 
@@ -174,9 +174,9 @@ export class SolarSystem {
     for (let i = 0; i < M; i++) {
       const a = 0.7 + Math.random() * 9;
       const ang = Math.random() * Math.PI * 2;
-      const rr = a * AU;
+      const rr = auToScene(a);
       dpos[i * 3] = Math.cos(ang) * rr;
-      dpos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 60;
+      dpos[i * 3 + 1] = (Math.random() - 0.5) * (Math.random() ** 2) * 16;
       dpos[i * 3 + 2] = -Math.sin(ang) * rr;
       const b = 0.25 + Math.random() * 0.55;
       dcol[i * 3] = b; dcol[i * 3 + 1] = b * 0.96; dcol[i * 3 + 2] = b * 0.88;
@@ -186,7 +186,7 @@ export class SolarSystem {
     dgeo.setAttribute('color', new THREE.BufferAttribute(dcol, 3));
     this.dust = new THREE.Points(dgeo, new THREE.PointsMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0.35)')),
-      size: 3.0, sizeAttenuation: true, transparent: true, opacity: 0.6,
+      size: 0.8, sizeAttenuation: true, transparent: true, opacity: 0.6,
       vertexColors: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     this.group.add(this.dust);
   }
@@ -202,12 +202,12 @@ export class SolarSystem {
       m.visible = false;
       return m;
     };
-    this.earthUmbra = mkCone(70, 3.4, 1.9, 0x362014, 0.42);
-    this.earthPenumbra = mkCone(110, 4.6, 4.6, 0x241610, 0.20);
-    this.moonUmbra = mkCone(30, 1.0, 0.5, 0x241a1e, 0.50);
+    this.earthUmbra = mkCone(14.5, 0.70, 0.39, 0x362014, 0.42);
+    this.earthPenumbra = mkCone(23, 0.95, 0.95, 0x241610, 0.20);
+    this.moonUmbra = mkCone(6.2, 0.21, 0.10, 0x241a1e, 0.50);
     // 日食时月球本影投在地球表面的暗斑
     this.shadowSpot = new THREE.Mesh(
-      new THREE.CircleGeometry(0.42, 32),
+      new THREE.CircleGeometry(0.095, 32),
       new THREE.MeshBasicMaterial({ color: 0x060403, transparent: true, opacity: 0.72, depthWrite: false }));
     this.shadowSpot.visible = false;
     this.forceMoonOnAxis = false;
@@ -242,18 +242,24 @@ export class SolarSystem {
       this._glow2.material.opacity = Math.min(1, dSun / 2400) * 0.9;
     }
 
-    // 行星 LOD：远景放大看得见，特写恢复真实比例
-    const k = Math.min(1, Math.max(0, (dSun - 500) / 2100));
-    const s = 1 + 5 * k * k * (3 - 2 * k);
-    sun.holder.scale.setScalar(1 + 3.6 * k * k * (3 - 2 * k));
+    // 最小屏幕尺寸钳制（参考站行为）：行星/太阳永不小于数像素
+    const fovT = Math.tan((camera ? camera.fov : 60) * Math.PI / 360);
+    const minPxScale = (displayR, dist, minPx) => {
+      const rpx = displayR / (Math.max(dist, 0.01) * fovT) * (window.innerHeight / 2);
+      return Math.min(14, Math.max(1, minPx / Math.max(rpx, 0.001)));
+    };
 
     for (const p of PLANETS) {
       const { pos } = planetPosition(p.id, T);
       const entry = this.bodies.get(p.id);
       entry.holder.position.set(pos[0], pos[1], pos[2]);
-      entry.holder.scale.setScalar(s);
+      entry.holder.scale.setScalar(minPxScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 100, 9));
       entry.worldPos.copy(entry.holder.position);
-      if (entry.spin) entry.mesh.rotation.y += entry.spin * simSpeed * 0.02;
+      // 自转：按真实自转周期 + 模拟儒略日计算相位（参考站同思路，逆行自转取负）
+      if (p.rotationHours) {
+        const dir = p.rotationHours < 0 ? -1 : 1;
+        entry.mesh.rotation.y = dir * ((jd * 24 / Math.abs(p.rotationHours)) % 1) * Math.PI * 2;
+      }
       if (entry.clouds) entry.clouds.rotation.y += simSpeed * 0.0008;
       // 卫星公转（局部坐标，随 holder 一起缩放）
       for (const mo of entry.moons || []) {
@@ -269,8 +275,8 @@ export class SolarSystem {
       const cv = makePlanetTexture('moon', 11); addCraters(cv, 110);
       const mmat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.96, emissiveMap: tex(cv), emissive: new THREE.Color(0, 0, 0) });
       loadRealMap('assets/tex/planets/moon-2k.jpg', mmat);
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(1.15, 40, 28), mmat);
-      this._register('moon', mesh, MOON_INFO, 1.15, this.get('earth').holder);
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.264, 40, 28), mmat);
+      this._register('moon', mesh, MOON_INFO, 0.264, this.get('earth').holder);
     }
     const me = this.bodies.get('moon');
     me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
@@ -298,7 +304,7 @@ export class SolarSystem {
 
     // 本影斑：月球→地球射线与地球球的交点（交不上则隐藏）
     if (this.shadowSpot.visible) {
-      const R = 2.2;
+      const R = 0.455;
       const toE = earth.worldPos.clone().sub(mn.worldPos);
       const L = toE.length();
       const dir = toE.multiplyScalar(1 / L);
@@ -311,7 +317,7 @@ export class SolarSystem {
         if (t > 0 && t < L + R) {
           const p = mn.worldPos.clone().add(dir.clone().multiplyScalar(t));
           const nrm = p.clone().sub(earth.worldPos).normalize();
-          this.shadowSpot.position.copy(earth.worldPos).add(nrm.clone().multiplyScalar(R * 1.004));
+          this.shadowSpot.position.copy(earth.worldPos).add(nrm.clone().multiplyScalar(R * 1.006));
           this.shadowSpot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), nrm);
           this.shadowSpot.visible = true;
         } else this.shadowSpot.visible = false;

@@ -3,9 +3,21 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=48';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=52';
 
 const DEG = Math.PI / 180;
+
+// 参考站距离压缩表：AU → 场景单位（分段线性 ×2）
+const DIST_TABLE = [[0,0],[.387,16],[.723,28],[1,40],[1.524,55],[5.203,88],[9.537,122],[19.19,152],[30.07,175],[39.48,194]];
+export function auToScene(au) {
+  const a = Math.max(0, au);
+  for (let i = 1; i < DIST_TABLE.length; i++) {
+    const [c, d] = DIST_TABLE[i - 1], [f, h] = DIST_TABLE[i];
+    if (a <= f) return (d + (h - d) * (a - c) / (f - c)) * 2;
+  }
+  const [n, i0] = DIST_TABLE[DIST_TABLE.length - 2], [a2, r2] = DIST_TABLE[DIST_TABLE.length - 1];
+  return (r2 + (a - a2) * ((r2 - i0) / (a2 - n))) * 2;
+}
 
 export function dateToJD(date) {
   return date.getTime() / 86400000 + 2440587.5;
@@ -53,8 +65,10 @@ export function planetPosition(id, T) {
   const yh = xv * (sinO * cosw + cosO * sinw * cosI) - yv * (sinO * sinw - cosO * cosw * cosI);
   const zh = xv * (sinw * sinI) + yv * (cosw * sinI);
 
-  // 黄道坐标(xh 向春分点, zh 向北) → 场景(x, y=北, z)
-  return { pos: [xh * AU, zh * AU, -yh * AU], r: Math.hypot(xh, yh, zh), lon: Math.atan2(yh, xh) };
+  // 黄道坐标(xh 向春分点, zh 向北) → 场景(x, y=北, z)；距离按参考站查表压缩
+  const rAU = Math.hypot(xh, yh, zh) || 1e-9;
+  const f = auToScene(rAU) / rAU;
+  return { pos: [xh * f, zh * f, -yh * f], r: rAU, lon: Math.atan2(yh, xh) };
 }
 
 // 轨道椭圆采样（画轨道线用）：给一组平近点角，返回场景坐标点列
@@ -78,7 +92,9 @@ export function planetOrbitPoints(id, T, n = 256) {
     const xh = xv * (cosO * cosw - sinO * sinw * cosI) - yv * (cosO * sinw + sinO * cosw * cosI);
     const yh = xv * (sinO * cosw + cosO * sinw * cosI) - yv * (sinO * sinw - cosO * cosw * cosI);
     const zh = xv * (sinw * sinI) + yv * (cosw * sinI);
-    pts.push([xh * AU, zh * AU, -yh * AU]);
+    const rAU = Math.hypot(xh, yh, zh) || 1e-9;
+    const f = auToScene(rAU) / rAU;
+    pts.push([xh * f, zh * f, -yh * f]);
   }
   return pts;
 }
@@ -93,7 +109,7 @@ export function moonPosition(T) {
   const bet = 5.128 * DEG * Math.sin(F);               // 黄纬
   const rKM = 385001 - 20905 * Math.cos(Mm);           // 距离 km
   // 视觉轨道半径 26 单位（真实比例仅 0.257，行星尺寸已夸张，月轨同步放大）
-  const r = 26 * rKM / 385000;
+  const r = 1.1 * rKM / 385000;
   const cl = Math.cos(bet);
   const x = r * cl * Math.cos(lam), ye = r * cl * Math.sin(lam), z = r * Math.sin(bet);
   return { pos: [x, z, -ye], r, lon: lam };
