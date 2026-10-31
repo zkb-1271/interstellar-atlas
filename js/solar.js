@@ -4,11 +4,22 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=43';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=43';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=43';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=48';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints } from './astro.js?v=48';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=48';
 
 export const SUN_RADIUS = 13;
+
+const texLoader = new THREE.TextureLoader();
+function loadRealMap(url, mat) {
+  texLoader.load(url, t => {
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    mat.map = t;
+    if (mat.emissiveMap) mat.emissiveMap = t;
+    mat.needsUpdate = true;
+  });
+}
 
 function tex(cv) {
   const t = new THREE.CanvasTexture(cv);
@@ -52,6 +63,10 @@ export class SolarSystem {
   _buildSun() {
     const geo = new THREE.SphereGeometry(SUN_RADIUS, 64, 32);
     const mat = new THREE.MeshBasicMaterial({ map: tex(makeSunTexture()) });
+    texLoader.load('assets/tex/planets/sun_sss-4k.jpg', t => {
+      t.colorSpace = THREE.SRGBColorSpace;
+      mat.map = t; mat.needsUpdate = true;
+    });
     mat.color = new THREE.Color(1.6, 1.35, 1.05);   // 提亮喂给 Bloom
     this._register('sun', new THREE.Mesh(geo, mat), { ...SUN_INFO, type: 'star' }, SUN_RADIUS);
 
@@ -68,16 +83,17 @@ export class SolarSystem {
 
   _buildPlanet(p) {
     let cv = makePlanetTexture(p.type, 7 + p.id.length * 3);
-    if (p.type === 'rocky' || p.type === 'moon') addCraters(cv, p.type === 'moon' ? 220 : 140);
     const mat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.94, metalness: 0.02 });
+    if (p.tex) loadRealMap(`assets/tex/${p.tex}`, mat);       // NASA 真图覆盖
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.displayR, 48, 32), mat);
     const entry = this._register(p.id, mesh, p, p.displayR);
     entry.spin = p.spin;
     entry.moons = (MOONS[p.id] || []).map((md, i) => {
       const mcv = makePlanetTexture('moon', 30 + i * 11); addCraters(mcv, 60);
+      const mMat = new THREE.MeshStandardMaterial({ map: tex(mcv), roughness: 0.97 });
+      if (md.tex) loadRealMap(`assets/tex/${md.tex}`, mMat);
       const mMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(md.r, 24, 16),
-        new THREE.MeshStandardMaterial({ map: tex(mcv), roughness: 0.97 }));
+        new THREE.SphereGeometry(md.r, 24, 16), mMat);
       this.get(p.id).holder.add(mMesh);     // 挂在 holder：跟随公转位置但不随自转
       return { mesh: mMesh, orbitR: md.orbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05 };
     });
@@ -86,6 +102,10 @@ export class SolarSystem {
       const clouds = new THREE.Mesh(
         new THREE.SphereGeometry(p.displayR * 1.018, 48, 32),
         new THREE.MeshStandardMaterial({ map: tex(makeCloudTexture()), transparent: true, depthWrite: false, roughness: 1 }));
+      texLoader.load('assets/tex/planets/earth_clouds_nasa-2k.jpg', t => {
+        t.colorSpace = THREE.SRGBColorSpace;
+        clouds.material.map = t; clouds.material.needsUpdate = true;
+      });
       mesh.add(clouds);
       entry.clouds = clouds;
     }
@@ -102,6 +122,10 @@ export class SolarSystem {
       }
       const ring = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
         map: tex(makeRingTexture()), side: THREE.DoubleSide, transparent: true, depthWrite: false }));
+      texLoader.load('assets/tex/planets/saturn-ring-2k.png', t => {
+        t.colorSpace = THREE.SRGBColorSpace;
+        ring.material.map = t; ring.material.needsUpdate = true;
+      });
       ring.rotation.x = Math.PI / 2 - 0.47;   // 土星环倾角
       mesh.add(ring);
       entry.ring = ring;
@@ -112,7 +136,7 @@ export class SolarSystem {
       p3 => new THREE.Vector3(p3[0], p3[1], p3[2]));
     const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
     const orbit = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({
-      color: 0xcabfa4, transparent: true, opacity: 0.42 }));
+      color: 0xaab6c8, transparent: true, opacity: 0.45 }));
     this.group.add(orbit);
     entry.orbit = orbit;
   }
@@ -221,7 +245,7 @@ export class SolarSystem {
     // 行星 LOD：远景放大看得见，特写恢复真实比例
     const k = Math.min(1, Math.max(0, (dSun - 500) / 2100));
     const s = 1 + 5 * k * k * (3 - 2 * k);
-    sun.holder.scale.setScalar(1 + 2.2 * k * k * (3 - 2 * k));
+    sun.holder.scale.setScalar(1 + 3.6 * k * k * (3 - 2 * k));
 
     for (const p of PLANETS) {
       const { pos } = planetPosition(p.id, T);
@@ -244,6 +268,7 @@ export class SolarSystem {
     if (!moonEntry) {
       const cv = makePlanetTexture('moon', 11); addCraters(cv, 110);
       const mmat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.96, emissiveMap: tex(cv), emissive: new THREE.Color(0, 0, 0) });
+      loadRealMap('assets/tex/planets/moon-2k.jpg', mmat);
       const mesh = new THREE.Mesh(new THREE.SphereGeometry(1.15, 40, 28), mmat);
       this._register('moon', mesh, MOON_INFO, 1.15, this.get('earth').holder);
     }

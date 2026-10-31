@@ -23,56 +23,56 @@ export const ORBITAL_ELEMENTS = {
 
 // 展示半径：2.2 * sqrt(真实半径/地球半径)——特写真实、总览可见
 export const PLANETS = [
-  { id:'mercury', en:'MERCURY', cn:'水星', type:'rocky', displayR:1.36, spin:0.017,
+  { id:'mercury', en:'MERCURY', cn:'水星', type:'rocky', tex:'planets/mercury-2k.jpg', displayR:1.36, spin:0.017,
     radiusKm:2440,  gravity:3.7,  periodDays:87.97,  rotationHours:1407.6, tempC:'-173 ~ 427', moons:0,
     sections:[
       { t:'概览', text:'离太阳最近的行星，也是八大行星里最小的一颗。它以 88 天的速度绕日狂奔，罗马人因此把它当作信使之神墨丘利。表面与月球惊人地相似，布满 40 多亿年来的陨击疤痕。' },
       { t:'大气与表面', text:'几乎没有真正的大气，只有一层稀薄到可以忽略的外逸层，成分是氧、钠、氢。白天阳光直射处高达 427°C，夜晚骤降到 -173°C，是太阳系昼夜温差最大的世界。卡路里盆地直径 1550 公里，是它最醒目的地貌。' },
       { t:'卫星与探测', text:'水星没有卫星。人类对它知之甚少：1974 年水手 10 号首次飞掠，2011 年信使号进入环绕轨道，绘制了全星表面地图；2026 年后贝皮·科隆坡号将接棒继续解码这颗灼热的金属世界。' }
     ] },
-  { id:'venus',   en:'VENUS',   cn:'金星', type:'venus', displayR:2.15, spin:-0.004,
+  { id:'venus',   en:'VENUS',   cn:'金星', type:'venus', tex:'planets/venus_atmosphere-2k.jpg', displayR:2.15, spin:-0.004,
     radiusKm:6052,  gravity:8.87, periodDays:224.70, rotationHours:-5832.5, tempC:'464（均温）', moons:0,
     sections:[
       { t:'概览', text:'夜空中最亮的行星，中国人称它启明星与长庚星。大小与地球相仿，却是同一颗太阳下走向两个极端的孪生兄弟——464°C 的均温让它成为太阳系最热的行星。' },
       { t:'大气与表面', text:'96.5% 二氧化碳构成的浓密大气压在地表，气压是地球的 92 倍，相当于地球海面下一公里。硫酸云永久遮蔽天空，云顶风速可达每小时 360 公里。它还是唯一逆向自转的大行星：一个金星日比一个金星年还长。' },
       { t:'卫星与探测', text:'金星没有卫星。苏联 Venera 系列探测器在 1970–80 年代陆续着陆，传回地表照片——每个都只存活了几十分钟便被高温高压摧毁；麦哲伦号雷达则揭开了它火山密布的表面。' }
     ] },
-  { id:'earth',   en:'EARTH',   cn:'地球', type:'earth', displayR:2.2, spin:1.0,
+  { id:'earth',   en:'EARTH',   cn:'地球', type:'earth', tex:'planets/earth_daymap-2k.jpg', displayR:2.2, spin:1.0,
     radiusKm:6371,  gravity:9.81, periodDays:365.26, rotationHours:23.93, tempC:'15（均温）', moons:1,
     sections:[
       { t:'概览', text:'目前已知唯一存在生命的世界，太阳系第五大行星。液态海洋覆盖 71% 的表面，一颗恰到好处距离的恒星、一层保护性的大气和一个巨大的月球，共同塑造了这颗蓝色弹珠。' },
       { t:'大气与表面', text:'氮气占 78%、氧气 21% 的大气层厚达上百公里，臭氧层吸收致命紫外线，磁场偏转太阳风。板块运动让地壳不断循环再造，火山与海洋的化学平衡维持着 15°C 的地表均温。' },
       { t:'卫星与探测', text:'唯一的天然卫星月球诞生于 45 亿年前的一次天体撞击，它稳定着地轴、驱动潮汐。人类是这颗行星的探测者也是居住者：从 1968 年阿波罗 8 号回望地球的那张照片开始，我们第一次把自己的家园看成一颗行星。' }
     ] },
-  { id:'mars',    en:'MARS',    cn:'火星', type:'mars', displayR:1.60, spin:0.97,
+  { id:'mars',    en:'MARS',    cn:'火星', type:'mars', tex:'planets/mars-2k.jpg', displayR:1.60, spin:0.97,
     radiusKm:3390,  gravity:3.71, periodDays:686.98, rotationHours:24.62, tempC:'-63（均温）', moons:2,
     sections:[
       { t:'概览', text:'锈红色的沙漠世界。铁氧化物尘暴给它染上血液般的颜色，中国人称它荧惑。它拥有太阳系最高的火山奥林帕斯山（21 公里）和最深的峡谷水手谷。' },
       { t:'大气与表面', text:'大气稀薄，不到地球的 1%，95% 是二氧化碳。沙尘暴可以席卷整个星球并持续数月。干涸的河床、三角洲与水蚀矿物暗示它曾有温暖湿润的过去——如今的液态水以地下冰和极地冰盖的形式存在。' },
       { t:'卫星与探测', text:'两颗小卫星火卫一与火卫二形似土豆，可能是被俘获的小行星。火星是人类探测器造访最多的行星：从 1976 年海盗号到毅力号与祝融号，寻找古老生命痕迹的旅程至今仍在继续。' }
     ] },
-  { id:'jupiter', en:'JUPITER', cn:'木星', type:'jupiter', displayR:7.29, spin:2.4,
+  { id:'jupiter', en:'JUPITER', cn:'木星', type:'jupiter', tex:'planets/jupiter-2k.jpg', displayR:7.29, spin:2.4,
     radiusKm:69911, gravity:24.79, periodDays:4332.6, rotationHours:9.93, tempC:'-108（云顶）', moons:95,
     sections:[
       { t:'概览', text:'太阳系无可争议的王者：质量是其余七颗行星总和的 2.5 倍，可装下 1300 个地球。大红斑是一场刮了至少三百年的风暴，能吞下整个地球。' },
       { t:'大气与表面', text:'没有固体表面——向外依次是氢、液态金属氢和被压成等离子体的核心。云层被高速急流撕成明暗相间的条纹，风速达每小时 600 公里。磁场强度是地球的 2 万倍。' },
       { t:'卫星与探测', text:'已确认 95 颗卫星，四颗伽利略卫星最著名：木卫一布满活火山，木卫二冰壳下藏着全球海洋，木卫三是太阳系最大卫星。1979 年旅行者号首次近观，1995–2003 年伽利略号环绕探测，朱诺号至今仍在工作。' }
     ] },
-  { id:'saturn',  en:'SATURN',  cn:'土星', type:'saturn', displayR:6.65, spin:2.2, ring:true,
+  { id:'saturn',  en:'SATURN',  cn:'土星', type:'saturn', tex:'planets/saturn-2k.jpg', displayR:6.65, spin:2.2, ring:true,
     radiusKm:58232, gravity:10.44, periodDays:10759, rotationHours:10.66, tempC:'-139（云顶）', moons:146,
     sections:[
       { t:'概览', text:'以壮观光环著称的气态巨行星。环系宽达 28 万公里，厚度却常常只有 10 米——由无数冰粒与碎石构成，密度比水还低，理论上它能浮在足够大的海面上。' },
       { t:'大气与表面', text:'与木星类似但更轻更冷，云层呈柔和的米金色。北极有一个持续数十年的神秘六边形风暴，边长超过地球直径。风速最高每小时 1800 公里。' },
       { t:'卫星与探测', text:'146 颗卫星构成一个迷你太阳系：土卫六有大氣和液态甲烷湖，土卫二南极喷出冰羽流——它们是寻找生命的热门目标。卡西尼号 2004–2017 年环绕探测 13 年，最终葬身土星大气。' }
     ] },
-  { id:'uranus',  en:'URANUS',  cn:'天王星', type:'ice', displayR:4.39, spin:-1.4,
+  { id:'uranus',  en:'URANUS',  cn:'天王星', type:'ice', tex:'planets/uranus-2k.jpg', displayR:4.39, spin:-1.4,
     radiusKm:25362, gravity:8.69, periodDays:30687, rotationHours:-17.24, tempC:'-197（均温）', moons:28,
     sections:[
       { t:'概览', text:'一颗躺着自转的冰巨星，自转轴倾角 98°，几乎平行于轨道面——可能源于远古的一次巨型撞击。每个极点会经历长达 42 年的极昼与极夜。' },
       { t:'大气与表面', text:'大气中的甲烷吸收红光，赋予它青蓝色的宁静外观。虽被归为冰巨星，内部其实是以水、氨、甲烷组成的炽热浓稠流体，是太阳系最冷的行星，最低温 -224°C。' },
       { t:'卫星与探测', text:'28 颗卫星以莎士比亚与蒲柏笔下的人物命名（泰坦妮亚、奥伯龙……）。它是唯一只被一艘探测器造访过的大行星：1986 年旅行者 2 号飞掠 5.5 小时，拍下的照片至今仍是主流资料。' }
     ] },
-  { id:'neptune', en:'NEPTUNE', cn:'海王星', type:'ice', displayR:4.32, spin:1.5,
+  { id:'neptune', en:'NEPTUNE', cn:'海王星', type:'ice', tex:'planets/neptune-2k.jpg', displayR:4.32, spin:1.5,
     radiusKm:24622, gravity:11.15, periodDays:60190, rotationHours:16.11, tempC:'-201（均温）', moons:16,
     sections:[
       { t:'概览', text:'靠数学而非望远镜发现的行星：天文学家从天王星轨道的扰动推算出它的位置，1846 年在预测点附近 1° 内找到它。深度蓝色的表面刮着太阳系最猛烈的风。' },
@@ -115,24 +115,24 @@ export const MOONS = {
     { name: '火卫二 Deimos', r: 0.24, orbit: 4.0, period: 1.26 },
   ],
   jupiter: [
-    { name: '木卫一 Io', r: 0.42, orbit: 1.6, period: 1.77 },
-    { name: '木卫二 Europa', r: 0.38, orbit: 2.1, period: 3.55 },
-    { name: '木卫三 Ganymede', r: 0.55, orbit: 2.9, period: 7.15 },
-    { name: '木卫四 Callisto', r: 0.50, orbit: 3.9, period: 16.7 },
+    { name: '木卫一 Io', tex: 'moons/io.jpg', r: 0.42, orbit: 1.6, period: 1.77 },
+    { name: '木卫二 Europa', tex: 'moons/europa.jpg', r: 0.38, orbit: 2.1, period: 3.55 },
+    { name: '木卫三 Ganymede', tex: 'moons/ganymede.jpg', r: 0.55, orbit: 2.9, period: 7.15 },
+    { name: '木卫四 Callisto', tex: 'moons/callisto.jpg', r: 0.50, orbit: 3.9, period: 16.7 },
   ],
   saturn: [
-    { name: '土卫一 Mimas', r: 0.26, orbit: 3.0, period: 0.94 },
-    { name: '土卫二 Enceladus', r: 0.30, orbit: 3.5, period: 1.37 },
-    { name: '土卫四 Dione', r: 0.32, orbit: 4.0, period: 2.74 },
-    { name: '土卫五 Rhea', r: 0.36, orbit: 4.6, period: 4.52 },
-    { name: '土卫六 Titan', r: 0.52, orbit: 5.4, period: 15.9 },
+    { name: '土卫一 Mimas', tex: 'moons/mimas.jpg', r: 0.26, orbit: 3.0, period: 0.94 },
+    { name: '土卫二 Enceladus', tex: 'moons/enceladus.jpg', r: 0.30, orbit: 3.5, period: 1.37 },
+    { name: '土卫四 Dione', tex: 'moons/dione.jpg', r: 0.32, orbit: 4.0, period: 2.74 },
+    { name: '土卫五 Rhea', tex: 'moons/rhea.jpg', r: 0.36, orbit: 4.6, period: 4.52 },
+    { name: '土卫六 Titan', tex: 'moons/titan.jpg', r: 0.52, orbit: 5.4, period: 15.9 },
   ],
   uranus: [
     { name: '天卫三 Titania', r: 0.38, orbit: 2.4, period: 8.7 },
     { name: '天卫四 Oberon', r: 0.36, orbit: 3.0, period: 13.5 },
   ],
   neptune: [
-    { name: '海卫一 Triton', r: 0.44, orbit: 2.6, period: -5.88 },
+    { name: '海卫一 Triton', tex: 'moons/triton.jpg', r: 0.44, orbit: 2.6, period: -5.88 },
   ],
 };
 
