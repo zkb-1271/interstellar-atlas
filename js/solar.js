@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=181';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=181';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=181';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=182';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=182';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=182';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -523,10 +523,11 @@ export class SolarSystem {
       m.visible = false;
       return m;
     };
-    // 尺度跟新的行星半径走：地球 R=0.455、月球轨道 1.1、月球 R=0.264
-    this.earthUmbra = mkCone(1.9, 0.55, 0.02, 0x362014, 0.40);
-    this.earthPenumbra = mkCone(3.0, 0.78, 0.30, 0x241610, 0.16);
-    this.moonUmbra = mkCone(0.62, 0.10, 0.01, 0x241a1e, 0.50);
+    // 尺度跟新的行星半径走：地球 R=0.455、月球轨道 10 单位（≈22 个
+    // 地球半径的压缩视觉距离）、月球 R = 0.455×0.273 = 0.124（真实比例）
+    this.earthUmbra = mkCone(36, 0.46, 0.004, 0x362014, 0.40);   // 本影：真实锥度，10 单位处半径 ≈0.33
+    this.earthPenumbra = mkCone(10.5, 0.46, 0.74, 0x241610, 0.16); // 半影：随距离扩张
+    this.moonUmbra = mkCone(1.45, 0.11, 0.01, 0x241a1e, 0.50);   // 日食时月球贴到 1.4 单位处，锥尖刚好触地
     // 日食时月球本影投在地球表面的暗斑
     this.shadowSpot = new THREE.Mesh(
       new THREE.CircleGeometry(0.022, 32),
@@ -656,19 +657,22 @@ export class SolarSystem {
       const cv = makePlanetTexture('moon', 11); addCraters(cv, 110);
       const mmat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.96, emissiveMap: tex(cv), emissive: new THREE.Color(0, 0, 0) });
       loadRealMap('assets/tex/planets/moon-2k.jpg', mmat);
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.264, 40, 28), mmat);
-      const me0 = this._register('moon', mesh, MOON_INFO, 0.264, this.get('earth').holder);
+      // 月球半径用真实比例：0.455 × 0.273 ≈ 0.124（以前用显示公式算出
+      // 0.264，月地比 0.58，比真实的 0.273 大了一倍多）
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.124, 40, 28), mmat);
+      const me0 = this._register('moon', mesh, MOON_INFO, 0.124, this.get('earth').holder);
       me0.isMoon = true;
     }
     const me = this.bodies.get('moon');
     me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
     earth.holder.updateWorldMatrix(true, true);
     me.holder.getWorldPosition(me.worldPos);
-    // 日食视觉吸附：简化月历的误差足以让本影锥尖端错过地球，
-    // 观看日食时把月球贴到日地连线上，保证影子触地（与月食红月同级的夸张）
+    // 日食视觉吸附：真实月地距离（10 单位）下月球角径只有太阳的 1/7，
+    // "吞日"不成立。日食演出时把月球贴到日地连线上 1.4 单位处——
+    // 那里月面角径恰好等于太阳角径，本影锥尖也刚好触地（与月食红月同级的夸张）
     if (this.forceMoonOnAxis) {
       const toSunE = earth.worldPos.clone().normalize();
-      me.holder.position.copy(earth.worldPos).add(toSunE.multiplyScalar(26));
+      me.holder.position.copy(toSunE.multiplyScalar(1.4));
       me.worldPos.copy(me.holder.position);
     }
 

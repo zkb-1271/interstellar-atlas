@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=181';
+import { QUOTES, PLANETS } from './data.js?v=182';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=181';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=182';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -660,7 +660,7 @@ export class UI {
       const fov0 = camera.fov * Math.PI / 180;
       const rpx0 = (b.displayR / (dist0 * Math.tan(fov0 / 2))) * (height / 2);
       // 卫星标签只在贴近母星时才显示；太阳太显眼交给左侧导航轨；彗星给足曝光
-      const minR = b.isMoon ? 6 : (b.isComet ? 0.3 : (id === 'sun' ? 40 : 0.5));
+      const minR = b.isMoon ? 3 : (b.isComet ? 0.3 : (id === 'sun' ? 40 : 0.5));
       const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15 && rpx0 < 110 && rpx0 >= minR;
       if (!visible) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; rec._vis = false; continue; }
       const sx = (v.x * 0.5 + 0.5) * width, sy = (-v.y * 0.5 + 0.5) * height;

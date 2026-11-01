@@ -377,9 +377,14 @@ export const QUOTES = [
 
 // 主要卫星：r = 卫星半径（行星半径的倍数）、orbit = 轨道半径（行星半径的倍数）
 // ⚠️ 行星显示半径现在只有 0.5~1.2，卫星必须按行星半径换算，否则贴到镜头前会比行星还大
+// 卫星尺寸/距离口径（v182 校正）：
+//   r     = 卫星半径 / 行星半径 的真实比例（<0.035 的取 0.035 保底可见，
+//           否则火卫一这类小卫星只有零点几个像素）
+//   orbit = 真实轨道距离 / 行星半径（个别 >22 的压缩到 22，
+//           月球这类极端值在 solar.js 里单独处理）
 export const MOONS = {
   mars: [
-    { id: 'phobos', r: 0.06, orbit: 2.0, period: 0.32,
+    { id: 'phobos', r: 0.035, orbit: 3.0, period: 0.32,
       info: { kind: 'moon', en: 'PHOBOS', cn: '火卫一', radiusKm: 11, gravity: '0.0006', periodDays: 0.32, rotationHours: 7.66, tempC: '-40', moons: '—',
         desc: '火星最大的卫星，也是一颗"正在坠落"的卫星。',
         sections: [
@@ -387,7 +392,7 @@ export const MOONS = {
           { t: '轨道与命运', text: '它每 7.4 小时绕火星一圈，比火星自转还快，所以在火星天空里从西边升起、东边落下。潮汐作用正让它每年靠近火星约 1.8 厘米，几千万年后它将撞上火星或碎成一道行星环。' },
           { t: '探测', text: '1971 年水手 9 号首次拍到它，此后的海盗号、火星全球勘测者都曾近距离成像。日本 MMX 计划将于 2020 年代末采样返回。' },
         ] } },
-    { id: 'deimos', r: 0.05, orbit: 2.8, period: 1.26,
+    { id: 'deimos', r: 0.035, orbit: 6.9, period: 1.26,
       info: { kind: 'moon', en: 'DEIMOS', cn: '火卫二', radiusKm: 6, gravity: '0.0003', periodDays: 1.26, rotationHours: 30.3, tempC: '-40', moons: '—',
         desc: '火星较小、较远的卫星，表面被细尘填平了。',
         sections: [
@@ -397,7 +402,7 @@ export const MOONS = {
         ] } },
   ],
   jupiter: [
-    { id: 'io', tex: 'moons/io.jpg', r: 0.10, orbit: 1.9, period: 1.77,
+    { id: 'io', tex: 'moons/io.jpg', r: 0.035, orbit: 5.9, period: 1.77,
       info: { kind: 'moon', en: 'IO', cn: '木卫一', radiusKm: 1821, gravity: '1.80', periodDays: 1.77, rotationHours: 42.5, tempC: '-143（火山口 1600）', moons: '—',
         desc: '太阳系火山活动最剧烈的天体，表面被硫黄染成黄橙色。',
         sections: [
@@ -405,7 +410,7 @@ export const MOONS = {
           { t: '表面', text: '几乎没有陨击坑——火山喷出的硫和二氧化硫不断把地表抹平。颜色从亮黄到暗橙不一，全是不同形态的硫化物。' },
           { t: '探测', text: '1610 年伽利略发现它。1979 年旅行者 1 号拍到了正在喷发的火山羽流，伽利略号、朱诺号此后长期监测它的火山活动。' },
         ] } },
-    { id: 'europa', tex: 'moons/europa.jpg', r: 0.09, orbit: 2.3, period: 3.55,
+    { id: 'europa', tex: 'moons/europa.jpg', r: 0.035, orbit: 9.4, period: 3.55,
       info: { kind: 'moon', en: 'EUROPA', cn: '木卫二', radiusKm: 1561, gravity: '1.31', periodDays: 3.55, rotationHours: 85.2, tempC: '-160', moons: '—',
         desc: '冰壳之下藏着全球性海洋，是寻找地外生命的头号目标。',
         sections: [
@@ -413,7 +418,7 @@ export const MOONS = {
           { t: '为什么值得去', text: '液态水、岩石海底、潮汐加热带来的能量——生命所需的三要素这里都齐了。表面的褐色条纹被认为是海水上涌留下的盐和硫化物。' },
           { t: '探测', text: '旅行者号、伽利略号已经对它做过详细测绘；NASA 的欧罗巴快船已于 2024 年发射，预计 2030 年抵达。' },
         ] } },
-    { id: 'ganymede', tex: 'moons/ganymede.jpg', r: 0.13, orbit: 2.9, period: 7.15,
+    { id: 'ganymede', tex: 'moons/ganymede.jpg', r: 0.037, orbit: 15.0, period: 7.15,
       info: { kind: 'moon', en: 'GANYMEDE', cn: '木卫三', radiusKm: 2634, gravity: '1.43', periodDays: 7.15, rotationHours: 171.7, tempC: '-163', moons: '—',
         desc: '太阳系最大的卫星，比水星还大，也是唯一拥有磁场的卫星。',
         sections: [
@@ -421,7 +426,7 @@ export const MOONS = {
           { t: '表面', text: '两种地貌拼在一起：古老的深色区域布满陨击坑，年轻的浅色区域则是被冰火山改写过的沟槽地形。冰壳下同样可能存在咸水海洋。' },
           { t: '探测', text: 'ESA 的 JUICE 探测器于 2023 年发射，2031 年后将进入木卫三轨道，成为第一个环绕非月球卫星的探测器。' },
         ] } },
-    { id: 'callisto', tex: 'moons/callisto.jpg', r: 0.12, orbit: 3.6, period: 16.7,
+    { id: 'callisto', tex: 'moons/callisto.jpg', r: 0.035, orbit: 22.0, period: 16.7,
       info: { kind: 'moon', en: 'CALLISTO', cn: '木卫四', radiusKm: 2410, gravity: '1.24', periodDays: 16.69, rotationHours: 400.5, tempC: '-139', moons: '—',
         desc: '太阳系陨击坑最密集的表面，40 亿年几乎没变过。',
         sections: [
@@ -431,7 +436,7 @@ export const MOONS = {
         ] } },
   ],
   saturn: [
-    { id: 'mimas', tex: 'moons/mimas.jpg', r: 0.06, orbit: 2.6, period: 0.94,
+    { id: 'mimas', tex: 'moons/mimas.jpg', r: 0.035, orbit: 3.2, period: 0.94,
       info: { kind: 'moon', en: 'MIMAS', cn: '土卫一', radiusKm: 198, gravity: '0.064', periodDays: 0.94, rotationHours: 22.6, tempC: '-209', moons: '—',
         desc: '被一个 130 公里宽的巨坑砸出了一个"死星"的样子。',
         sections: [
@@ -439,7 +444,7 @@ export const MOONS = {
           { t: '争议', text: '它表面看起来毫无地质活动，但轨道摆动暗示内部可能藏着液态水，这让"死寂冰球"的形象变得可疑。' },
           { t: '与环的关系', text: '土星 C 环外缘那道宽 4800 公里的卡西尼缝，正是土卫一的引力清空的：土卫一每绕土星一圈，环粒子就被推挤两次，恰好落在缝的位置。一颗 396 公里的小卫星，就这样在 12 万公里宽的环系上刻出了一道界线。' },
         ] } },
-    { id: 'enceladus', tex: 'moons/enceladus.jpg', r: 0.07, orbit: 2.9, period: 1.37,
+    { id: 'enceladus', tex: 'moons/enceladus.jpg', r: 0.035, orbit: 4.0, period: 1.37,
       info: { kind: 'moon', en: 'ENCELADUS', cn: '土卫二', radiusKm: 252, gravity: '0.113', periodDays: 1.37, rotationHours: 32.9, tempC: '-198', moons: '—',
         desc: '南极喷出百公里高的冰羽流，是土星环 E 环的来源。',
         sections: [
@@ -447,7 +452,7 @@ export const MOONS = {
           { t: '生命线索', text: '卡西尼号穿越羽流时探测到盐、二氧化硅和有机分子，说明冰下海洋与岩石海底正在发生水热反应——这正是地球深海热泉孕育生命的条件。' },
           { t: '探测', text: '卡西尼号 2005 年首次发现羽流。至今没有专门的着陆任务，但它是行星科学界呼声最高的目标之一。' },
         ] } },
-    { id: 'dione', tex: 'moons/dione.jpg', r: 0.08, orbit: 3.2, period: 2.74,
+    { id: 'dione', tex: 'moons/dione.jpg', r: 0.035, orbit: 6.3, period: 2.74,
       info: { kind: 'moon', en: 'DIONE', cn: '土卫四', radiusKm: 561, gravity: '0.232', periodDays: 2.74, rotationHours: 65.7, tempC: '-186', moons: '—',
         desc: '表面有明亮的冰崖网络，像被划开的冰面。',
         sections: [
@@ -455,7 +460,7 @@ export const MOONS = {
           { t: '与土卫二的关系', text: '它与土卫二处于 1:2 轨道共振，引力拉扯是土卫二内部加热的重要来源之一。' },
           { t: '共轨的伴星', text: '土卫四的轨道上还有两颗更小的天体：土卫十二（Helene）跑在它前方 60 度、土卫三十四（Polydeuces）跟在后方 60 度，正好是拉格朗日 L4 / L5 点。这种一主两从的共轨结构在土星系里并不罕见。' },
         ] } },
-    { id: 'rhea', tex: 'moons/rhea.jpg', r: 0.09, orbit: 3.6, period: 4.52,
+    { id: 'rhea', tex: 'moons/rhea.jpg', r: 0.035, orbit: 8.7, period: 4.52,
       info: { kind: 'moon', en: 'RHEA', cn: '土卫五', radiusKm: 764, gravity: '0.264', periodDays: 4.52, rotationHours: 108.4, tempC: '-174', moons: '—',
         desc: '土星第二大卫星，一颗几乎纯冰的脏雪球。',
         sections: [
@@ -463,7 +468,7 @@ export const MOONS = {
           { t: '趣闻', text: '2008 年卡西尼号曾探测到疑似稀薄氧气外逸层——冰面被磁层粒子轰击分解出水分子所致。' },
           { t: '环的乌龙', text: '2008 年曾有论文宣布土卫五周围存在稀薄环系，理由是探测到了电子密度下降。后续观测始终没能拍到环，这个结论最终被撤回——它成了行星科学里一个常被引用的证据不足案例。' },
         ] } },
-    { id: 'titan', tex: 'moons/titan.jpg', r: 0.12, orbit: 4.0, period: 15.9,
+    { id: 'titan', tex: 'moons/titan.jpg', r: 0.044, orbit: 20.3, period: 15.9,
       info: { kind: 'moon', en: 'TITAN', cn: '土卫六', radiusKm: 2575, gravity: '1.35', periodDays: 15.95, rotationHours: 382.7, tempC: '-179', moons: '—',
         desc: '唯一有浓密大气的卫星，地表有液态甲烷的河流与湖泊。',
         sections: [
@@ -473,7 +478,7 @@ export const MOONS = {
         ] } },
   ],
   uranus: [
-    { id: 'titania', r: 0.10, orbit: 2.2, period: 8.7,
+    { id: 'titania', r: 0.035, orbit: 17.2, period: 8.7,
       info: { kind: 'moon', en: 'TITANIA', cn: '天卫三', radiusKm: 789, gravity: '0.379', periodDays: 8.71, rotationHours: 209, tempC: '-203', moons: '—',
         desc: '天王星最大的卫星，表面有巨大的峡谷系统。',
         sections: [
@@ -481,7 +486,7 @@ export const MOONS = {
           { t: '探测', text: '1986 年旅行者 2 号飞掠时只拍到了它南半球的一小部分，其余仍是空白。' },
           { t: '峡谷', text: '天卫三的地壳像被拉伸过：一系列平行的断层崖切开了整个半球，落差可达数公里。普遍认为这是早期内部的水结冰膨胀、把地壳顶裂的结果——和木卫二、土卫二那种由潮汐维持的活跃完全是两种机制。' },
         ] } },
-    { id: 'oberon', r: 0.09, orbit: 2.9, period: 13.5,
+    { id: 'oberon', r: 0.035, orbit: 22.0, period: 13.5,
       info: { kind: 'moon', en: 'OBERON', cn: '天卫四', radiusKm: 761, gravity: '0.346', periodDays: 13.46, rotationHours: 323, tempC: '-198', moons: '—',
         desc: '天王星最外侧的大卫星，表面布满古老陨击坑。',
         sections: [
@@ -490,7 +495,7 @@ export const MOONS = {
         ] } },
   ],
   neptune: [
-    { id: 'triton', tex: 'moons/triton.jpg', r: 0.10, orbit: 2.4, period: -5.88,
+    { id: 'triton', tex: 'moons/triton.jpg', r: 0.055, orbit: 14.4, period: -5.88,
       info: { kind: 'moon', en: 'TRITON', cn: '海卫一', radiusKm: 1353, gravity: '0.779', periodDays: -5.88, rotationHours: -141, tempC: '-235', moons: '—',
         desc: '逆向公转的"外来者"，表面有氮气间歇泉。',
         sections: [

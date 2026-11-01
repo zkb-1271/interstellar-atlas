@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=181';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=181';
-import { createDeepSpace } from './starfield.js?v=181';
-import { SolarSystem } from './solar.js?v=181';
-import { FlightController, easeOutQuint } from './flight.js?v=181';
-import { UI } from './ui.js?v=181';
-import { initLoading } from './loading.js?v=181';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=182';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=182';
+import { createDeepSpace } from './starfield.js?v=182';
+import { SolarSystem } from './solar.js?v=182';
+import { FlightController, easeOutQuint } from './flight.js?v=182';
+import { UI } from './ui.js?v=182';
+import { initLoading } from './loading.js?v=182';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -427,7 +427,7 @@ function selectPlanet(id) {
   // 特写距离：行星半径 ≈ 画面半高的 0.42（"占半屏"），按 fov 反解
   // 有卫星系的星球要退远一点；彗星用 focusR 取景（要看彗发和彗尾，不是看彗核）
   const frameR = b.focusR || b.displayR;
-  const dist = Math.max(frameR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
+  const dist = Math.max(frameR * 5.6, 0.6, (b.moonOuter || 0) * 0.55);
   let dir;
   if (id === 'sun') dir = camera.position.clone().sub(p).normalize();
   else dir = p.clone().negate().normalize();              // 行星 → 太阳（亮面朝向相机）
@@ -456,7 +456,7 @@ function setViewAngle(v) {
   const perp = new THREE.Vector3().crossVectors(toSun, new THREE.Vector3(0, 1, 0)).normalize();
   // 有卫星系的星球要退远一点；彗星用 focusR 取景（要看彗发和彗尾，不是看彗核）
   const frameR = b.focusR || b.displayR;
-  const dist = Math.max(frameR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
+  const dist = Math.max(frameR * 5.6, 0.6, (b.moonOuter || 0) * 0.55);
   let dir;
   if (v === 'sun') dir = toSun.clone();                      // 向阳面：从太阳看
   else if (v === 'dark') dir = toSun.clone().negate();       // 背光面
@@ -534,10 +534,10 @@ function setViewSpot(id) {
   if (eclipseView === 'lunar') {
     const moonP = moon.worldPos;
     const spots = {
-      // 远景：太阳—地球—月影锥整个几何关系
-      far:    { cam: ep.clone().add(antiSun.clone().multiplyScalar(3.6)).add(perp.clone().multiplyScalar(4.4)).add(new THREE.Vector3(0, 2.0, 0)), target: ep.clone().add(antiSun.clone().multiplyScalar(0.4)), range: [0.4, 800] },
+      // 远景：太阳—地球—月影锥整个几何关系（月球在 10 单位处，取景框要罩住全程）
+      far:    { cam: ep.clone().add(antiSun.clone().multiplyScalar(9)).add(perp.clone().multiplyScalar(12)).add(new THREE.Vector3(0, 3.0, 0)), target: ep.clone().add(antiSun.clone().multiplyScalar(5)), range: [0.4, 800] },
       // 侧视：地影锥与红月同框
-      side:   { cam: ep.clone().add(antiSun.clone().multiplyScalar(2.0)).add(perp.clone().multiplyScalar(2.4)).add(new THREE.Vector3(0, 0.70, 0)), target: ep.clone().add(antiSun.clone().multiplyScalar(0.75)), range: [0.3, 400] },
+      side:   { cam: ep.clone().add(antiSun.clone().multiplyScalar(5)).add(perp.clone().multiplyScalar(9)).add(new THREE.Vector3(0, 1.5, 0)), target: ep.clone().add(antiSun.clone().multiplyScalar(5)), range: [0.3, 400] },
       // 近景：贴着红月
       close:  { cam: moonP.clone().add(antiSun.clone().multiplyScalar(0.85)).add(perp.clone().multiplyScalar(0.62)).add(new THREE.Vector3(0, 0.26, 0)), target: moonP.clone(), range: [0.08, 100] },
       // 地面：站上地球朝月面，看月亮被"吃"掉
@@ -626,11 +626,12 @@ function updateEclipseTint() {
   const t = _rel.dot(_axis);
   const perp = _rel.addScaledVector(_axis, -t).length();
   let f = 0;                                            // 0 照常 → 1 全食
-  if (t > 0 && t < 1.9) {
-    const R = 0.55 * (1 - t / 1.9);                     // 本影半径
-    const P = 0.78 * (1 - t / 3.0);                     // 半影半径
+  if (t > 0 && t < 36) {
+    // 本影随距离线性收缩（地球 R=0.455 → 月球距离 10 单位处 ≈0.33），半影为示意过渡带
+    const R = Math.max(0, 0.455 - t * 0.0125);
+    const P = R + 0.2;
     if (perp < R) f = 1;
-    else if (perp < P) f = 1 - (perp - R) / Math.max(P - R, 1e-4);
+    else if (perp < P) f = 1 - (perp - R) / 0.2;
   }
   mat.color.setRGB(1 - 0.55 * f, 1 - 0.82 * f, 1 - 0.90 * f);
   // 全食红铜色自发光，不依赖光照

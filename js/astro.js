@@ -3,7 +3,7 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=181';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=182';
 
 const DEG = Math.PI / 180;
 
@@ -168,8 +168,9 @@ export function moonPosition(T) {
   const lam = Lm + 6.289 * DEG * Math.sin(Mm);         // 黄经
   const bet = 5.128 * DEG * Math.sin(F);               // 黄纬
   const rKM = 385001 - 20905 * Math.cos(Mm);           // 距离 km
-  // 视觉轨道半径 26 单位（真实比例仅 0.257，行星尺寸已夸张，月轨同步放大）
-  const r = 1.1 * rKM / 385000;
+  // 视觉轨道半径 10 单位 ≈ 22 个地球半径（真实 60.3 个，压缩但不再是
+  // "贴脸"的 2.4 个）；月球半径已改为真实比例 0.273×地球
+  const r = 10.0 * rKM / 385000;
   const cl = Math.cos(bet);
   const x = r * cl * Math.cos(lam), ye = r * cl * Math.sin(lam), z = r * Math.sin(bet);
   return { pos: [x, z, -ye], r, lon: lam };
