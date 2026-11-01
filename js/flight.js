@@ -142,7 +142,7 @@ export class FlightController {
     dom.addEventListener('pointercancel', end);
 
     window.addEventListener('wheel', e => {
-      if (e.target.closest && e.target.closest('.pc-sec, #planetCard, #eventsPanel, #constPanel, #planetRail, #timebar')) return;
+      if (e.target.closest && e.target.closest('.pc-sec, #planetCard, #eventsPanel, #constPanel, #knowPanel, #planetRail, #timebar')) return;
       e.preventDefault();
       if (this._flight) this.cancelFlight();
       const dy = clamp(e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1), -180, 180);

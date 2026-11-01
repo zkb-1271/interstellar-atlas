@@ -228,7 +228,7 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 #dirPanel li:hover { color: var(--ink); background: rgba(255,255,255,.03); }
 #dirPanel li.active { color: var(--gold-bright); background: rgba(217,179,108,.07); }
 
-/* ---------- 天象面板 ---------- *//* ---------- 天象面板 ---------- */
+/* ---------- 天象面板 ---------- */
 #eventsPanel {
   position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.97); z-index: 40;
   width: 640px; max-height: 78vh; overflow-y: auto;
@@ -239,24 +239,46 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 #eventsPanel.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
 #eventsPanel h2 { font-family: var(--serif); font-size: 26px; font-weight: 500; }
 #eventsPanel .sub { font-size: 10.5px; letter-spacing: .4em; color: var(--ink-dim); font-family: var(--mono); margin-top: 6px; }
-#eventsPanel h3 { font-size: 13px; letter-spacing: .3em; color: var(--gold); margin: 26px 0 10px; font-weight: 400; }
+#eventsPanel h3 {
+  font-size: 13px; letter-spacing: .3em; color: var(--gold); margin: 28px 0 8px; font-weight: 400;
+  display: flex; align-items: center; gap: 10px;
+}
+#eventsPanel h3::before { content: ''; width: 14px; height: 1px; background: var(--gold-dim); }
+#eventsPanel h3::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.06); }
 #eventsPanel .row {
-  display: flex; align-items: center; gap: 14px; padding: 11px 14px; border-radius: 12px;
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px;
   border: 1px solid transparent; transition: all .2s;
 }
+#ev-eclipses .row + .row, #ev-aligns .row + .row {
+  border-top: 1px solid rgba(255,255,255,.05); border-top-left-radius: 0; border-top-right-radius: 0;
+}
 #eventsPanel .row:hover { background: rgba(217, 179, 108, .05); border-color: var(--panel-border); }
-#eventsPanel .row .date { font-family: var(--mono); font-size: 15px; color: var(--gold-bright); min-width: 118px; }
+#eventsPanel .row .date { font-family: var(--mono); font-size: 15px; color: var(--gold-bright); min-width: 118px; white-space: nowrap; }
 #eventsPanel .row .what { flex: 1; font-size: 13.5px; color: var(--ink); }
 #eventsPanel .row .what small { display: block; color: var(--ink-dim); font-size: 10.5px; letter-spacing: .2em; margin-top: 2px; font-family: var(--mono); }
 #eventsPanel .row .go {
   background: none; border: 1px solid var(--gold-dim); color: var(--gold);
   font-size: 11.5px; letter-spacing: .2em; padding: 6px 14px; border-radius: 999px; cursor: none; transition: all .2s;
-  font-family: var(--sans);
+  font-family: var(--sans); white-space: nowrap;
 }
 #eventsPanel .row .go:hover { background: rgba(217, 179, 108, .12); color: var(--gold-bright); }
+#eventsPanel .panel-note { margin-top: 26px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.06);
+  font-size: 10.5px; line-height: 1.8; letter-spacing: .08em; color: rgba(151,145,127,.65); }
 #eventsClose { position: absolute; top: 22px; right: 26px; background: none; border: none;
   color: var(--ink-dim); font-size: 17px; cursor: none; }
 #eventsClose:hover { color: var(--gold-bright); }
+
+/* ---------- 滚动条：面板统一暗金细滚动条（替代系统白条） ---------- */
+.sideCard::-webkit-scrollbar, #eventsPanel::-webkit-scrollbar,
+#knowPanel::-webkit-scrollbar, #dirPanel::-webkit-scrollbar { width: 7px; }
+.sideCard::-webkit-scrollbar-track, #eventsPanel::-webkit-scrollbar-track,
+#knowPanel::-webkit-scrollbar-track, #dirPanel::-webkit-scrollbar-track { background: transparent; }
+.sideCard::-webkit-scrollbar-thumb, #eventsPanel::-webkit-scrollbar-thumb,
+#knowPanel::-webkit-scrollbar-thumb, #dirPanel::-webkit-scrollbar-thumb {
+  background: rgba(217,179,108,.18); border-radius: 4px; }
+.sideCard::-webkit-scrollbar-thumb:hover, #eventsPanel::-webkit-scrollbar-thumb:hover,
+#knowPanel::-webkit-scrollbar-thumb:hover, #dirPanel::-webkit-scrollbar-thumb:hover {
+  background: rgba(217,179,108,.34); }
 
 /* ---------- 天象观景位 ---------- */
 #viewbar {
@@ -325,7 +347,9 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
 #loading .galaxy {
-  width: 600px; height: 600px; display: block; margin-bottom: -34px;
+  /* 尺寸跟随视口：矮窗口上不能再让 600px 的星系把文字面板挤出屏幕 */
+  width: min(600px, 62vmin); height: min(600px, 62vmin);
+  display: block; margin-bottom: calc(min(600px, 62vmin) * -0.056);
   filter: blur(0.4px) saturate(1.05);
   animation: galaxyIn 2.4s cubic-bezier(.2,.7,.3,1) both;
 }
@@ -341,7 +365,7 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   color: rgba(217,179,108,.55); margin-bottom: 16px;
 }
 #loading h1 {
-  font-family: var(--serif); font-size: 36px; font-weight: 400;
+  font-family: var(--serif); font-size: min(36px, 6.5vw); font-weight: 400;
   letter-spacing: .52em; text-indent: .52em; margin: 0;
   color: #f4e7cc; text-shadow: 0 0 40px rgba(217,179,108,.35);
 }
@@ -621,3 +645,6 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   transition: opacity .16s, transform .16s;
 }
 #tip.show { opacity: 1; transform: translateY(0); }
+
+/* 长名字（猎户座大星云、67P 楚留莫夫-格拉西缅科）自动缩字号，避免撑成两行 */
+.sideCard h1.long { font-size: 34px; line-height: 1.18; letter-spacing: .01em; }

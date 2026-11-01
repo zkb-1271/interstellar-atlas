@@ -3,8 +3,8 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=169';
-import { CONSTELLATIONS } from './data.js?v=169';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=173';
+import { CONSTELLATIONS, NEBULAE } from './data.js?v=173';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -144,57 +144,45 @@ export function createDeepSpace() {
   constGroup.name = 'constellations';
   group.add(constGroup);
 
-  // ---------- 远处星云（发射星云 / 反射星云）----------
+  // ---------- 远处星云：按真实赤经赤纬摆放，落在各自的星座里 ----------
+  // 每一个都可悬停高亮、可点开档案（和星座用同一套侧边卡）
   const nebGroup = new THREE.Group();
-  const NEB = [
-    { rgb: [150, 72, 190], size: 5200, op: 0.22 },   // 紫
-    { rgb: [58, 120, 205], size: 6000, op: 0.19 },   // 蓝
-    { rgb: [205, 96, 68], size: 4600, op: 0.20 },    // 红
-    { rgb: [70, 178, 168], size: 4200, op: 0.17 },   // 青
-    { rgb: [190, 130, 62], size: 6800, op: 0.16 },   // 金褐
-    { rgb: [120, 90, 210], size: 3400, op: 0.19 },   // 蓝紫
-    { rgb: [176, 70, 120], size: 3800, op: 0.17 },   // 洋红
-  ];
-  // 默认深空机位朝这个方向看：先在这一带手放三团，保证一进来就能看见
-  const vd = new THREE.Vector3(5200, -5600, -12600).normalize();
-  const vu = new THREE.Vector3().crossVectors(vd, new THREE.Vector3(0, 1, 0)).normalize();
-  const vv = new THREE.Vector3().crossVectors(vu, vd).normalize();
-  const HERO = [
-    { kx: 0.42, ky: 0.20, rgb: [150, 72, 190], size: 5600, op: 0.30 },
-    { kx: -0.46, ky: -0.16, rgb: [205, 96, 68], size: 4800, op: 0.26 },
-    { kx: 0.06, ky: -0.50, rgb: [58, 120, 205], size: 6400, op: 0.24 },
-  ];
-  for (const h of HERO) {
-    const dir = vd.clone().addScaledVector(vu, h.kx).addScaledVector(vv, h.ky).normalize();
-    const tex = new THREE.CanvasTexture(makeNebulaSprite(30 + h.kx * 90, 256, h.rgb));
+  window.__nebData = [];
+  const nebRecs = [];
+  for (const n of NEBULAE) {
+    const dir = skyDir(n.ra, n.dec);
+    const cv = makeNebulaSprite(n.hue, 512, n.rgb);
+    const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
+    const baseOp = n.size > 4400 ? 0.22 : 0.28;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: tex, transparent: true, opacity: h.op, depthWrite: false,
+      map: tex, transparent: true, opacity: baseOp, depthWrite: false,
       blending: THREE.AdditiveBlending }));
-    sp.position.copy(dir.multiplyScalar(R * 0.93));
-    sp.scale.setScalar(h.size);
-    nebGroup.add(sp);
-  }
-
-  const nr = { s: 90210 };
-  NEB.forEach((n, i) => {
-    // 偏向银道面分布（真实星云大多在银盘上）
-    let x = rand(nr) * 2 - 1, y = rand(nr) * 2 - 1, z = rand(nr) * 2 - 1;
-    const l = Math.hypot(x, y, z) || 1; x /= l; y /= l; z /= l;
-    y *= 0.42;
-    const ct = Math.cos(0.5), st = Math.sin(0.5);
-    const y2 = y * ct - x * st, x2 = y * st + x * ct;
-    const dir = new THREE.Vector3(x2, y2, z).normalize();
-
-    const tex = new THREE.CanvasTexture(makeNebulaSprite(30 + i * 37, 256, n.rgb));
-    tex.colorSpace = THREE.SRGBColorSpace;
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: tex, transparent: true, opacity: n.op, depthWrite: false,
-      blending: THREE.AdditiveBlending, color: 0xffffff }));
-    sp.position.copy(dir.multiplyScalar(R * 0.93));
+    const pos = dir.clone().multiplyScalar(R * 0.93);
+    sp.position.copy(pos);
     sp.scale.setScalar(n.size);
     nebGroup.add(sp);
-  });
+    // 卡片配图：把带 alpha 的星云贴图叠到深底上（叠加两次提亮），
+    // 否则直接导 JPEG 会得到一整块全黑的图。
+    const card = document.createElement('canvas');
+    card.width = card.height = 360;
+    const g2 = card.getContext('2d');
+    g2.fillStyle = '#05060a'; g2.fillRect(0, 0, 360, 360);
+    g2.globalCompositeOperation = 'lighter';
+    g2.drawImage(cv, 0, 0, 360, 360);
+    g2.drawImage(cv, 0, 0, 360, 360);
+    const rec = { id: n.id, info: n, center: pos.clone(), size: n.size,
+                  sprite: sp, baseOp, img: card.toDataURL('image/jpeg', 0.88) };
+    nebRecs.push(rec);
+    window.__nebData.push(rec);
+  }
+  // 瞄准高亮：被瞄的那团变亮，其余压暗
+  nebGroup.userData.setHighlight = (id) => {
+    for (const r of nebRecs) {
+      r.sprite.material.opacity = r.id === id ? Math.min(0.72, r.baseOp * 2.6)
+                                              : r.baseOp * (id ? 0.55 : 1);
+    }
+  };
   nebGroup.name = 'nebulae';
   group.add(nebGroup);
 

@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=169';
+import { QUOTES, PLANETS } from './data.js?v=173';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=169';
+import { fmtDateTime } from './astro.js?v=173';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -266,6 +266,7 @@ export class UI {
     showCard(info, kicker) {
     this.card.querySelector('#pc-kicker').textContent = kicker;
     this.card.querySelector('#pc-cn').textContent = info.cn;
+    this.card.querySelector('#pc-cn').classList.toggle('long', info.cn.length > 4);
     this.card.querySelector('#pc-en').textContent = info.en;
     this.card.querySelector('#pc-desc').innerHTML = (info.sections || [{ t: '', text: info.desc || '' }])
       .map(sec => sec.t ? `<div class="pc-sec"><h4>${sec.t}</h4><p>${sec.text}</p></div>` : `<p>${sec.text}</p>`)
@@ -339,7 +340,8 @@ export class UI {
       <h3>日月食 · ECLIPSES</h3>
       <div id="ev-eclipses"></div>
       <h3>行星连珠 · ALIGNMENTS</h3>
-      <div id="ev-aligns"><div class="row" style="color:var(--ink-dim);font-size:12px">正在扫描未来十年五星（水金火木土）天象……</div></div>`;
+      <div id="ev-aligns"><div class="row" style="color:var(--ink-dim);font-size:12px">正在扫描未来十年五星（水金火木土）天象……</div></div>
+      <div class="panel-note">跳转后时间会停在事件发生的真实时刻，可点底部时间栏的速率按钮继续推进。「地面」机位模拟站在地表仰望的视角。</div>`;
     root.appendChild(p);
     this.eventsPanel = p;
     p.querySelector('#eventsClose').addEventListener('click', () => this.cb.onCloseEvents());
@@ -388,29 +390,61 @@ export class UI {
       <div class="pc-sub" id="cp-sub"></div>
       <div class="cp-img" id="cp-img"></div>
       <div class="pc-desc" id="cp-desc"></div>
-      <div class="stats" id="cp-stats"></div>`;
+      <div class="stats" id="cp-stats"></div>
+      <div class="pc-facts" id="cp-facts"></div>`;
     root.appendChild(p);
     this.constPanel = p;
     p.querySelector('#constClose').addEventListener('click', () => { this.hideConstPanel(); this.cb.onConstClose && this.cb.onConstClose(); });
   }
-  showConstPanel(c) {
+  // 星座卡与星云卡共用这一张（内容不同，版式一致）
+  showSkyCard(o) {
     const q = id => this.constPanel.querySelector(id);
-    q('#cp-kicker').textContent = `CONSTELLATION · ${c.en}`;
-    q('#cp-cn').textContent = c.cn;
-    q('#cp-en').textContent = c.en;
-    q('#cp-sub').textContent = c.season ? `最佳观测 ${c.season}　·　占天球 ${c.area} 平方度（第 ${c.rank}）` : '';
+    q('#cp-kicker').textContent = o.kicker;
+    q('#cp-cn').textContent = o.cn;
+    q('#cp-cn').classList.toggle('long', o.cn.length > 4);
+    q('#cp-en').textContent = o.en;
+    q('#cp-sub').textContent = o.sub || '';
     const img = q('#cp-img');
-    img.style.backgroundImage = c.img ? `url(${c.img})` : 'none';
-    img.style.display = c.img ? '' : 'none';
-    q('#cp-desc').innerHTML = `<div class="pc-sec"><h4>概览</h4><p>${c.desc}</p></div>`;
-    const rows = [
-      ['亮星', c.star || '—'],
-      ['深空天体', c.dso || '—'],
-      ['星数 / 连线', `${c.stars.length} 颗 · ${c.lines.length} 条`],
-    ];
-    q('#cp-stats').innerHTML = rows.map(r => `<div class="stat"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+    img.style.backgroundImage = o.img ? `url(${o.img})` : 'none';
+    img.style.display = o.img ? '' : 'none';
+    q('#cp-desc').innerHTML = (o.sections && o.sections.length
+      ? [{ t: '概览', text: o.desc }, ...o.sections]
+      : [{ t: '概览', text: o.desc }])
+      .map(sec => `<div class="pc-sec"><h4>${sec.t}</h4><p>${sec.text}</p></div>`).join('');
+    q('#cp-stats').innerHTML = (o.rows || [])
+      .map(r => `<div class="stat"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+    q('#cp-facts').innerHTML = (o.facts && o.facts.length) ? `
+      <div class="pf-k">冷知识 · FIELD NOTES</div>
+      <ul>${o.facts.map(f => `<li>${f}</li>`).join('')}</ul>` : '';
     this.constPanel.classList.add('show');
     this.constPanel.scrollTop = 0;
+  }
+  showConstPanel(c) {
+    this.showSkyCard({
+      kicker: `CONSTELLATION · ${c.en}`,
+      cn: c.cn, en: c.en,
+      sub: c.season ? `最佳观测 ${c.season}　·　占天球 ${c.area} 平方度（第 ${c.rank}）` : '',
+      img: c.img, desc: c.desc,
+      rows: [
+        ['亮星', c.star || '—'],
+        ['深空天体', c.dso || '—'],
+        ['星数 / 连线', `${c.stars.length} 颗 · ${c.lines.length} 条`],
+      ],
+    });
+  }
+  showNebulaPanel(n) {
+    this.showSkyCard({
+      kicker: `DEEP SKY · ${n.abbr || n.en}`,
+      cn: n.cn, en: n.en,
+      sub: `${n.type}　·　${n.distance}`,
+      img: n.img, desc: n.desc, sections: n.sections, facts: n.facts,
+      rows: [
+        ['类型', n.type],
+        ['距离', n.distance],
+        ['尺度', n.span],
+        ['所在星座', n.where],
+      ],
+    });
   }
   hideConstPanel() { this.constPanel.classList.remove('show'); }
 
@@ -542,13 +576,24 @@ export class UI {
   get knowOpen() { return this.knowPanel.classList.contains('show'); }
   showConstAim(c, x, y) {
     this.aimId = c.id;                 // 被瞄准的星座不再显示常驻名字，避免和瞄准标记叠在一起
+    this.aimKind = 'const';
     this.aimTag.classList.add('show');
     this.aimTag.style.left = x + 'px';
     this.aimTag.style.top = y + 'px';
     this.aimTag.querySelector('.cn').textContent = c.cn;
     this.aimTag.querySelector('.en').textContent = c.en + ' · 点击凝望';
   }
-  hideConstAim() { this.aimId = null; this.aimTag.classList.remove('show'); }
+  showNebAim(n, x, y) {
+    this.aimId = n.id;
+    this.aimKind = 'neb';
+    this.aimTag.classList.add('show');
+    this.aimTag.style.left = x + 'px';
+    this.aimTag.style.top = y + 'px';
+    this.aimTag.querySelector('.cn').textContent = n.cn;
+    this.aimTag.querySelector('.en').textContent = `${n.abbr || n.en} · ${n.type} · 点击查看`;
+  }
+  hideAim() { this.aimId = null; this.aimKind = null; this.aimTag.classList.remove('show'); }
+  hideConstAim() { this.hideAim(); }
 
   // 提示框：原生 title 会跟鼠标飘、样式也不统一，这里自己画一个
   _buildTip(root) {

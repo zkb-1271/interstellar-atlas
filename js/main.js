@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=169';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=169';
-import { createDeepSpace } from './starfield.js?v=169';
-import { SolarSystem } from './solar.js?v=169';
-import { FlightController, easeOutQuint } from './flight.js?v=169';
-import { UI } from './ui.js?v=169';
-import { initLoading } from './loading.js?v=169';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=173';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=173';
+import { createDeepSpace } from './starfield.js?v=173';
+import { SolarSystem } from './solar.js?v=173';
+import { FlightController, easeOutQuint } from './flight.js?v=173';
+import { UI } from './ui.js?v=173';
+import { initLoading } from './loading.js?v=173';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -60,11 +60,37 @@ const deepSky = createDeepSpace();
 scene.add(deepSky);
 const constGroup = deepSky.getObjectByName('constellations');
 const nebGroup = deepSky.getObjectByName('nebulae');
-// 星云属于深空装饰：进太阳系要一起收起，别给太阳系背景染上彩色雾
-function setConstVisible(v) {
-  if (constGroup) constGroup.visible = v;
-  if (nebGroup) nebGroup.visible = v;
+// 深空层（星座连线 + 星云）淡入淡出：切换视角时按透明度渐变，
+// 不再"凭空出现 / 瞬间消失"。baseOp 记录每个材质的原始不透明度。
+let skyFade = 0;
+function applySkyFade(f) {
+  skyFade = f;
+  for (const g of [constGroup, nebGroup]) {
+    if (!g) continue;
+    g.visible = f > 0.012;
+    g.traverse(o => {
+      const m = o.material;
+      if (!m || m.opacity === undefined) return;
+      if (m.userData.baseOp === undefined) m.userData.baseOp = m.opacity;
+      m.opacity = m.userData.baseOp * f;
+    });
+  }
 }
+
+// 轻量补间：给"太阳系缩小退场 / 星座淡入"这类一次性动画用
+const tweens = [];
+const easeInOutT = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function addTween(dur, fn, done) { tweens.push({ t: 0, dur, fn, done }); }
+function stepTweens(dt) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    tw.t = Math.min(tw.dur, tw.t + dt);
+    const e = tw.dur > 0 ? tw.t / tw.dur : 1;
+    tw.fn(e);
+    if (e >= 1) { tweens.splice(i, 1); if (tw.done) tw.done(); }
+  }
+}
+
 function setSolarVisible(v) { solar.group.visible = v; }
 const solar = new SolarSystem(scene);
 const flight = new FlightController(camera, canvas);
@@ -143,15 +169,17 @@ setInterval(() => { if (mode === 'deep' && !document.hidden) ui._setQuote(); }, 
 // ---------- 模式切换 ----------
 function goDeep() {
   mode = 'deep';
+  tweens.length = 0;              // 换模式时作废未完成的过渡补间
   flight.setFreePitch(true);      // 深空：没有地平线，随便往哪转
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
   // 关键：飞行过程中太阳系必须还在，否则就是"对着空星空拉远"
-  // 落地（3.6s）后再收起太阳系、点亮星座连线，形成"退场—抵达"的层次
+  // 落地（3.6s）后太阳系整体缩小退场、星座淡入，形成"退场—抵达"的层次
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
-  setConstVisible(false);
+  solar.group.scale.setScalar(1);
+  applySkyFade(0);
   ui.setRailActive(null);
   flight.follow(null);
   ui.setMode('deep');
@@ -161,31 +189,43 @@ function goDeep() {
     camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.6,
     onDone: () => {
       deepReady = true;
-      setSolarVisible(false);
-      setConstVisible(true);
+      // 太阳系退场：整体逐渐缩小到看不见，而不是最后一帧直接消失
+      addTween(1.5, e => {
+        solar.group.scale.setScalar(Math.max(0.001, 1 - easeInOutT(e)));
+      }, () => {
+        setSolarVisible(false);
+        solar.group.scale.setScalar(1);   // 复位，下次进场是正常尺寸
+      });
       solar.setOrbitsVisible(false);
-      flight.setRange(50, 18500);      // 别拉出银河天球（半径 19700）之外
+      // 星座与星云淡入：随透明度慢慢浮现，不再凭空出现
+      addTween(2.0, e => applySkyFade(e * e * (3 - 2 * e)));
+      flight.setRange(50, 16000);      // 别拉出银河天球（半径 19700）之外
     },
   });
 }
 
 function enterSolar() {
   mode = 'solar';
+  tweens.length = 0;
   deepReady = false;
   flight.setFreePitch(false);
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
+  solar.group.scale.setScalar(1);
+  // 星座连线淡出，而不是瞬间消失
+  if (skyFade > 0.01) addTween(1.1, e => applySkyFade(skyFade * (1 - e)), () => applySkyFade(0));
   ui.hideConstPanel();
   ui.setMode('solar');
   const oc = computeOverviewCam();
   flight.flyTo({
     camPos: oc.camPos, target: oc.target, duration: 3.0,
-    onDone: () => { setConstVisible(false); flight.setRange(60, 18500); },
+    onDone: () => { flight.setRange(60, 18500); },
   });
 }
 
 function goOverview() {
   mode = 'solar';
+  tweens.length = 0;
   deepReady = false;
   flight.setFreePitch(false);
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
@@ -193,6 +233,9 @@ function goOverview() {
   ui.showViewbar(null); flight.setAutoOrbit(false);
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
+  solar.group.scale.setScalar(1);
+  // 星座连线淡出：从深空飞回来时随视野一起退场，而不是突然抽走
+  if (skyFade > 0.01) addTween(1.1, e => applySkyFade(skyFade * (1 - e)), () => applySkyFade(0));
   ui.hideConstPanel();
   ui.setRailActive(null);
   flight.follow(null);
@@ -200,10 +243,9 @@ function goOverview() {
   ui.hideCard();
   ui.hideEvents();
   const oc2 = computeOverviewCam();
-  // 星座连线留到落地再收：从深空飞回来时，连线随视野一起退场更自然
   flight.flyTo({
     camPos: oc2.camPos, target: oc2.target, duration: 3.0,
-    onDone: () => { setConstVisible(false); flight.setRange(0.9, 18500); },
+    onDone: () => { flight.setRange(0.9, 18500); },
   });
 }
 
@@ -218,6 +260,7 @@ canvas.addEventListener('pointerup', e => {
   downXY = null;
   if (moved >= 5 || flight.isFlying) return;
   if (hoverId && mode === 'solar') selectPlanet(hoverId);
+  else if (aimNeb && mode === 'deep') focusNebula(aimNeb.info.id);
   else if (aimConst && mode === 'deep') focusConst(aimConst.id);
 });
 canvas.addEventListener('pointermove', e => {
@@ -252,37 +295,68 @@ function setHover(id) {
   canvas.style.cursor = id ? 'none' : 'none';
 }
 
-// ---------- 深空：星座瞄准 ----------
-let aimConst = null;
+// ---------- 深空：星座 / 星云瞄准 ----------
+let aimConst = null, aimNeb = null;
 const _cv = new THREE.Vector3();
-function updateConstAim() {
-  if (mode !== 'deep' || !constGroup || !window.__constData) {
-    if (aimConst) {
-      aimConst = null;
-      constGroup?.userData.setHighlight?.(null);
-      ui.hideConstAim();
-      if (mode !== 'deep') ui.setReticleHover(false);
-    }
+const _cv2 = new THREE.Vector3();
+
+function clearAim() {
+  aimConst = null; aimNeb = null;
+  constGroup?.userData.setHighlight?.(null);
+  nebGroup?.userData.setHighlight?.(null);
+  ui.hideAim();
+  ui.setReticleHover(false);
+}
+
+function updateAim() {
+  if (mode !== 'deep' || !constGroup) {
+    if (aimConst || aimNeb) clearAim();
     return;
   }
   const mx = (pointer.x * 0.5 + 0.5) * innerWidth;
   const my = (-pointer.y * 0.5 + 0.5) * innerHeight;
-  let best = null, bd = 110;
-  for (const c of window.__constData) {
+  const tanH = Math.tan(camera.fov * Math.PI / 360);
+
+  // 星座：固定 110px 容差
+  let bc = null, bcScore = 1;
+  for (const c of window.__constData || []) {
     _cv.copy(c.center).project(camera);
     if (_cv.z > 1) continue;
     const sx = (_cv.x * 0.5 + 0.5) * innerWidth;
     const sy = (-_cv.y * 0.5 + 0.5) * innerHeight;
     const d = Math.hypot(sx - mx, sy - my);
-    if (d < bd) { bd = d; best = c; }
+    const score = d / 110;
+    if (score < bcScore) { bcScore = score; bc = c; }
   }
-  if (best !== aimConst) {
-    aimConst = best;
-    constGroup.userData.setHighlight?.(best ? best.id : null);
-    ui.setReticleHover(!!best);
-    if (!best) ui.hideConstAim();
+
+  // 星云：容差按它在屏幕上的半径算（大星云更容易点中）
+  let bn = null, bnScore = 1;
+  for (const n of window.__nebData || []) {
+    _cv2.copy(n.center).project(camera);
+    if (_cv2.z > 1) continue;
+    const sx = (_cv2.x * 0.5 + 0.5) * innerWidth;
+    const sy = (-_cv2.y * 0.5 + 0.5) * innerHeight;
+    const dist = camera.position.distanceTo(n.center);
+    const rpx = (n.size * 0.5) / (dist * tanH) * (innerHeight / 2);
+    if (rpx < 10) continue;
+    const score = Math.hypot(sx - mx, sy - my) / Math.max(rpx * 0.8, 22);
+    if (score < bnScore) { bnScore = score; bn = n; }
   }
-  if (best) ui.showConstAim(best, mx, my);
+
+  // 两者都命中时，按"离中心更近"的那一个算
+  const kind = bn && (!bc || bnScore <= bcScore) ? 'neb' : (bc ? 'const' : null);
+  const id = kind === 'neb' ? bn.info.id : (bc ? bc.id : null);
+  const prev = aimNeb ? aimNeb.info.id : (aimConst ? aimConst.id : null);
+  if (id !== prev) {
+    aimNeb = kind === 'neb' ? bn : null;
+    aimConst = kind === 'const' ? bc : null;
+    constGroup.userData.setHighlight?.(aimConst ? aimConst.id : null);
+    nebGroup.userData.setHighlight?.(aimNeb ? aimNeb.info.id : null);
+    ui.setReticleHover(!!id);
+    if (!id) ui.hideAim();
+  }
+  if (aimNeb) ui.showNebAim(aimNeb.info, mx, my);
+  else if (aimConst) ui.showConstAim(aimConst, mx, my);
 }
 
 // ---------- 聚焦天体 ----------
@@ -377,8 +451,12 @@ let eclipseEvent = null;      // 当前观看的日月食事件
 function jumpEclipse(ev) {
   ui.hideEvents();
   mode = 'solar';
+  tweens.length = 0;
   flight.setFreePitch(false);
   solar.setOrbitsVisible(true);
+  setSolarVisible(true);
+  solar.group.scale.setScalar(1);
+  applySkyFade(0);               // 从深空直接跳天象时，把星座/星云一起收干净
   ui.setMode('solar');
   ui.hideCard();
   selectedId = null;
@@ -445,8 +523,13 @@ function openEvents() {
   ui.showEvents();
   if (!alignCache) {
     setTimeout(() => {
-      alignCache = findAlignments(Math.floor(jd), 3650, 2);
-      ui.fillAlignments(alignCache, fmtDate);
+      try {
+        alignCache = findAlignments(Math.floor(jd), 3650, 2);
+        ui.fillAlignments(alignCache, fmtDate);
+      } catch (err) {
+        alignCache = [];
+        ui.fillAlignments([], fmtDate);   // 扫描出错也要把"正在扫描"占位替换掉
+      }
     }, 60);
   }
 }
@@ -454,6 +537,7 @@ function openEvents() {
 function jumpAlignment(ev) {
   ui.hideEvents();
   mode = 'solar';
+  tweens.length = 0;
   flight.setFreePitch(false);
   solar.setOrbitsVisible(true);
   ui.setMode('solar');
@@ -462,7 +546,8 @@ function jumpAlignment(ev) {
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
   setSolarVisible(true);
-  setConstVisible(false);
+  solar.group.scale.setScalar(1);
+  applySkyFade(0);
   ui.hideConstPanel();
   speedIdx = 0; ui.setActiveSpeed(0);
   jd = ev.jd;
@@ -506,7 +591,24 @@ function updateEclipseTint() {
   mat.emissive.setRGB(0.55 * f, 0.13 * f, 0.05 * f);
 }
 
-// ---------- 星座凝视 ----------
+// ---------- 深空天体凝视（星座 / 星云共用） ----------
+function flyToSky(dir) {
+  const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+  const camPos = dir.clone().multiplyScalar(6200).add(side.clone().multiplyScalar(900)).add(new THREE.Vector3(0, 400, 0));
+  const target0 = dir.clone().multiplyScalar(18500);
+  // 目标点沿"相机右方向"偏移，让天体落在画面左侧、不被右边的档案卡压住
+  const viewDir = target0.clone().sub(camPos).normalize();
+  const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
+  const shift = camPos.distanceTo(target0) * _tanHalf() * camera.aspect * 0.30;
+  flight.follow(null);
+  flight.flyTo({
+    camPos,
+    target: target0.add(camRight.multiplyScalar(shift)),
+    duration: 2.4, arc: 0.1,
+    onDone: () => flight.setRange(2200, 14000),
+  });
+}
+
 function focusConst(id) {
   const c = CONSTELLATIONS.find(x => x.id === id);
   if (!c) return;
@@ -514,27 +616,23 @@ function focusConst(id) {
   ui.showConstPanel(c);
   const data = (window.__constData || []).find(x => x.id === id);
   if (!data) return;
-  const dir = data.center.clone().normalize();
-  const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-  const camPos = dir.clone().multiplyScalar(6200).add(side.clone().multiplyScalar(900)).add(new THREE.Vector3(0, 400, 0));
-  // 目标点沿"相机右方向"偏移，让星座落在画面左侧、不被右边的档案卡压住
-  const viewDir = dir.clone().multiplyScalar(18500).sub(camPos).normalize();
-  const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
-  const dist = camPos.distanceTo(dir.clone().multiplyScalar(18500));
-  const shift = dist * _tanHalf() * camera.aspect * 0.30;
-  flight.follow(null);
-  flight.flyTo({
-    camPos,
-    target: dir.clone().multiplyScalar(18500).add(camRight.multiplyScalar(shift)),
-    duration: 2.4, arc: 0.1,
-    onDone: () => flight.setRange(1500, 26000),
-  });
+  flyToSky(data.center.clone().normalize());
 }
+
+// 星云：用真实的赤经赤纬方向取景
+function focusNebula(id) {
+  const rec = (window.__nebData || []).find(x => x.info.id === id);
+  if (!rec) return;
+  ui.hideCard();
+  ui.showNebulaPanel({ ...rec.info, img: rec.img });   // 配图存在记录上，不在 data 里
+  flyToSky(rec.center.clone().normalize());
+}
+
 function closeConst() {
   ui.hideConstPanel();
   flight.flyTo({
     camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 2.2, arc: 0.25,
-    onDone: () => flight.setRange(50, 30000),
+    onDone: () => flight.setRange(50, 16000),
   });
 }
 
@@ -559,14 +657,16 @@ function frame(dt) {
 
     flight.applyPitchLink(overviewViewHeight());
     flight.update(dt);
-    // 从深空飞回时，接近太阳系的过程中把星座连线收掉（别等到最后一帧才跳变）
-    if (mode === 'solar' && constGroup && constGroup.visible && flight.viewHeight < 900) setConstVisible(false);
+    stepTweens(dt);        // 太阳系缩小退场 / 星座淡入淡出
+    // 硬性保险：相机永远留在银河天球（半径 19700）之内，防"飞出天球穿模"
+    const camL = camera.position.length();
+    if (camL > 19000) camera.position.multiplyScalar(19000 / camL);
     updateHover();
-    updateConstAim();
+    updateAim();
 
     ui.updateDate(jd);
     ui.updateOverlay(solar.bodies, camera, mode, hoverId, selectedId, innerWidth, innerHeight);
-  ui.updateConstLabels(window.__constData || [], camera, mode === 'deep' && deepReady);
+  ui.updateConstLabels(window.__constData || [], camera, mode === 'deep' && deepReady && skyFade > 0.5);
 
     composer.render();
   } catch (err) {
@@ -613,8 +713,9 @@ function bootSolar() {
   mode = 'solar';
   solar.setOrbitsVisible(true);
   solar.group.visible = true;
+  solar.group.scale.setScalar(1);
   setSolarVisible(true);
-  setConstVisible(false);
+  applySkyFade(0);
   ui.setMode('solar');
   ui.setRailActive(null);
 }
@@ -629,5 +730,6 @@ window.__scene = {
   setPositionMode: (m) => { positionMode = m; },
   setFreePitch: (v) => flight.setFreePitch(v),
   focusConst: (id) => focusConst(id),
+  focusNebula: (id) => focusNebula(id),
   get state() { return { mode, jd, speedIdx, eclipseView, selectedId, positionMode, deepReady, flying: flight.isFlying }; },
 };

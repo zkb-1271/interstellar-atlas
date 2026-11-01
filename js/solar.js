@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=169';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=169';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=169';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=173';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=173';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=173';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -118,18 +118,21 @@ export class SolarSystem {
       if (md.tex) loadRealMap(`assets/tex/${md.tex}`, mMat);
       const mMesh = new THREE.Mesh(
         new THREE.SphereGeometry(mR, 24, 16), mMat);
-      // 卫星轨道金圈：用 LineLoop 保证永远是 1px 细线（RingGeometry 近看会变成粗带）
+      // 卫星轨道金圈：与卫星实际路径同一平面（同半径、同倾角）。
+      // ⚠️ 必须挂在 holder 上——挂在会自转的 mesh 上会跟着行星一起转，
+      //    而卫星挂在不自转的层级，结果就是卫星"脱离"轨道圈。
+      const mIncl = md.incl ?? 0.05;
       const ringPts = [];
       for (let k = 0; k < 180; k++) {
         const a = (k / 180) * Math.PI * 2;
-        ringPts.push(new THREE.Vector3(Math.cos(a) * mOrbit, Math.sin(a) * mOrbit, 0));
+        ringPts.push(new THREE.Vector3(
+          Math.cos(a) * mOrbit, Math.sin(a) * mOrbit * mIncl, -Math.sin(a) * mOrbit));
       }
       const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
       const ringMat = new THREE.LineBasicMaterial({
         color: 0xd8c49a, transparent: true, opacity: 0, depthWrite: false });
       const ring = new THREE.LineLoop(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2 - 0.12;
-      mesh.add(ring);
+      entry.holder.add(ring);
       entry.moonRings = entry.moonRings || [];
       entry.moonRings.push(ringMat);
       this.get(p.id).holder.add(mMesh);     // 挂在 holder：跟随公转位置但不随自转
@@ -139,7 +142,7 @@ export class SolarSystem {
         id: mid, mesh: mMesh, holder: null, info: md.info || { kind: 'moon', en: 'MOON', cn: '卫星' },
         displayR: mR, worldPos: new THREE.Vector3(), isMoon: true, parent: p.id,
       });
-      return { mesh: mMesh, orbitR: mOrbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05,
+      return { mesh: mMesh, orbitR: mOrbit, period: md.period, phase: i * 2.1, incl: mIncl,
                entry: this.bodies.get(mid) };
     });
     entry.moonOuter = entry.moons.reduce((m, o) => Math.max(m, o.orbitR), 0);
@@ -558,7 +561,12 @@ export class SolarSystem {
         // 待机自转：即使时间暂停，卫星也按自己的节奏缓慢绕行（周期越长走得越慢）
         const idle = (clockT * Math.PI * 2) / (12 + 1.6 * Math.abs(mo.period));
         const ang = (jd / mo.period) * Math.PI * 2 + mo.phase + idle;
-        mo.mesh.position.set(Math.cos(ang) * mo.orbitR, Math.sin(ang * 0.9) * mo.orbitR * mo.incl, -Math.sin(ang) * mo.orbitR);
+        // 三个分量必须用同一个 ang（以前 y 写成 sin(ang*0.9)，相位错位，
+        // 卫星走出来的不是椭圆，看起来就像脱离了轨道圈）
+        mo.mesh.position.set(
+          Math.cos(ang) * mo.orbitR,
+          Math.sin(ang) * mo.orbitR * mo.incl,
+          -Math.sin(ang) * mo.orbitR);
         if (mo.entry) mo.mesh.getWorldPosition(mo.entry.worldPos);   // 供悬停/聚焦/标签使用
       }
       // 卫星轨道圈渐显（相机接近时）
