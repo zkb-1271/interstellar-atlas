@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=158';
+import { QUOTES, PLANETS } from './data.js?v=159';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=158';
+import { fmtDateTime } from './astro.js?v=159';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -84,11 +84,19 @@ export class UI {
     this._buildHint(root);
     this._buildAimTag(root);
     this._buildKnow(root);
+    this._buildTip(root);
 
     // 准星跟随
     window.addEventListener('mousemove', e => {
       this.reticle.style.left = e.clientX + 'px';
       this.reticle.style.top = e.clientY + 'px';
+      if (this.tip && this.tip.classList.contains('show')) {
+        const w = this.tip.offsetWidth, h = this.tip.offsetHeight;
+        const x = Math.min(e.clientX + 16, innerWidth - w - 12);
+        const y = e.clientY - h - 14 < 8 ? e.clientY + 20 : e.clientY - h - 14;
+        this.tip.style.left = x + 'px';
+        this.tip.style.top = y + 'px';
+      }
     }, { passive: true });
 
     // Esc 关闭浮层
@@ -171,7 +179,7 @@ export class UI {
     today.addEventListener('click', () => this.cb.onToday());
     // 示意排布 / 实时轨道（对应参考站 SCHEMATIC / REAL）
     this.posBtn = el('button', 'posmode', '示意排布');
-    this.posBtn.title = '示意排布：行星按压缩距离排成一线，轨道线为同心导轨（参考站图谱视角）｜实时轨道：按 JPL 历表真实公转，轨道线为真实椭圆';
+    this.posBtn.dataset.tip = '示意排布：行星按压缩距离排成一线，轨道线为同心导轨｜实时轨道：按 JPL 历表真实公转，轨道线为真实椭圆';
     this.posBtn.addEventListener('click', () => this.cb.onTogglePosition());
     bar.append(this.bigDate, this.speedsEl, this.posBtn, today);
     root.appendChild(bar);
@@ -427,7 +435,6 @@ export class UI {
       d.style.setProperty('--c', it.color || '#d8c49a');
       d.style.animationDelay = (0.12 + i * 0.055) + 's';
       d.dataset.id = it.id;
-      d.title = it.au == null ? '太阳' : `${it.cn} · ${it.au.toFixed(2)} AU`;
       d.addEventListener('click', () => this.cb.onSelectPlanet(it.id));
       rail.appendChild(d);
       this.railDots.push(d);
@@ -512,6 +519,20 @@ export class UI {
     this.aimTag.querySelector('.en').textContent = c.en + ' · 点击凝望';
   }
   hideConstAim() { this.aimId = null; this.aimTag.classList.remove('show'); }
+
+  // 提示框：原生 title 会跟鼠标飘、样式也不统一，这里自己画一个
+  _buildTip(root) {
+    const t = el('div');
+    t.id = 'tip';
+    root.appendChild(t);
+    this.tip = t;
+    document.addEventListener('mouseover', e => {
+      const host = e.target.closest && e.target.closest('[data-tip]');
+      if (!host) { this.tip.classList.remove('show'); return; }
+      this.tip.textContent = host.dataset.tip;
+      this.tip.classList.add('show');
+    });
+  }
 
   _buildHint(root) {
     this.hint = el('div', '', '点击行星聚焦 · 拖动环视 · 滚轮缩放');

@@ -617,3 +617,15 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 #planetCard .pc-src .ps-k { font-size: 10px; letter-spacing: .3em; color: var(--ink-dim); margin-bottom: 8px; }
 #planetCard .pc-src p { font-size: 11.5px; line-height: 1.8; color: rgba(151,145,127,.9); }
 #planetCard .pc-src .ps-note { margin-top: 6px; color: rgba(151,145,127,.62); }
+
+/* ---------- 自定义提示框（替代原生 title） ---------- */
+#tip {
+  position: fixed; left: 0; top: 0; z-index: 70; max-width: 300px;
+  padding: 7px 11px; border-radius: 8px;
+  background: rgba(8,8,10,.92); border: 1px solid rgba(217,179,108,.28);
+  box-shadow: 0 6px 22px rgba(0,0,0,.55);
+  font-size: 11.5px; line-height: 1.65; letter-spacing: .04em; color: #cfc9ba;
+  pointer-events: none; opacity: 0; transform: translateY(4px);
+  transition: opacity .16s, transform .16s;
+}
+#tip.show { opacity: 1; transform: translateY(0); }
