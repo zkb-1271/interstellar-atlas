@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=144';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=144';
-import { createDeepSpace } from './starfield.js?v=144';
-import { SolarSystem } from './solar.js?v=144';
-import { FlightController, easeOutQuint } from './flight.js?v=144';
-import { UI } from './ui.js?v=144';
-import { initLoading } from './loading.js?v=144';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=154';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=154';
+import { createDeepSpace } from './starfield.js?v=154';
+import { SolarSystem } from './solar.js?v=154';
+import { FlightController, easeOutQuint } from './flight.js?v=154';
+import { UI } from './ui.js?v=154';
+import { initLoading } from './loading.js?v=154';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -95,6 +95,8 @@ const ui = new UI(document.body, {
   onTab: (id) => { if (id === 'deep') goDeep(); else goOverview(); },
   onOpenEvents: () => openEvents(),
   onCloseEvents: () => ui.hideEvents(),
+  onOpenKnow: () => ui.showKnow(),
+  onCloseKnow: () => ui.hideKnow(),
   onSpeed: (i) => { speedIdx = i; ui.setActiveSpeed(i); },
   onToday: () => { jd = dateToJD(new Date()); },
   onCloseCard: () => closeCard(),
@@ -117,6 +119,7 @@ const ui = new UI(document.body, {
 ui.setActiveSpeed(speedIdx);
 ui.setPositionMode(positionMode);
 ui.fillEclipses(ECLIPSES);
+ui.fillArticles(ARTICLES);
 ui.setMode('deep');
 setInterval(() => { if (mode === 'deep' && !document.hidden) ui._setQuote(); }, 12000);
 

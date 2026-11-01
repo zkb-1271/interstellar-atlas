@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=144';
-import { planetPosition, bodyPosition, orbitPointsFrom, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=144';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=144';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=154';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=154';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=154';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -39,6 +39,8 @@ export class SolarSystem {
     this.group = new THREE.Group();
     scene.add(this.group);
     this.bodies = new Map();      // id → { mesh, group, info, displayR, worldPos:Vector3 }
+    this._orbitsOn = true;
+    this._posMode = 'schematic';
 
     this._buildLights();
     this._buildSun();
@@ -180,14 +182,26 @@ export class SolarSystem {
       entry.ring = ring;
     }
 
-    // 轨道线：按当前历元要素采样真实椭圆
-    const pts = planetOrbitPoints(p.id, jdToCenturies(2451545.0), 256).map(
+    // 轨道线：两套几何
+    //  ① 真实椭圆（按当前历元要素采样）—— 只在「实时轨道」模式显示，
+    //     此时行星位置也用同一套 bodyPosition 换算，圈与星必然重合
+    //  ② 同心导轨 —— 「示意排布」模式下行星被摆在压缩轨道半径上，
+    //     用同心圆表示"它离太阳多远"，圈同样穿过行星
+    // 采样要够密：256 段时相邻点间距近 2 个世界单位，总览里就是十几像素的缝，
+    // 行星看起来"离开了轨道"。3000 段后最大偏差 < 0.15 单位（约 1 像素）。
+    const pts = planetOrbitPoints(p.id, jdToCenturies(2451545.0), 3000).map(
       p3 => new THREE.Vector3(p3[0], p3[1], p3[2]));
-    const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
-    const orbit = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({
-      color: 0xa8bcd2, transparent: true, opacity: 0.13 }));
+    const orbit = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: 0xa8bcd2, transparent: true, opacity: 0.15 }));
     this.group.add(orbit);
     entry.orbit = orbit;
+
+    const ringR = auToScene(p.elements.a) * SCHEMATIC;
+    const rpts = ringPoints(ringR, 256).map(q => new THREE.Vector3(q[0], q[1], q[2]));
+    const ringOrbit = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(rpts),
+      new THREE.LineBasicMaterial({ color: 0x93a7c0, transparent: true, opacity: 0.04 }));
+    this.group.add(ringOrbit);
+    entry.orbitRing = ringOrbit;
   }
 
   _buildBelt() {
@@ -426,13 +440,13 @@ export class SolarSystem {
       const entry = {
         id, mesh: nucleus, holder, info: c.info || c, displayR: R,
         worldPos: new THREE.Vector3(), coma, tail, comet: c, isComet: true,
-        focusR: c.focusR || R * 4,
+        focusR: c.focusR || R * 4, orbitAlways: true,   // 彗星在任何模式下都走真实轨道
       };
       this.bodies.set(id, entry);
       this.comets.push(entry);
 
       // 轨道线
-      const pts = orbitPointsFrom(c.elements, 420).map(q => new THREE.Vector3(q[0], q[1], q[2]));
+      const pts = orbitPointsFrom(c.elements, 3000).map(q => new THREE.Vector3(q[0], q[1], q[2]));
       const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),
         new THREE.LineBasicMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.12, depthWrite: false }));
       this.group.add(line);
@@ -476,17 +490,32 @@ export class SolarSystem {
 
   // 深空模式收起轨道线与小行星带，只留星野
   setOrbitsVisible(v) {
-    for (const b of this.bodies.values()) {
-      if (b.orbit) b.orbit.visible = v;
-    }
+    this._orbitsOn = v;
+    this._syncOrbitMode();
     this.belt.visible = v;
     if (this.kuiper) this.kuiper.visible = v;
     if (this.oort) this.oort.visible = v;
     if (this.beltFog) this.beltFog.visible = v;
   }
 
+  // 轨道线的两种口径：实时轨道看真实椭圆，示意排布看同心导轨
+  _syncOrbitMode() {
+    const on = this._orbitsOn !== false;
+    const real = this._posMode === 'real';
+    for (const b of this.bodies.values()) {
+      if (b.orbitRing) b.orbitRing.visible = on && !real;
+      if (b.orbit) b.orbit.visible = on && (real || b.orbitAlways);
+    }
+  }
+
   update(jd, simSpeed, camera, clockT = 0, positionMode = 'schematic') {
     const T = jdToCenturies(jd);
+
+    // 排布模式变了就换一套轨道线（示意 = 同心导轨 / 实时 = 真实椭圆）
+    if (this._posMode !== positionMode) {
+      this._posMode = positionMode;
+      this._syncOrbitMode();
+    }
 
     // 太阳辉光（固定几何尺寸，不再随距离缩放）
     if (this._glow1) {

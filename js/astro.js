@@ -3,7 +3,7 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=144';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=154';
 
 const DEG = Math.PI / 180;
 
@@ -89,22 +89,37 @@ export function bodyPosition(el, T) {
 }
 
 // 通用：采样一条轨道椭圆（画轨道线用）
+// ⚠️ 半径必须和 bodyPosition 用同一套换算：auToScene(a) × (p/a)
+//    早先这里写成 auToScene(p)，而 auToScene 是分段非线性压缩，
+//    离心率大的天体（火星、彗星）轨道圈就会和实际位置明显错开。
 export function orbitPointsFrom(el, n = 256) {
   const O = el.node * DEG, inc = el.i * DEG, w = el.peri * DEG - O;
+  const base = auToScene(el.a);            // 半长轴对应的场景半径（固定不随 p 变）
   const pts = [];
   for (let k = 0; k < n; k++) {
     const M = (k / n) * 2 * Math.PI;
     let f = M;
     for (let b = 0; b < 5; b++) f -= (f - el.e * Math.sin(f) - M) / (1 - el.e * Math.cos(f));
     const h = 2 * Math.atan2(Math.sqrt(1 + el.e) * Math.sin(f / 2), Math.sqrt(1 - el.e) * Math.cos(f / 2));
-    const p = el.a * (1 - el.e * Math.cos(f));
+    const ratio = 1 - el.e * Math.cos(f);          // = p / a
     const g = h + w;
-    const v = p * (Math.cos(O) * Math.cos(g) - Math.sin(O) * Math.sin(g) * Math.cos(inc));
-    const E2 = p * (Math.sin(O) * Math.cos(g) + Math.cos(O) * Math.sin(g) * Math.cos(inc));
-    const x = p * Math.sin(g) * Math.sin(inc);
+    const v = (Math.cos(O) * Math.cos(g) - Math.sin(O) * Math.sin(g) * Math.cos(inc));
+    const E2 = (Math.sin(O) * Math.cos(g) + Math.cos(O) * Math.sin(g) * Math.cos(inc));
+    const x = Math.sin(g) * Math.sin(inc);
     const lon = Math.atan2(E2, v), lat = Math.atan2(x, Math.hypot(v, E2));
-    const hU = auToScene(p) * SCHEMATIC;
+    const hU = base * ratio * SCHEMATIC;           // 与 bodyPosition 完全一致
     pts.push([Math.cos(lon) * hU, Math.sin(lat) * hU, Math.sin(lon) * hU]);
+  }
+  return pts;
+}
+
+// 同心导轨（示意排布模式用）：半径固定为压缩后的轨道距离，
+// 行星在示意模式下就被摆在这个半径上，圈与星严丝合缝。
+export function ringPoints(r, n = 256) {
+  const pts = [];
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * Math.PI * 2;
+    pts.push([Math.cos(a) * r, 0, Math.sin(a) * r]);
   }
   return pts;
 }

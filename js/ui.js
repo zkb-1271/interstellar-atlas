@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=144';
+import { QUOTES, PLANETS } from './data.js?v=154';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=144';
+import { fmtDateTime } from './astro.js?v=154';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -83,12 +83,20 @@ export class UI {
     this._buildViewbar(root);
     this._buildHint(root);
     this._buildAimTag(root);
+    this._buildKnow(root);
 
     // 准星跟随
     window.addEventListener('mousemove', e => {
       this.reticle.style.left = e.clientX + 'px';
       this.reticle.style.top = e.clientY + 'px';
     }, { passive: true });
+
+    // Esc 关闭浮层
+    window.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      this.hideKnow();
+      this.hideEvents();
+    });
   }
 
   _buildTopbar(root) {
@@ -106,10 +114,11 @@ export class UI {
     this.tabs.style.opacity = '0';
     this.tabs.style.transition = 'opacity .8s';
     this.tabEls = {};
-    for (const [id, label] of [['deep', '深空'], ['solar', '太阳系'], ['events', '天象']]) {
+    for (const [id, label] of [['deep', '深空'], ['solar', '太阳系'], ['events', '天象'], ['knowledge', '知识']]) {
       const b = el('button', 'tab', label);
       b.addEventListener('click', () => {
         if (id === 'events') this.cb.onOpenEvents();
+        else if (id === 'knowledge') this.cb.onOpenKnow();
         else this.cb.onTab(id);
       });
       this.tabEls[id] = b;
@@ -162,7 +171,7 @@ export class UI {
     today.addEventListener('click', () => this.cb.onToday());
     // 示意排布 / 实时轨道（对应参考站 SCHEMATIC / REAL）
     this.posBtn = el('button', 'posmode', '示意排布');
-    this.posBtn.title = '示意排布：行星按压缩距离排成一线（参考站图谱视角）｜实时轨道：按 JPL 历表真实公转';
+    this.posBtn.title = '示意排布：行星按压缩距离排成一线，轨道线为同心导轨（参考站图谱视角）｜实时轨道：按 JPL 历表真实公转，轨道线为真实椭圆';
     this.posBtn.addEventListener('click', () => this.cb.onTogglePosition());
     bar.append(this.bigDate, this.speedsEl, this.posBtn, today);
     root.appendChild(bar);
@@ -231,7 +240,9 @@ export class UI {
         <div class="pc-navrow"><button id="pc-prev">← 上一颗</button><span>地理标注</span><button id="pc-next">下一颗 →</button></div>
       </div>
       <div class="pc-desc" id="pc-desc"></div>
-      <div class="stats" id="pc-stats"></div>`;
+      <div class="stats" id="pc-stats"></div>
+      <div class="pc-facts" id="pc-facts"></div>
+      <div class="pc-src" id="pc-src"></div>`;
     root.appendChild(c);
     this.card = c;
     c.querySelector('#cardClose').addEventListener('click', () => this.cb.onCloseCard());
@@ -251,17 +262,63 @@ export class UI {
     this.card.querySelector('#pc-desc').innerHTML = (info.sections || [{ t: '', text: info.desc || '' }])
       .map(sec => sec.t ? `<div class="pc-sec"><h4>${sec.t}</h4><p>${sec.text}</p></div>` : `<p>${sec.text}</p>`)
       .join('');
+    // 标题下的一句话提要 + 「探索这颗星球」里的关键数字
+    this.card.querySelector('#pc-sub').textContent = info.desc || '';
+    this.card.querySelector('#pc-explore').innerHTML = this._exploreChips(info);
+
+    // 冷知识：一句话一条，给具体数字，读起来比正文轻
+    const facts = info.facts || [];
+    this.card.querySelector('#pc-facts').innerHTML = facts.length ? `
+      <div class="pf-k">冷知识 · FIELD NOTES</div>
+      <ul>${facts.map(f => `<li>${f}</li>`).join('')}</ul>` : '';
+
+    // 资料来源：与目录面板最后一项对齐，也给数字一个出处
+    const kind = info.kind || 'planet';
+    const src = kind === 'moon'
+      ? '轨道与影像：NASA / JPL 卫星数据表、旅行者与卡西尼任务公开影像'
+      : kind === 'comet'
+      ? '轨道要素：JPL Small-Body Database ｜ 影像：ESA Rosetta / NASA Stardust'
+      : kind === 'star'
+      ? '数据：NASA Solar Dynamics Observatory、SOHO ｜ 影像：SDO / 太阳动力学天文台'
+      : '轨道要素：JPL Approximate Positions of the Planets ｜ 数据：NASA Planetary Fact Sheet ｜ 影像：NASA / JPL-Caltech';
+    this.card.querySelector('#pc-src').innerHTML =
+      `<div class="ps-k">资料来源 · SOURCES</div><p>${src}</p><p class="ps-note">本站为演示性可视化：行星半径为视觉放大，轨道距离在「示意排布」下经过分段压缩。</p>`;
+
+    const num = v => (v == null || v === '' || Number.isNaN(Number(v))) ? null : Number(v);
+    const pd = num(info.periodDays);
+    const rh = num(info.rotationHours);
     const rows = [
       ['半径', info.radiusKm ? info.radiusKm.toLocaleString() + ' km' : '—'],
-      ['表面重力', info.gravity + ' m/s²'],
-      ['公转周期', info.periodDays >= 365 ? (info.periodDays / 365.25).toFixed(1) + ' 年' : info.periodDays + ' 天'],
-      ['自转周期', Math.abs(info.rotationHours ?? 0) ? Math.abs(info.rotationHours / 24).toFixed(1) + ' 天' + (info.rotationHours < 0 ? '（逆行）' : '') : '—'],
-      ['温度', info.tempC],
+      ['表面重力', info.gravity != null ? info.gravity + ' m/s²' : '—'],
+      ['公转周期', pd == null ? '—'
+        : pd < 0 ? Math.abs(pd) + ' 天（逆行）'
+        : pd >= 700 ? (pd / 365.25).toFixed(1) + ' 年'
+        : pd + ' 天'],
+      ['自转周期', rh == null ? '—'
+        : Math.abs(rh) >= 48 ? (Math.abs(rh) / 24).toFixed(1) + ' 天' + (rh < 0 ? '（逆行）' : '')
+        : Math.abs(rh).toFixed(1) + ' 小时' + (rh < 0 ? '（逆行）' : '')],
+      ['温度', info.tempC ?? '—'],
       ['卫星', info.moons ?? '—'],
     ];
     this.card.querySelector('#pc-stats').innerHTML = rows.map(r => `<div class="stat"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
     this.card.classList.add('show');
+    this.card.scrollTop = 0;
   }
+  _exploreChips(info) {
+    const chips = [];
+    const add = (k, v) => chips.push(`<span class="chip"><i>${k}</i><b>${v}</b></span>`);
+    if (info.radiusKm) {
+      add('直径', (info.radiusKm * 2).toLocaleString() + ' km');
+      const rel = info.radiusKm / 6371;
+      if (rel >= 0.02) add('地球', rel >= 1 ? rel.toFixed(rel >= 10 ? 0 : 1) + ' 倍' : (rel * 100).toFixed(0) + '%');
+    }
+    if (info.au != null) add('距日', Number(info.au).toFixed(2) + ' AU');
+    const pd = Number(info.periodDays);
+    if (pd) add('公转', Math.abs(pd) >= 700 ? (Math.abs(pd) / 365.25).toFixed(1) + ' 年' : Math.abs(pd).toFixed(1) + ' 天');
+    if (info.kind === 'comet' && info.rotationHours) add('自转', info.rotationHours + ' 小时');
+    return chips.join('');
+  }
+
   hideCard() { this.card.classList.remove('show'); this.hideDirPanel(); this.hideFocusTitle(); }
 
   _buildEvents(root) {
@@ -386,6 +443,66 @@ export class UI {
     root.appendChild(t);
     this.aimTag = t;
   }
+
+  // ---------- 知识库 ----------
+  _buildKnow(root) {
+    const p = el('aside');
+    p.id = 'knowPanel';
+    p.innerHTML = `
+      <button id="knowClose">✕</button>
+      <div class="kp-head">
+        <div class="kp-kicker">常识 · CODEX</div>
+        <h2>太阳系知识库</h2>
+        <div class="sub">NINE ESSAYS ON THE SOLAR SYSTEM</div>
+      </div>
+      <div class="kp-list" id="knowList"></div>
+      <div class="kp-detail" id="knowDetail"></div>`;
+    root.appendChild(p);
+    this.knowPanel = p;
+    this.knowList = p.querySelector('#knowList');
+    this.knowDetail = p.querySelector('#knowDetail');
+    p.querySelector('#knowClose').addEventListener('click', () => this.cb.onCloseKnow());
+    this.knowDetail.addEventListener('click', e => {
+      if (e.target.closest('#knowBack')) this._knowListMode();
+    });
+  }
+
+  fillArticles(list) {
+    this.knowList.innerHTML = list.map((a, i) => `
+      <button class="kp-item" data-id="${a.id}">
+        <span class="no">${String(i + 1).padStart(2, '0')}</span>
+        <span class="body">
+          <span class="tt">${a.cn}</span>
+          <span class="en">${a.en}</span>
+          <span class="lead">${a.lead || ''}</span>
+        </span>
+        <span class="arrow">→</span>
+      </button>`).join('');
+    this.knowList.querySelectorAll('.kp-item').forEach(b => {
+      b.addEventListener('click', () => this.showArticle(list.find(a => a.id === b.dataset.id)));
+    });
+  }
+
+  showArticle(a) {
+    if (!a) return;
+    this.knowDetail.innerHTML = `
+      <button id="knowBack">← 返回目录</button>
+      <div class="kp-kicker">${a.kicker || ''}</div>
+      <h3>${a.cn}</h3>
+      <div class="sub">${a.en}</div>
+      <p class="lead">${a.lead || ''}</p>
+      ${(a.stats || []).length ? `<div class="kp-stats">${a.stats.map(s =>
+        `<div><span>${s[0]}</span><b>${s[1]}</b></div>`).join('')}</div>` : ''}
+      <div class="kp-body">${(a.sections || []).map(s =>
+        `<div class="kp-sec"><h4>${s.t}</h4><p>${s.text}</p></div>`).join('')}</div>`;
+    this.knowPanel.classList.add('detail');
+    this.knowDetail.scrollTop = 0;
+  }
+
+  _knowListMode() { this.knowPanel.classList.remove('detail'); }
+  showKnow() { this._knowListMode(); this.knowPanel.classList.add('show'); }
+  hideKnow() { this.knowPanel.classList.remove('show'); }
+  get knowOpen() { return this.knowPanel.classList.contains('show'); }
   showConstAim(c, x, y) {
     this.aimId = c.id;                 // 被瞄准的星座不再显示常驻名字，避免和瞄准标记叠在一起
     this.aimTag.classList.add('show');
