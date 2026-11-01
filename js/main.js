@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=96';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=96';
-import { createDeepSpace } from './starfield.js?v=96';
-import { SolarSystem } from './solar.js?v=96';
-import { FlightController, easeOutQuint } from './flight.js?v=96';
-import { UI } from './ui.js?v=96';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=97';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=97';
+import { createDeepSpace } from './starfield.js?v=97';
+import { SolarSystem } from './solar.js?v=97';
+import { FlightController, easeOutQuint } from './flight.js?v=97';
+import { UI } from './ui.js?v=97';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -50,9 +50,10 @@ function computeOverviewCam() {
   // 参考站捕获相机（dist=900，z-up→y-up 换算：从黄道面下方 887 处低角度平视）
   // 参考站 rig 捕获值（z-up→y-up 直接换算）
   // 参考站模型 + 参考图六点拟合解（D132/E0/L57/tR-0.6，贴黄道面低角度）
-  // 六点拟合解（参考图 5 行星+太阳屏幕坐标反解，err 1.48）
-  const camPos = new THREE.Vector3(86.8, -4, -107.3);
-  const target = new THREE.Vector3(-43.7, -9.7, -56.6);
+  // 连珠构图（网格搜索解：8 行星横贯全屏 x∈[-0.99,0.98]、y≤0.10）+ 20° 倾角
+  const L = 208 * Math.PI / 180, D = 360, E = 123;
+  const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
+  const target = new THREE.Vector3(0, 0, 0);
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);
@@ -123,7 +124,7 @@ function enterSolar() {
   const oc = computeOverviewCam();
   flight.flyTo({
     camPos: oc.camPos, target: oc.target, duration: 2.6, arc: 0.3,
-    onDone: () => flight.setRange(6, 26000),
+    onDone: () => flight.setRange(60, 30000),
   });
 }
 
