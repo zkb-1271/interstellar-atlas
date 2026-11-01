@@ -4,11 +4,21 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=100';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=100';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=100';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=102';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=102';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=102';
 
-export const SUN_RADIUS = 3.27;
+// 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
+export const SUN_RADIUS = displayRadius(696000);
+
+// 参考站 Zs 表：用于天体尺度/带边界（不是显示半径，是"体量档位"）
+const ZS = { sun: 8, mercury: 4, venus: 5.2, earth: 6.8, moon: 1.6, mars: 6, jupiter: 12.2, saturn: 14.5, uranus: 8.8, neptune: 6.7, pluto: 5, belt: 12 };
+
+// 行星微光晕色（取自参考站 color 字段）
+const PLANET_TINT = {
+  mercury: '#9d9489', venus: '#d8bd8a', earth: '#74b7c2', mars: '#9a5c4c',
+  jupiter: '#d8b48a', saturn: '#e0cba0', uranus: '#8fd7e0', neptune: '#5a7bd8',
+};
 
 const texLoader = new THREE.TextureLoader();
 function loadRealMap(url, mat) {
@@ -52,9 +62,9 @@ export class SolarSystem {
   }
 
   _buildLights() {
-    this.sunLight = new THREE.PointLight(0xfff1dc, 2.6, 0, 0);
+    this.sunLight = new THREE.PointLight(0xfff4e2, 3.2, 0, 0);
     this.group.add(this.sunLight);
-    this.group.add(new THREE.AmbientLight(0x33383f, 0.55));
+    this.group.add(new THREE.AmbientLight(0x3a4048, 0.6));
     // 相机补光：给逆光暗面一点轮廓（月食剪影/行星特写夜面）
     this.camLight = new THREE.PointLight(0xf2ede2, 0.22, 0, 0);
     this.scene.add(this.camLight);
@@ -67,26 +77,38 @@ export class SolarSystem {
       t.colorSpace = THREE.SRGBColorSpace;
       mat.map = t; mat.needsUpdate = true;
     });
-    mat.color = new THREE.Color(1.6, 1.35, 1.05);   // 提亮喂给 Bloom
+    mat.color = new THREE.Color(1.5, 1.38, 1.2);   // 提亮喂给 Bloom
     this._register('sun', new THREE.Mesh(geo, mat), { ...SUN_INFO, type: 'star' }, SUN_RADIUS);
 
     const glow1 = this._glow1 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,190,90,0.95)', 'rgba(255,120,30,0.35)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    glow1.scale.setScalar(SUN_RADIUS * 4);
+    glow1.scale.setScalar(SUN_RADIUS * 1.9);
     const glow2 = this._glow2 = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(makeGlowSprite('rgba(255,150,60,0.30)', 'rgba(255,90,20,0.10)')),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    glow2.scale.setScalar(SUN_RADIUS * 10);
+    glow2.scale.setScalar(SUN_RADIUS * 4.6);
     this.bodies.get('sun').holder.add(glow1, glow2);
   }
 
   _buildPlanet(p) {
+    const R = displayRadius(p.radiusKm);            // 参考站公式：0.0115×km^0.42
     let cv = makePlanetTexture(p.type, 7 + p.id.length * 3);
     const mat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.94, metalness: 0.02 });
     if (p.tex) loadRealMap(`assets/tex/${p.tex}`, mat);       // NASA 真图覆盖
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.displayR, 48, 32), mat);
-    const entry = this._register(p.id, mesh, p, p.displayR);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), mat);
+    const entry = this._register(p.id, mesh, p, R);
+
+    // 微光晕：总览时行星只有几个像素，靠一层加性柔光让它"亮起来"（参考站同款观感）
+    const tint = PLANET_TINT[p.id] || '#ffffff';
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: tex(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0)')),
+      color: new THREE.Color(tint), blending: THREE.AdditiveBlending,
+      depthWrite: false, depthTest: false, transparent: true, opacity: 0.5 }));
+    halo.scale.setScalar(R * 4.2);
+    halo.renderOrder = 3;
+    mesh.add(halo);
+    entry.halo = halo;
     entry.spin = p.spin;
     entry.moons = (MOONS[p.id] || []).map((md, i) => {
       const mcv = makePlanetTexture('moon', 30 + i * 11); addCraters(mcv, 60);
@@ -109,17 +131,22 @@ export class SolarSystem {
 
     if (p.id === 'earth') {
       const clouds = new THREE.Mesh(
-        new THREE.SphereGeometry(p.displayR * 1.018, 48, 32),
-        new THREE.MeshStandardMaterial({ map: tex(makeCloudTexture()), transparent: true, depthWrite: false, roughness: 1 }));
+        new THREE.SphereGeometry(R * 1.018, 48, 32),
+        new THREE.MeshStandardMaterial({ map: null, transparent: true, depthWrite: false, roughness: 1, opacity: 0.9 }));
       texLoader.load('assets/tex/planets/earth_clouds_nasa-2k.jpg', t => {
         t.colorSpace = THREE.SRGBColorSpace;
-        clouds.material.map = t; clouds.material.needsUpdate = true;
+        // 参考站的云图是灰度 JPG：只能当 alphaMap 用，否则会变成不透明外壳盖住地表
+        clouds.material.map = null;
+        clouds.material.alphaMap = t;
+        clouds.material.color.set(0xffffff);
+        clouds.material.opacity = 0.92;
+        clouds.material.needsUpdate = true;
       });
       mesh.add(clouds);
       entry.clouds = clouds;
     }
     if (p.ring) {
-      const inner = p.displayR * 1.12, outer = p.displayR * 2.35;
+      const inner = R * 1.12, outer = R * 2.35;
       const geo = new THREE.RingGeometry(inner, outer, 128, 1);
       // 让 UV.x 沿半径展开
       const pos = geo.attributes.position, uv = geo.attributes.uv;
@@ -145,7 +172,7 @@ export class SolarSystem {
       p3 => new THREE.Vector3(p3[0], p3[1], p3[2]));
     const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
     const orbit = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({
-      color: 0xaab6c8, transparent: true, opacity: 0.16 }));
+      color: 0x9fb0c4, transparent: true, opacity: 0.055 }));
     this.group.add(orbit);
     entry.orbit = orbit;
   }
@@ -221,21 +248,22 @@ export class SolarSystem {
         }`,
     };
 
-    // 主带：内=火星轨道+2+火星半径，外=木星轨道−2−木星半径（照抄 Mg/Rg）
-    const inner = auToScene(1.524) + 0.349 + 2;
-    const outer = auToScene(5.203) - 1.246 - 2;
-    const beltPos = u$(16000, inner, outer, 0.8, 20260901, { gaps: true, bias: 0.72 });
+    // 主带：内 = 火星轨道 + 6 + 2，外 = 木星轨道 − 12.2 − 2（参考站 Mg/Rg，Zs 表）
+    // 再整体 ×Fs()=0.46（图谱折叠比例）
+    const inner = (auToScene(1.524) + ZS.mars + 2) * SCHEMATIC;
+    const outer = (auToScene(5.203) - ZS.jupiter - 2) * SCHEMATIC;
+    const beltPos = u$(12000, inner, outer, 0.8 * SCHEMATIC, 20260901, { gaps: true, bias: 0.72 });
     const beltGeo = new THREE.BufferGeometry();
     beltGeo.setAttribute('position', new THREE.BufferAttribute(beltPos, 3));
-    fillAttrs(beltGeo, { rgb: [0.56, 0.54, 0.5], seed: 90210 });
+    fillAttrs(beltGeo, { rgb: [0.68, 0.66, 0.62], seed: 90210 });
     const beltMat = new THREE.ShaderMaterial({
       vertexShader: particleShader.vertexShader,
       fragmentShader: particleShader.fragmentShader,
       uniforms: {
         uPixelRatio: { value: Math.min(devicePixelRatio, 2) },
-        uBaseSize: { value: 1.45 },
+        uBaseSize: { value: 0.6 },
         uDetail: { value: 1 },
-        uOpacity: { value: 0.17 },
+        uOpacity: { value: 0.06 },
       },
       transparent: true, depthWrite: false,
     });
@@ -247,14 +275,14 @@ export class SolarSystem {
     const gapW = (outer - inner) * 0.05;
     const fogMat = new THREE.ShaderMaterial({
       uniforms: {
-        uOpacity: { value: 0.09 },
-        uColor: { value: new THREE.Color('#8d8371') },
+        uOpacity: { value: 0.1 },
+        uColor: { value: new THREE.Color('#cfc8b8') },
         uInner: { value: inner },
         uOuter: { value: outer },
         uGapWidth: { value: gapW },
-        uGapA: { value: auToScene(2.5) },
-        uGapB: { value: auToScene(2.82) },
-        uGapC: { value: auToScene(3.27) },
+        uGapA: { value: auToScene(2.5) * SCHEMATIC },
+        uGapB: { value: auToScene(2.82) * SCHEMATIC },
+        uGapC: { value: auToScene(3.27) * SCHEMATIC },
       },
       vertexShader: `
         varying vec2 vLocal;
@@ -301,26 +329,47 @@ export class SolarSystem {
     this.group.add(fog);
     this.beltFog = fog;
 
-    // 柯伊伯带：14000 颗、356-401、厚 9、灰蓝
-    const kIn = auToScene(30.07) + 0.804 + 6, kOut = kIn + 45;
-    const kuiperPos = u$(14000, kIn, kOut, 9, 77123, { bias: 0.62 });
+    // 柯伊伯带：内 = 海王星轨道 + Zs.neptune + 6，跨 45（参考站 y2/x2）
+    const kIn = (auToScene(30.07) + ZS.neptune + 6) * SCHEMATIC;
+    const kOut = (auToScene(30.07) + ZS.neptune + 6 + 45) * SCHEMATIC;
+    const kuiperPos = u$(14000, kIn, kOut, 9 * SCHEMATIC, 77123, { bias: 0.62 });
     const kuiperGeo = new THREE.BufferGeometry();
     kuiperGeo.setAttribute('position', new THREE.BufferAttribute(kuiperPos, 3));
-    fillAttrs(kuiperGeo, { rgb: [0.62, 0.72, 0.86], seed: 31337 });
+    fillAttrs(kuiperGeo, { rgb: [0.66, 0.74, 0.88], seed: 31337 });
     const kuiperMat = new THREE.ShaderMaterial({
       vertexShader: particleShader.vertexShader,
       fragmentShader: particleShader.fragmentShader,
       uniforms: {
         uPixelRatio: { value: Math.min(devicePixelRatio, 2) },
-        uBaseSize: { value: 1.45 },
+        uBaseSize: { value: 1.3 },
         uDetail: { value: 1 },
-        uOpacity: { value: 0.12 },
+        uOpacity: { value: 0.06 },
       },
       transparent: true, depthWrite: false,
     });
     this.kuiper = new THREE.Points(kuiperGeo, kuiperMat);
-    this.kuiper.visible = false;
     this.group.add(this.kuiper);
+
+    // 奥尔特云：参考站最外层 uN = x2 + 18 + 90
+    const oIn = (auToScene(30.07) + ZS.neptune + 6 + 45 + 18) * SCHEMATIC;
+    const oOut = (auToScene(30.07) + ZS.neptune + 6 + 45 + 18 + 90) * SCHEMATIC;
+    const oortPos = u$(16000, oIn, oOut, 26 * SCHEMATIC, 88091, { bias: 0.55 });
+    const oortGeo = new THREE.BufferGeometry();
+    oortGeo.setAttribute('position', new THREE.BufferAttribute(oortPos, 3));
+    fillAttrs(oortGeo, { rgb: [0.5, 0.58, 0.78], seed: 20260901 });
+    const oortMat = new THREE.ShaderMaterial({
+      vertexShader: particleShader.vertexShader,
+      fragmentShader: particleShader.fragmentShader,
+      uniforms: {
+        uPixelRatio: { value: Math.min(devicePixelRatio, 2) },
+        uBaseSize: { value: 1.2 },
+        uDetail: { value: 1 },
+        uOpacity: { value: 0.06 },
+      },
+      transparent: true, depthWrite: false,
+    });
+    this.oort = new THREE.Points(oortGeo, oortMat);
+    this.group.add(this.oort);
   }
 
   _buildShadowCones() {
@@ -334,12 +383,13 @@ export class SolarSystem {
       m.visible = false;
       return m;
     };
-    this.earthUmbra = mkCone(14.5, 0.70, 0.39, 0x362014, 0.42);
-    this.earthPenumbra = mkCone(23, 0.95, 0.95, 0x241610, 0.20);
-    this.moonUmbra = mkCone(6.2, 0.21, 0.10, 0x241a1e, 0.50);
+    // 尺度跟新的行星半径走：地球 R=0.455、月球轨道 1.1、月球 R=0.264
+    this.earthUmbra = mkCone(1.9, 0.55, 0.02, 0x362014, 0.40);
+    this.earthPenumbra = mkCone(3.0, 0.78, 0.30, 0x241610, 0.16);
+    this.moonUmbra = mkCone(0.62, 0.10, 0.01, 0x241a1e, 0.50);
     // 日食时月球本影投在地球表面的暗斑
     this.shadowSpot = new THREE.Mesh(
-      new THREE.CircleGeometry(0.095, 32),
+      new THREE.CircleGeometry(0.022, 32),
       new THREE.MeshBasicMaterial({ color: 0x060403, transparent: true, opacity: 0.72, depthWrite: false }));
     this.shadowSpot.visible = false;
     this.forceMoonOnAxis = false;
@@ -361,44 +411,47 @@ export class SolarSystem {
       if (b.orbit) b.orbit.visible = v;
     }
     this.belt.visible = v;
+    if (this.kuiper) this.kuiper.visible = v;
+    if (this.oort) this.oort.visible = v;
+    if (this.beltFog) this.beltFog.visible = v;
   }
 
-  update(jd, simSpeed, camera) {
+  update(jd, simSpeed, camera, clockT = 0, positionMode = 'schematic') {
     const T = jdToCenturies(jd);
 
-    // 太阳辉光近距离衰减（防止特写时橙雾糊屏）
-    const dSun = camera ? camera.position.length() : 1e9;
-    // 带粒子尺寸（照抄 $z）
-    if (this.beltMat) this.beltMat.uniforms.uBaseSize.value = Math.min(2.2, Math.max(0.8, 1.4 * Math.pow(Math.max(dSun, 1) / 240, -0.18)));
-    // 太阳：远景放大保可见（30px 半径@任何距离）
-    const sunE = this.bodies.get('sun');
-    sunE.mesh.scale.setScalar(Math.min(30, Math.max(1, dSun * 0.0265)));
-    const sun = this.bodies.get('sun');
+    // 太阳辉光（固定几何尺寸，不再随距离缩放）
     if (this._glow1) {
-      this._glow1.material.opacity = Math.min(1, dSun / 500) * 0.95;
-      this._glow2.material.opacity = Math.min(1, dSun / 2400) * 0.9;
+      const d = camera ? camera.position.distanceTo(this.bodies.get('sun').worldPos) : 200;
+      this._glow1.material.opacity = Math.min(1, 40 / Math.max(d, 1)) * 0.95;
+      this._glow2.material.opacity = Math.min(1, 120 / Math.max(d, 1)) * 0.8;
+    }
+    // 带粒子尺寸随相机高度微调（参考站 $z 同款）
+    if (this.beltMat && camera) {
+      const dSun = camera.position.length();
+      this.beltMat.uniforms.uBaseSize.value = Math.min(2.2, Math.max(0.8, 1.4 * Math.pow(Math.max(dSun, 1) / 240, -0.18)));
     }
 
-    // 最小屏幕尺寸钳制（参考站行为）：行星/太阳永不小于数像素
-    const fovT = Math.tan((camera ? camera.fov : 60) * Math.PI / 360);
-    const bodyScale = (displayR, dist) =>
-      Math.min(30, Math.max(1, (displayR * 2000) / Math.max(dist, 0.5)));
-
     for (const p of PLANETS) {
-      const { pos } = planetPosition(p.id, T);
       const entry = this.bodies.get(p.id);
+      // 参考站双模式：SCHEMATIC = 压缩距离排在 +X 一线（默认）；REAL = 真实历表
+      const pos = positionMode === 'real'
+        ? planetPosition(p.id, T).pos
+        : planetSchematic(p.id, clockT).pos;
       entry.holder.position.set(pos[0], pos[1], pos[2]);
-      const dCam = camera ? camera.position.distanceTo(entry.worldPos) : 900;
-      // 参考站行为：scale = clamp(K/dist, 1, 30)——特写自然放大占半屏，总览保持可见
-      entry.mesh.scale.setScalar(Math.min(30, Math.max(1, (p.displayR * 30000) / Math.max(dCam, 0.5))));
       entry.worldPos.copy(entry.holder.position);
-      // 自转：按真实自转周期 + 模拟儒略日计算相位（参考站同思路，逆行自转取负）
+      // 光晕只在远景时可见
+      if (entry.halo && camera) {
+        const dH = camera.position.distanceTo(entry.worldPos);
+        // 只在"行星看起来很小"时亮起；贴脸特写必须收掉，否则会糊成一坨色斑
+        const near = 25 * entry.displayR, far = 60 * entry.displayR;
+        entry.halo.material.opacity = Math.max(0, Math.min(1, (dH - near) / far)) * 0.45;
+      }
+      // 自转：按真实自转周期 + 模拟儒略日计算相位（逆行取负）
       if (p.rotationHours) {
         const dir = p.rotationHours < 0 ? -1 : 1;
         entry.mesh.rotation.y = dir * ((jd * 24 / Math.abs(p.rotationHours)) % 1) * Math.PI * 2;
       }
       if (entry.clouds) entry.clouds.rotation.y += simSpeed * 0.0008;
-      // 卫星公转（局部坐标，随 holder 一起缩放）
       for (const mo of entry.moons || []) {
         const ang = (jd / mo.period) * Math.PI * 2 + mo.phase;
         mo.mesh.position.set(Math.cos(ang) * mo.orbitR, Math.sin(ang * 0.9) * mo.orbitR * mo.incl, -Math.sin(ang) * mo.orbitR);
@@ -406,7 +459,7 @@ export class SolarSystem {
       // 卫星轨道圈渐显（相机接近时）
       if (entry.moonRings && camera) {
         const dCam = camera.position.distanceTo(entry.worldPos);
-        const op = Math.min(0.45, Math.max(0, (500 - dCam) / 350)) * 0.9;
+        const op = Math.min(0.4, Math.max(0, (12 - dCam) / 9)) * 0.9;
         for (const rm of entry.moonRings) rm.opacity = op;
       }
     }
@@ -423,7 +476,6 @@ export class SolarSystem {
     }
     const me = this.bodies.get('moon');
     me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
-    if (camera) me.mesh.scale.setScalar(Math.min(30, Math.max(1, (0.264 * 2000) / Math.max(camera.position.distanceTo(me.worldPos), 0.5))));
     earth.holder.updateWorldMatrix(true, true);
     me.holder.getWorldPosition(me.worldPos);
     // 日食视觉吸附：简化月历的误差足以让本影锥尖端错过地球，

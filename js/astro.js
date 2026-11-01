@@ -3,9 +3,23 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=100';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=102';
 
 const DEG = Math.PI / 180;
+
+// ============================================================
+//  参考站（solar-system-atlas）实测公式 —— 全部从运行时/源码核实
+// ============================================================
+// 图谱折叠比例：示意排布时所有位置 ×0.46（参考站 Fs()，atlasPose=true 时）
+export const SCHEMATIC = 0.46;
+// 行星显示半径：0.0115 × km^0.42（参考站 VG，太阳半径 3.30、木星 1.245、地球 0.455）
+export function displayRadius(km) {
+  return 0.0115 * Math.pow(Math.max(km, 0.5), 0.42);
+}
+// 总览可视宽度（世界单位）：参考站 aee() = (kA+20 - (-17)) × 0.46，kA = er(39.48)+5
+export const OVERVIEW_WIDTH = ((194 * 2 + 5) + 20 + 17) * SCHEMATIC;   // ≈ 197.8
+// 总览视线中心 X：参考站 aee() = ((kA+20) + (-17)) / 2 × 0.46
+export const OVERVIEW_CX = ((194 * 2 + 5) + 20 - 17) / 2 * SCHEMATIC; // ≈ 91.08
 
 // 参考站距离压缩表：AU → 场景单位（分段线性 ×2）
 const DIST_TABLE = [[0,0],[.387,16],[.723,28],[1,40],[1.524,55],[5.203,88],[9.537,122],[19.19,152],[30.07,175],[39.48,194]];
@@ -69,6 +83,26 @@ export function planetPosition(id, T) {
   const h = auToScene(el.a) * ref.ratio;
   return { pos: [Math.cos(ref.lon) * h, Math.sin(ref.lat) * h, Math.sin(ref.lon) * h], r: h, lon: ref.lon };
 }
+// —— 参考站「示意排布」：所有行星按压缩轨道距离排在 +X 一条线上 ——
+// 源码 jye(): r = Vye(t,e) 微扰；x = cos(r)·o；z = sin(r)·o·(1-ecc)；再 ×Fs()
+// 这就是参考站总览"连珠式一字排开"的来源：不是真实历表，是图谱示意。
+export function planetSchematic(id, t = 0) {
+  const el = PLANET_ELEMENTS_REF[id];
+  const o = auToScene(el.a);
+  const amp = 0.9 / o;                        // 摆动幅度（参考站 Vye）
+  const freq = 0.05 / Math.sqrt(o);
+  const phase = SCHEMATIC_PHASE[id] ?? 0.1;
+  const r = Math.sin(t * freq + phase * 5) * amp;
+  const ecc = SCHEMATIC_ECC[id] ?? 0.02;
+  const x = Math.cos(r) * o * SCHEMATIC;
+  const z = Math.sin(r) * o * (1 - ecc) * SCHEMATIC;
+  const y = Math.sin(r) * o * (1 - ecc) * Math.sin((el.i || 0) * DEG) * SCHEMATIC;
+  return { pos: [x, y, z], r: Math.hypot(x, z) };
+}
+
+const SCHEMATIC_PHASE = { mercury: .02, venus: .07, earth: .12, mars: .17, jupiter: .22, saturn: .27, uranus: .32, neptune: .37 };
+const SCHEMATIC_ECC = { mercury: .13, venus: .04, earth: .02, mars: .09, jupiter: .05, saturn: .05, uranus: .05, neptune: .01 };
+
 const PLANET_ELEMENTS_REF = {
   mercury: {a:.3871,e:.2056,i:7.005,node:48.331,peri:77.456,l0:252.251,period:87.969},
   venus: {a:.7233,e:.0068,i:3.395,node:76.68,peri:131.533,l0:181.98,period:224.701},

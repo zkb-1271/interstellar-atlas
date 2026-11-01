@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=100';
+import { QUOTES, PLANETS } from './data.js?v=102';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=100';
+import { fmtDateTime } from './astro.js?v=102';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -159,7 +159,11 @@ export class UI {
     const today = el('button', '', '回到今天');
     today.id = 'todayBtn';
     today.addEventListener('click', () => this.cb.onToday());
-    bar.append(this.bigDate, this.speedsEl, today);
+    // 示意排布 / 实时轨道（对应参考站 SCHEMATIC / REAL）
+    this.posBtn = el('button', 'posmode', '示意排布');
+    this.posBtn.title = '示意排布：行星按压缩距离排成一线（参考站图谱视角）｜实时轨道：按 JPL 历表真实公转';
+    this.posBtn.addEventListener('click', () => this.cb.onTogglePosition());
+    bar.append(this.bigDate, this.speedsEl, this.posBtn, today);
     root.appendChild(bar);
     this.timebar = bar;
     this.SPEEDS = SPEEDS;
@@ -448,6 +452,10 @@ export class UI {
     sub.textContent = dt.slice(11) + ' · 模拟时间';
   }
   setActiveSpeed(i) { this.speedBtns.forEach((b, j) => b.classList.toggle('active', i === j)); }
+  setPositionMode(m) {
+    this.posBtn.textContent = m === 'real' ? '实时轨道' : '示意排布';
+    this.posBtn.classList.toggle('on', m === 'real');
+  }
 
   // 标签 + 悬停金环（主循环调用）
   updateOverlay(bodies, camera, mode, hoverId, selectedId, width, height) {
@@ -468,7 +476,9 @@ export class UI {
       const dist0 = camera.position.distanceTo(b.worldPos);
       const fov0 = camera.fov * Math.PI / 180;
       const rpx0 = (b.displayR / (dist0 * Math.tan(fov0 / 2))) * (height / 2);
-      const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15 && rpx0 < 110;
+      // 卫星标签只在贴近时显示；太阳太显眼，总览由左侧导航轨标注即可
+      const minR = id === 'moon' ? 4 : (id === 'sun' ? 40 : 0.5);
+      const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15 && rpx0 < 110 && rpx0 >= minR;
       if (!visible) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; rec._vis = false; continue; }
       const sx = (v.x * 0.5 + 0.5) * width, sy = (-v.y * 0.5 + 0.5) * height;
       shown.push({ id, rec, sx, sy, rpx: rpx0, dist: dist0 });
@@ -476,24 +486,27 @@ export class UI {
       rec._sx = sx; rec._sy = sy; rec._rpx = rpx0;
     }
 
-    // 标签避让：按远近排序，近的优先；与已显示标签距离 < 30px 的隐藏（远的让近的）
-    shown.sort((a, b) => a.dist - b.dist);
+    // 标签避让：按屏幕 x 排序，默认放上方；与已放标签横向太近就改放下方（参考站交替排布）
+    shown.sort((a, b) => a.sx - b.sx);
     const kept = [];
     for (const item of shown) {
-      const clash = kept.some(k => Math.hypot(k.sx - item.sx, k.sy - item.sy) < 30);
-      item._hide = clash;
-      if (!clash) kept.push(item);
+      item._above = !kept.some(k => k._above && Math.abs(k.sx - item.sx) < 110);
+      item._hide = false;
+      kept.push(item);
     }
 
     for (const item of shown) {
       const { id, rec, sx, sy, rpx } = item;
       if (item._hide) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; continue; }
-      rec.div.style.opacity = id === selectedId ? '1' : (id === hoverId ? '1' : '0.72');
+      rec.div.style.opacity = id === selectedId ? '1' : (id === hoverId ? '1' : '0.86');
       rec.div.style.pointerEvents = 'auto';
-      const lx = sx + Math.max(rpx, 4) + 16, ly = sy - Math.max(rpx, 4) * 0.3;
+      // 标签放在天体上方，横向拥挤时自动改到下方（参考站 MERCURY 上 / VENUS 下）
+      const gap = Math.max(rpx, 4) + 10;
+      const lx = sx + Math.max(rpx, 4) + 14;
+      const ly = item._above ? sy - gap : sy + gap;
       rec.div.style.left = lx + 'px';
-      rec.div.style.top = sy + 'px';
-      rec.div.style.transform = 'translate(0,-50%)';
+      rec.div.style.top = ly + 'px';
+      rec.div.style.transform = item._above ? 'translate(0,-100%)' : 'translate(0,0)';
 
       if (id === hoverId && rpx > 2 && rpx < 90) {
         const rr = Math.max(rpx * 1.45 + 8, 16);
