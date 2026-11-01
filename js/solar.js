@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=174';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=174';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=174';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=175';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=175';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=175';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -16,6 +16,7 @@ const ZS = { sun: 8, mercury: 4, venus: 5.2, earth: 6.8, moon: 1.6, mars: 6, jup
 
 
 const texLoader = new THREE.TextureLoader();
+const _sunToCam = new THREE.Vector3();   // 太阳贴片朝相机偏移的复用向量
 function loadRealMap(url, mat) {
   texLoader.load(url, t => {
     t.colorSpace = THREE.SRGBColorSpace;
@@ -31,6 +32,44 @@ function tex(cv) {
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
   return t;
+}
+
+// 太阳正圆贴片：总览构图里太阳在画面最左缘（偏光轴 ~37°），
+// 透视投影会把球压扁约 18%，参考站的正交投影则永远是正圆。
+// 这块贴片永远面向相机、永远正圆，远看替代球体，拉近后淡出。
+function makeSunDiscTexture(size = 256) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const g = cv.getContext('2d');
+  const R = size / 2;
+  // 底色：中心亮黄 → 边缘橙红（临边昏暗）
+  const grad = g.createRadialGradient(R, R, 0, R, R, R);
+  grad.addColorStop(0, '#fff6d8');
+  grad.addColorStop(0.35, '#ffd98a');
+  grad.addColorStop(0.72, '#ffab3d');
+  grad.addColorStop(0.94, '#f97e1e');
+  grad.addColorStop(1, 'rgba(249,110,20,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  // 米粒组织：随机亮斑 / 暗斑，避免变成一块纯色圆
+  let seed = 20260901;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+  g.globalCompositeOperation = 'overlay';
+  for (let i = 0; i < 900; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = Math.sqrt(rnd()) * R * 0.96;
+    const x = R + Math.cos(a) * r, y = R + Math.sin(a) * r;
+    g.fillStyle = rnd() < 0.5 ? 'rgba(255,244,214,0.25)' : 'rgba(200,90,20,0.20)';
+    g.beginPath(); g.arc(x, y, 1 + rnd() * 3, 0, Math.PI * 2); g.fill();
+  }
+  g.globalCompositeOperation = 'destination-in';
+  const edge = g.createRadialGradient(R, R, R * 0.95, R, R, R);
+  edge.addColorStop(0, 'rgba(0,0,0,1)');
+  edge.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = edge;
+  g.fillRect(0, 0, size, size);
+  g.globalCompositeOperation = 'source-over';
+  return tex(cv);
 }
 
 export class SolarSystem {
@@ -87,6 +126,16 @@ export class SolarSystem {
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
     glow2.scale.setScalar(SUN_RADIUS * 4.6);
     this.bodies.get('sun').holder.add(glow1, glow2);
+
+    // 正圆贴片：总览时盖住被透视压扁的球体（见 makeSunDiscTexture 注释）。
+    // 稍微放大一点，把压扁椭圆完整盖住；depthTest 保持开启，
+    // 且每帧把它向相机偏出球面（见 update），日食时月球才能从前面遮住太阳。
+    const disc = this._sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: makeSunDiscTexture(), transparent: true, depthWrite: false }));
+    disc.material.color.setRGB(1.35, 1.26, 1.12);   // 与球体同样的过曝喂给 Bloom
+    disc.scale.setScalar(SUN_RADIUS * 2.12);
+    disc.renderOrder = 4;                            // 压在行星微光晕（3）之上
+    this.bodies.get('sun').holder.add(disc);
   }
 
   _buildPlanet(p) {
@@ -528,6 +577,22 @@ export class SolarSystem {
       const d = camera ? camera.position.distanceTo(this.bodies.get('sun').worldPos) : 200;
       this._glow1.material.opacity = Math.min(1, 40 / Math.max(d, 1)) * 0.95;
       this._glow2.material.opacity = Math.min(1, 120 / Math.max(d, 1)) * 0.8;
+    }
+
+    // 太阳正圆贴片：远看永远正圆（盖住透视压扁的球），拉近后淡出露真球。
+    // 按屏幕半径控制淡出；位置向相机偏出球面 1.06R，保证深度测试时
+    // 贴片在球体之前、月球之后——日食里月亮仍能正常遮住太阳。
+    if (this._sunDisc && camera) {
+      const sp = this.bodies.get('sun').worldPos;
+      const dSun = camera.position.distanceTo(sp);
+      const rpx = (SUN_RADIUS / (dSun * Math.tan(camera.fov * Math.PI / 360))) * (window.innerHeight / 2);
+      const op = Math.min(1, Math.max(0, (100 - rpx) / 35));
+      this._sunDisc.material.opacity = op;
+      this._sunDisc.visible = op > 0.01;
+      if (this._sunDisc.visible) {
+        _sunToCam.copy(camera.position).sub(sp).normalize();
+        this._sunDisc.position.copy(_sunToCam.multiplyScalar(SUN_RADIUS * 1.06));
+      }
     }
     // 带粒子尺寸随相机高度微调（参考站 $z 同款）
     if (this.beltMat && camera) {
