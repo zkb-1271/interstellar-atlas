@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=88';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=88';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=88';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=93';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=93';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=93';
 
 export const SUN_RADIUS = 3.27;
 
@@ -373,13 +373,16 @@ export class SolarSystem {
     // 最小屏幕尺寸钳制（参考站行为）：行星/太阳永不小于数像素
     const fovT = Math.tan((camera ? camera.fov : 60) * Math.PI / 360);
     const bodyScale = (displayR, dist) =>
-      Math.min(30, Math.max(1, (displayR * 48000) / Math.max(dist, 0.5)));
+      Math.min(30, Math.max(1, (displayR * 30000) / Math.max(dist, 0.5)));
 
     for (const p of PLANETS) {
       const { pos } = planetPosition(p.id, T);
       const entry = this.bodies.get(p.id);
       entry.holder.position.set(pos[0], pos[1], pos[2]);
-      entry.mesh.scale.setScalar(bodyScale(p.displayR, camera ? camera.position.distanceTo(entry.worldPos) : 900));
+      const dCam = camera ? camera.position.distanceTo(entry.worldPos) : 900;
+      const grow = Math.min(30, Math.max(1, (p.displayR * 30000) / Math.max(dCam, 0.5)));
+      const maxScale = (13 * dCam * 0.577) / (360 * p.displayR);   // 屏幕半径 ≤13px
+      entry.mesh.scale.setScalar(Math.min(grow, maxScale));
       entry.worldPos.copy(entry.holder.position);
       // 自转：按真实自转周期 + 模拟儒略日计算相位（参考站同思路，逆行自转取负）
       if (p.rotationHours) {

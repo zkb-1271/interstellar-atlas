@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=88';
+import { QUOTES, PLANETS } from './data.js?v=93';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=88';
+import { fmtDateTime } from './astro.js?v=93';
 
 const NS = 'http://www.w3.org/2000/svg';
 

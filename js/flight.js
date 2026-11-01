@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+export const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
 
 export class FlightController {
   constructor(camera, dom) {
@@ -51,7 +52,7 @@ export class FlightController {
   get isFlying() { return !!this._flight; }
 
   // 一次性相机飞行：pos/target 都做平滑插值，路径带一点弧度
-  flyTo({ camPos, target, duration = 3.2, onDone, arc = 0.25 }) {
+  flyTo({ camPos, target, duration = 3.2, onDone, arc = 0.25, easing = easeInOut }) {
     const p0 = this.camera.position.clone();
     const t0 = this.controls.target.clone();
     const p1 = camPos.clone();
@@ -66,7 +67,7 @@ export class FlightController {
     const ctrl = mid.add(side.multiplyScalar(dist * arc * (Math.random() < 0.5 ? 1 : -1)))
                      .add(new THREE.Vector3(0, dist * arc * 0.6, 0));
 
-    this._flight = { p0, t0, p1, t1, ctrl, dur: duration, t: 0 };
+    this._flight = { p0, t0, p1, t1, ctrl, dur: duration, t: 0, easing };
     this.controls.enabled = false;
     this.onFlightDone = onDone || null;
   }
@@ -86,7 +87,7 @@ export class FlightController {
     if (this._flight) {
       const f = this._flight;
       f.t = Math.min(1, f.t + dt / f.dur);
-      const e = easeInOut(f.t);
+      const e = f.easing ? f.easing(f.t) : easeInOut(f.t);
 
       // 二次贝塞尔
       const a = f.p0.clone().lerp(f.ctrl, e);
