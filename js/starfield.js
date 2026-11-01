@@ -3,8 +3,8 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=163';
-import { CONSTELLATIONS } from './data.js?v=163';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=165';
+import { CONSTELLATIONS } from './data.js?v=165';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -74,7 +74,12 @@ export function createDeepSpace() {
       depthWrite: false, depthTest: false,     // 纯背景板：不参与深度，避免和 20000 半径的星点 z-fighting
     }));
   sky.renderOrder = -1000;
-  sky.rotation.y = Math.PI;        // 把贴图接缝转到默认视角背后，避免画面正中一条竖线
+  window.__sky = sky;
+  // 天球朝向：保持贴图原始朝向，银河带正好从右上方斜穿到左下方，
+  // 是太阳系总览里最好看的角度（扫了 48 个朝向挑出来的）。
+  // 以前为了躲开贴图接缝转过 y=π，结果把银河整个转出了画面，只剩右边缘一条。
+  // ⚠️ 别给天球加 X 轴倾斜：贴图的极点会被压进视野，出现放射状条纹。
+  sky.rotation.set(0, 0, 0);
   skyTex.wrapS = THREE.RepeatWrapping;
   group.add(sky);
 
