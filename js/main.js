@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=175';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=175';
-import { createDeepSpace } from './starfield.js?v=175';
-import { SolarSystem } from './solar.js?v=175';
-import { FlightController, easeOutQuint } from './flight.js?v=175';
-import { UI } from './ui.js?v=175';
-import { initLoading } from './loading.js?v=175';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=176';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=176';
+import { createDeepSpace } from './starfield.js?v=176';
+import { SolarSystem } from './solar.js?v=176';
+import { FlightController, easeOutQuint } from './flight.js?v=176';
+import { UI } from './ui.js?v=176';
+import { initLoading } from './loading.js?v=176';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -167,9 +167,33 @@ ui.setMode('deep');
 setInterval(() => { if (mode === 'deep' && !document.hidden) ui._setQuote(); }, 12000);
 
 // ---------- 模式切换 ----------
+let deepArrived = false;   // 防止 onDone / onFlightCancel 双触发
+
+// 深空落地收尾：太阳系缩小退场 + 星座淡入。
+// 无论飞行正常飞完还是被用户中途拖拽打断，都必须执行——
+// 否则太阳系悬在半空不退场、星座永远不出现。
+function arriveDeep() {
+  if (deepArrived) return;
+  deepArrived = true;
+  deepReady = true;
+  flight.onFlightCancel = null;   // 已落地，中断钩子作废，避免之后误触发
+  // 太阳系退场：整体逐渐缩小到看不见，而不是最后一帧直接消失
+  addTween(1.5, e => {
+    solar.group.scale.setScalar(Math.max(0.001, 1 - easeInOutT(e)));
+  }, () => {
+    setSolarVisible(false);
+    solar.group.scale.setScalar(1);   // 复位，下次进场是正常尺寸
+  });
+  solar.setOrbitsVisible(false);
+  // 星座与星云淡入：随透明度慢慢浮现，不再凭空出现
+  addTween(2.0, e => applySkyFade(e * e * (3 - 2 * e)));
+  flight.setRange(50, 16000);      // 别拉出银河天球（半径 19700）之外
+}
+
 function goDeep() {
   mode = 'deep';
   tweens.length = 0;              // 换模式时作废未完成的过渡补间
+  deepArrived = false;
   flight.setFreePitch(true);      // 深空：没有地平线，随便往哪转
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
@@ -185,22 +209,10 @@ function goDeep() {
   ui.setMode('deep');
   ui.hideCard();
   deepReady = false;
+  flight.onFlightCancel = arriveDeep;
   flight.flyTo({
     camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.6,
-    onDone: () => {
-      deepReady = true;
-      // 太阳系退场：整体逐渐缩小到看不见，而不是最后一帧直接消失
-      addTween(1.5, e => {
-        solar.group.scale.setScalar(Math.max(0.001, 1 - easeInOutT(e)));
-      }, () => {
-        setSolarVisible(false);
-        solar.group.scale.setScalar(1);   // 复位，下次进场是正常尺寸
-      });
-      solar.setOrbitsVisible(false);
-      // 星座与星云淡入：随透明度慢慢浮现，不再凭空出现
-      addTween(2.0, e => applySkyFade(e * e * (3 - 2 * e)));
-      flight.setRange(50, 16000);      // 别拉出银河天球（半径 19700）之外
-    },
+    onDone: arriveDeep,
   });
 }
 

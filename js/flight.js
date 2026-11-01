@@ -42,6 +42,7 @@ export class FlightController {
 
     this._flight = null;      // {from, to, dur, t, easing}
     this.onFlightDone = null;
+    this.onFlightCancel = null;   // 飞行被用户拖拽/滚轮打断时的收尾钩子
 
     this._drag = null;        // 拖拽状态
     this._inertia = { yaw: 0, pitch: 0 };   // 甩动角速度（rad/s）
@@ -160,11 +161,15 @@ export class FlightController {
       to, dur: Math.max(duration, 0.05), t: 0, easing,
     };
     this.onFlightDone = onDone || null;
+    this.onFlightCancel = null;   // 新飞行取代旧飞行：旧的中断钩子一并作废
   }
 
   cancelFlight() {
     if (!this._flight) return;
     this._flight = null;
+    // 用户主动打断（拖拽/滚轮）也要收尾：否则依赖 onDone 的
+    // 场景切换（如深空落地后的缩小/淡入）会永远不发生
+    if (this.onFlightCancel) { const cb = this.onFlightCancel; this.onFlightCancel = null; cb(); }
   }
 
   get isFlying() { return !!this._flight; }
