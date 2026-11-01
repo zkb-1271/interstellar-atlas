@@ -14,6 +14,12 @@ export const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
+// 拖拽灵敏度（弧度/像素）。太阳系与深空分开调，别共用一个值。
+//   太阳系：相机离目标近（视高 128、距离 144），拖动会放大成整屏的位移，
+//           给到"1:1 抓取"左右的手感（0.0011 弧度/像素 ≈ 鼠标走 1 像素、画面走 1 像素）
+//   深空：球心往外看，稍快一点更爽，沿用原来的 0.0024
+const DRAG = { yaw: 0.0012, yawDeep: 0.0024, pitch: 0.0011, pitchDeep: 0.0024 };
+
 export class FlightController {
   constructor(camera, dom) {
     this.camera = camera;
@@ -107,19 +113,22 @@ export class FlightController {
       this._drag.y = e.clientY;
       this._drag.t = now;
 
-      const k = 0.0024;
+      const k = this.freePitch ? DRAG.yawDeep : DRAG.yaw;
+      // 太阳系里相机离目标很近（视高 ~128、距离 ~144），纵向稍微一动画面就起伏很大，
+      // 所以纵向单独给一个更弱的系数；深空是"球心往外看"，纵向保持 1:1。
+      const kPitch = this.freePitch ? DRAG.pitchDeep : DRAG.pitch;
       // 统一成"抓住天空拖"：往哪拖，天空往哪走。
       //   横向 dx → yaw（向右拖，背景右移）
       //   纵向 -dy → pitch（向下拖，背景下移；深空里翻过极点也继续）
       this._tYaw += dx * k;
-      const dp = -dy * k;
+      const dp = -dy * kPitch;
       this._tPitch = this.freePitch ? this._tPitch + dp
                                     : clamp(this._tPitch + dp, -1.35, 1.35);
 
       // 记录瞬时角速度（低通一下，避免抖动），松手后靠它滑行
       const a = Math.min(1, dtm * 14);
       this._inertia.yaw += ((dx * k) / dtm - this._inertia.yaw) * a;
-      this._inertia.pitch += (((-dy) * k) / dtm - this._inertia.pitch) * a;
+      this._inertia.pitch += (((-dy) * kPitch) / dtm - this._inertia.pitch) * a;
     });
 
     const end = () => {
