@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=115';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=115';
-import { createDeepSpace } from './starfield.js?v=115';
-import { SolarSystem } from './solar.js?v=115';
-import { FlightController, easeOutQuint } from './flight.js?v=115';
-import { UI } from './ui.js?v=115';
-import { initLoading } from './loading.js?v=115';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=119';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=119';
+import { createDeepSpace } from './starfield.js?v=119';
+import { SolarSystem } from './solar.js?v=119';
+import { FlightController, easeOutQuint } from './flight.js?v=119';
+import { UI } from './ui.js?v=119';
+import { initLoading } from './loading.js?v=119';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -56,7 +56,7 @@ const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：�
 //   即"视宽 197.8 世界单位固定、太阳压在画面左缘 4%、行星沿 +X 一字排开"
 // pitch 取 0.03 弧度（≈1.7°）：与参考站 0° 几乎一致，但让黄道面有极轻微的
 // 椭圆厚度，小行星带才是一条有体的尘带而不是一根线。
-const BASE_PITCH = 0.03;
+const BASE_PITCH = 0.058;
 const _tanHalf = () => Math.tan(OVERVIEW_FOV * Math.PI / 360);
 const distForViewHeight = vh => vh / (2 * _tanHalf());
 

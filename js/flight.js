@@ -38,7 +38,7 @@ export class FlightController {
     this.onFlightDone = null;
 
     this._drag = null;        // 拖拽状态
-    this._vel = { yaw: 0, pitch: 0 };
+    this._inertia = { yaw: 0, pitch: 0 };   // 甩动角速度（rad/s）
     this.autoOrbit = { on: false, speed: 0.10 };
     this._zoomTouched = 0;    // 最近一次缩放时刻（俯仰联动用）
 
@@ -79,35 +79,38 @@ export class FlightController {
 
     dom.addEventListener('pointerdown', e => {
       if (this._flight) this.cancelFlight();
-      this._drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
-      this._vel.yaw = 0; this._vel.pitch = 0;
+      this._drag = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now() };
+      this._inertia.yaw = 0; this._inertia.pitch = 0;      // 按下即刹车
       dom.setPointerCapture?.(e.pointerId);
-      dom.style.cursor = 'grabbing';
     });
 
     dom.addEventListener('pointermove', e => {
       if (!this._drag || e.pointerId !== this._drag.id) return;
       const dx = e.clientX - this._drag.x;
       const dy = e.clientY - this._drag.y;
+      const now = performance.now();
+      const dtm = Math.max(8, now - this._drag.t) / 1000;   // 秒
       this._drag.x = e.clientX;
       this._drag.y = e.clientY;
-      // 与参考站同向：横向拖 → 绕 y 轴；纵向拖 → 抬/压俯仰
+      this._drag.t = now;
+
       const k = 0.0024;
+      // 与参考站一致：横向拖 → 绕 y 轴转；纵向拖 → 压/抬俯仰（向下拖压低视角）
       this._tYaw += dx * k;
-      this._tPitch = clamp(this._tPitch + dy * k, -1.35, 1.35);
-      this._vel.yaw = dx * k;
-      this._vel.pitch = dy * k;
-      this.yaw = this._tYaw; this.pitch = this._tPitch;   // 拖拽零延迟
+      this._tPitch = clamp(this._tPitch - dy * k, -1.35, 1.35);
+
+      // 记录瞬时角速度（低通一下，避免抖动），松手后靠它滑行
+      const a = Math.min(1, dtm * 14);
+      this._inertia.yaw += ((dx * k) / dtm - this._inertia.yaw) * a;
+      this._inertia.pitch += ((-dy * k) / dtm - this._inertia.pitch) * a;
     });
 
-    const end = e => {
+    const end = () => {
       if (!this._drag) return;
       this._drag = null;
-      dom.style.cursor = 'none';
-      // 惯性：松手后按速度滑一段
-      this._tYaw += this._vel.yaw * 6;
-      this._tPitch = clamp(this._tPitch + this._vel.pitch * 6, -1.35, 1.35);
-      this._vel.yaw = 0; this._vel.pitch = 0;
+      // 甩动上限：别让一下滑出去半圈
+      this._inertia.yaw = clamp(this._inertia.yaw, -2.6, 2.6);
+      this._inertia.pitch = clamp(this._inertia.pitch, -1.8, 1.8);
     };
     dom.addEventListener('pointerup', end);
     dom.addEventListener('pointercancel', end);
@@ -184,8 +187,18 @@ export class FlightController {
       if (this.autoOrbit.on && !this._drag) {
         this._tYaw += this.autoOrbit.speed * dt;
       }
-      // 阻尼逼近
-      const k = 1 - Math.pow(0.0016, dt);
+      // 松手后的惯性滑行：按指数摩擦衰减，停下前不会有突跳
+      if (!this._drag) {
+        const keep = Math.exp(-5.5 * dt);
+        this._tYaw += this._inertia.yaw * dt;
+        this._tPitch = clamp(this._tPitch + this._inertia.pitch * dt, -1.35, 1.35);
+        this._inertia.yaw *= keep;
+        this._inertia.pitch *= keep;
+        if (Math.abs(this._inertia.yaw) < 0.004) this._inertia.yaw = 0;
+        if (Math.abs(this._inertia.pitch) < 0.004) this._inertia.pitch = 0;
+      }
+      // 阻尼逼近：拖拽时跟得紧（有弹性但不拖沓），松手后更黏一点
+      const k = this._drag ? 1 - Math.pow(0.00035, dt) : 1 - Math.pow(0.004, dt);
       this.target.lerp(this._tTarget, k);
       this.yaw += (this._tYaw - this.yaw) * k;
       this.pitch += (this._tPitch - this.pitch) * k;

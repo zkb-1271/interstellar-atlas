@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=115';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=115';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=115';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=119';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=119';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=119';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -167,7 +167,7 @@ export class SolarSystem {
       p3 => new THREE.Vector3(p3[0], p3[1], p3[2]));
     const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
     const orbit = new THREE.LineLoop(orbitGeo, new THREE.LineBasicMaterial({
-      color: 0x9fb0c4, transparent: true, opacity: 0.055 }));
+      color: 0xa8bcd2, transparent: true, opacity: 0.13 }));
     this.group.add(orbit);
     entry.orbit = orbit;
   }

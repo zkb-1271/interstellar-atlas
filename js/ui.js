@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=115';
+import { QUOTES, PLANETS } from './data.js?v=119';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=115';
+import { fmtDateTime } from './astro.js?v=119';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -535,11 +535,7 @@ export class UI {
           ln.setAttribute('x1', seg[i][0]); ln.setAttribute('y1', seg[i][1]);
           ln.setAttribute('x2', seg[i][2]); ln.setAttribute('y2', seg[i][3]);
         });
-        this.leader.style.display = '';
-        this.leader.setAttribute('x1', sx + rpx * 0.8);
-        this.leader.setAttribute('y1', sy - rpx * 0.8);
-        this.leader.setAttribute('x2', lx - 6);
-        this.leader.setAttribute('y2', ly);
+        this.leader.style.display = 'none';   // 锁定环已经够清楚，不再拉引线（会像多出来一根指针）
         ringShown = true;
       }
     }
@@ -547,7 +543,8 @@ export class UI {
   }
 
   setReticleHover(on) {
+    // 悬停天体时整枚准星隐去，只留金色锁定环——否则两条十字叠在一起像重影
     this.reticle.classList.toggle('hovering', on);
-    this.reticle.querySelector('.ring').style.opacity = on ? '1' : '';
+    this.reticle.style.opacity = on ? '0' : '';
   }
 }
