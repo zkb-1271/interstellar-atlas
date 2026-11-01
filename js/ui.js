@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=167';
+import { QUOTES, PLANETS } from './data.js?v=169';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=167';
+import { fmtDateTime } from './astro.js?v=169';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -225,13 +225,13 @@ export class UI {
   hideDirPanel() { this.dirPanel.classList.remove('show'); }
 
   _buildCard(root) {
-    const c = el('aside');
+    const c = el('aside', 'sideCard');
     c.id = 'planetCard';
     c.innerHTML = `
       <div class="pc-head">
         <span class="pc-kicker" id="pc-kicker"></span>
         <span class="pc-auto" id="pc-auto">动效 · 自动</span>
-        <button id="cardClose">关闭 ×</button>
+        <button id="cardClose" class="card-close">关闭 ×</button>
       </div>
       <h1 id="pc-cn"></h1>
       <div class="pc-en" id="pc-en"></div>
@@ -373,26 +373,44 @@ export class UI {
   showEvents() { this.eventsPanel.classList.add('show'); }
   hideEvents() { this.eventsPanel.classList.remove('show'); }
 
+  // 星座档案：和行星档案卡同一套侧边卡（位置/宽度/排版全一致），
+  // 左边的画面负责"星座的样子"，右边只放文字与数据。
   _buildConstPanel(root) {
-    const p = el('div');
+    const p = el('aside', 'sideCard');
     p.id = 'constPanel';
     p.innerHTML = `
-      <button id="constClose">✕</button>
-      <div class="const-img" id="cp-img"></div>
-      <h2 id="cp-cn"></h2>
-      <div class="sub" id="cp-en"></div>
-      <p class="const-desc" id="cp-desc"></p>`;
+      <div class="pc-head">
+        <span class="pc-kicker" id="cp-kicker"></span>
+        <button id="constClose" class="card-close">关闭 ×</button>
+      </div>
+      <h1 id="cp-cn"></h1>
+      <div class="pc-en" id="cp-en"></div>
+      <div class="pc-sub" id="cp-sub"></div>
+      <div class="cp-img" id="cp-img"></div>
+      <div class="pc-desc" id="cp-desc"></div>
+      <div class="stats" id="cp-stats"></div>`;
     root.appendChild(p);
     this.constPanel = p;
     p.querySelector('#constClose').addEventListener('click', () => { this.hideConstPanel(); this.cb.onConstClose && this.cb.onConstClose(); });
   }
   showConstPanel(c) {
-    this.constPanel.querySelector('#cp-img').style.backgroundImage = c.img ? `url(${c.img})` : 'none';
-    this.constPanel.querySelector('#cp-img').style.display = c.img ? '' : 'none';
-    this.constPanel.querySelector('#cp-cn').textContent = c.cn;
-    this.constPanel.querySelector('#cp-en').textContent = c.en + ' CONSTELLATION';
-    this.constPanel.querySelector('#cp-desc').textContent = c.desc;
+    const q = id => this.constPanel.querySelector(id);
+    q('#cp-kicker').textContent = `CONSTELLATION · ${c.en}`;
+    q('#cp-cn').textContent = c.cn;
+    q('#cp-en').textContent = c.en;
+    q('#cp-sub').textContent = c.season ? `最佳观测 ${c.season}　·　占天球 ${c.area} 平方度（第 ${c.rank}）` : '';
+    const img = q('#cp-img');
+    img.style.backgroundImage = c.img ? `url(${c.img})` : 'none';
+    img.style.display = c.img ? '' : 'none';
+    q('#cp-desc').innerHTML = `<div class="pc-sec"><h4>概览</h4><p>${c.desc}</p></div>`;
+    const rows = [
+      ['亮星', c.star || '—'],
+      ['深空天体', c.dso || '—'],
+      ['星数 / 连线', `${c.stars.length} 颗 · ${c.lines.length} 条`],
+    ];
+    q('#cp-stats').innerHTML = rows.map(r => `<div class="stat"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
     this.constPanel.classList.add('show');
+    this.constPanel.scrollTop = 0;
   }
   hideConstPanel() { this.constPanel.classList.remove('show'); }
 

@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=167';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=167';
-import { createDeepSpace } from './starfield.js?v=167';
-import { SolarSystem } from './solar.js?v=167';
-import { FlightController, easeOutQuint } from './flight.js?v=167';
-import { UI } from './ui.js?v=167';
-import { initLoading } from './loading.js?v=167';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=169';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=169';
+import { createDeepSpace } from './starfield.js?v=169';
+import { SolarSystem } from './solar.js?v=169';
+import { FlightController, easeOutQuint } from './flight.js?v=169';
+import { UI } from './ui.js?v=169';
+import { initLoading } from './loading.js?v=169';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -510,15 +510,22 @@ function updateEclipseTint() {
 function focusConst(id) {
   const c = CONSTELLATIONS.find(x => x.id === id);
   if (!c) return;
+  ui.hideCard();          // 星座卡与行星卡共用同一个位置，别叠在一起
   ui.showConstPanel(c);
   const data = (window.__constData || []).find(x => x.id === id);
   if (!data) return;
   const dir = data.center.clone().normalize();
   const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+  const camPos = dir.clone().multiplyScalar(6200).add(side.clone().multiplyScalar(900)).add(new THREE.Vector3(0, 400, 0));
+  // 目标点沿"相机右方向"偏移，让星座落在画面左侧、不被右边的档案卡压住
+  const viewDir = dir.clone().multiplyScalar(18500).sub(camPos).normalize();
+  const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
+  const dist = camPos.distanceTo(dir.clone().multiplyScalar(18500));
+  const shift = dist * _tanHalf() * camera.aspect * 0.30;
   flight.follow(null);
   flight.flyTo({
-    camPos: dir.clone().multiplyScalar(6200).add(side.clone().multiplyScalar(900)).add(new THREE.Vector3(0, 400, 0)),
-    target: dir.clone().multiplyScalar(18500),
+    camPos,
+    target: dir.clone().multiplyScalar(18500).add(camRight.multiplyScalar(shift)),
     duration: 2.4, arc: 0.1,
     onDone: () => flight.setRange(1500, 26000),
   });
@@ -621,5 +628,6 @@ window.__scene = {
   overview: () => goOverview(),
   setPositionMode: (m) => { positionMode = m; },
   setFreePitch: (v) => flight.setFreePitch(v),
+  focusConst: (id) => focusConst(id),
   get state() { return { mode, jd, speedIdx, eclipseView, selectedId, positionMode, deepReady, flying: flight.isFlying }; },
 };
