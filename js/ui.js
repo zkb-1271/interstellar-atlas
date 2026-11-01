@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=185';
+import { QUOTES, PLANETS } from './data.js?v=186';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=185';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=186';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -246,6 +246,10 @@ export class UI {
         <div class="pc-block-k">探索这颗星球</div>
         <div class="pc-explore" id="pc-explore"></div>
       </div>
+      <div class="pc-block" id="pc-moons-block" style="display:none">
+        <div class="pc-block-k">它的卫星 · 点击前往</div>
+        <div class="pc-views" id="pc-moons"></div>
+      </div>
       <div class="pc-block">
         <div class="pc-block-k">观察这个世界</div>
         <div class="pc-views">
@@ -269,7 +273,7 @@ export class UI {
     }));
   }
 
-    showCard(info, kicker) {
+    showCard(info, kicker, moons) {
     this.card.querySelector('#pc-kicker').textContent = kicker;
     this.card.querySelector('#pc-cn').textContent = info.cn;
     this.card.querySelector('#pc-cn').classList.toggle('long', info.cn.length > 4);
@@ -280,6 +284,19 @@ export class UI {
     // 标题下的一句话提要 + 「探索这颗星球」里的关键数字
     this.card.querySelector('#pc-sub').textContent = info.desc || '';
     this.card.querySelector('#pc-explore').innerHTML = this._exploreChips(info);
+
+    // 「它的卫星」：真实比例后卫星又小又远，给一排按钮直接跳到卫星特写
+    const moonBlock = this.card.querySelector('#pc-moons-block');
+    const moonRow = this.card.querySelector('#pc-moons');
+    if (moons && moons.length) {
+      moonBlock.style.display = '';
+      moonRow.innerHTML = moons.map(m => `<button data-moon="${m.id}">${m.cn}</button>`).join('');
+      moonRow.querySelectorAll('button').forEach(b =>
+        b.addEventListener('click', () => this.cb.onSelectPlanet(b.dataset.moon)));
+    } else {
+      moonBlock.style.display = 'none';
+      moonRow.innerHTML = '';
+    }
 
     // 冷知识：一句话一条，给具体数字，读起来比正文轻
     const facts = info.facts || [];
@@ -719,7 +736,13 @@ export class UI {
         ringShown = true;
       }
     }
-    if (!ringShown) { this.hoverRing.style.opacity = '0'; this.leader.style.display = 'none'; }
+    if (!ringShown) {
+      this.hoverRing.style.opacity = '0';
+      this.leader.style.display = 'none';
+      // 环没画出来（比如目标占屏超过 90px）就必须把准星还回来，
+      // 否则准星藏了、环又没画——指针凭空消失
+      if (this.hoverId) this.setReticleHover(false);
+    }
   }
 
   setReticleHover(on) {

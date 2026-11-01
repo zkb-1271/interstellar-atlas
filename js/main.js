@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=185';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=185';
-import { createDeepSpace } from './starfield.js?v=185';
-import { SolarSystem } from './solar.js?v=185';
-import { FlightController, easeOutQuint } from './flight.js?v=185';
-import { UI } from './ui.js?v=185';
-import { initLoading } from './loading.js?v=185';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=186';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=186';
+import { createDeepSpace } from './starfield.js?v=186';
+import { SolarSystem } from './solar.js?v=186';
+import { FlightController, easeOutQuint } from './flight.js?v=186';
+import { UI } from './ui.js?v=186';
+import { initLoading } from './loading.js?v=186';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -174,14 +174,15 @@ function arriveDeep() {
   deepArrived = true;
   deepReady = true;
   flight.onFlightCancel = null;   // 已落地，中断钩子作废，避免之后误触发
-  // 太阳系退场：整体逐渐缩小到看不见，而不是最后一帧直接消失
-  addTween(1.5, e => {
+  // 太阳系退场：轨道盘跟着整体一起缩小，渐隐到看不见再收——
+  // 以前先瞬间收掉轨道盘再做缩放，缩的是几个看不见的点，等于没做
+  addTween(1.6, e => {
     solar.group.scale.setScalar(Math.max(0.001, 1 - easeInOutT(e)));
   }, () => {
+    solar.setOrbitsVisible(false);
     setSolarVisible(false);
     solar.group.scale.setScalar(1);   // 复位，下次进场是正常尺寸
   });
-  solar.setOrbitsVisible(false);
   // 星座与星云淡入：随透明度慢慢浮现，不再凭空出现
   addTween(2.0, e => applySkyFade(e * e * (3 - 2 * e)));
   flight.setRange(50, 16000);      // 别拉出银河天球（半径 19700）之外
@@ -419,7 +420,11 @@ function selectPlanet(id) {
   const cat = kind === 'star' ? '恒星' : kind === 'moon' ? '卫星' : kind === 'comet' ? '彗星' : '行星';
   const enKind = kind === 'star' ? 'STAR' : kind === 'moon' ? 'SATELLITE' : kind === 'comet' ? 'COMET' : 'PLANET';
   ui.showFocusTitle(b.info, cat);
-  ui.showCard(b.info, `${enKind} · ${b.info.en.toUpperCase()}`);
+  // 「它的卫星」按钮列表：地球月球是特殊 id 'moon'，其余是 'moon-<名>'
+  const moons = kind === 'moon' ? [] :
+    id === 'earth' ? [{ id: 'moon', cn: '月球' }] :
+    (MOONS[id] || []).map(md => ({ id: 'moon-' + md.id, cn: md.info.cn }));
+  ui.showCard(b.info, `${enKind} · ${b.info.en.toUpperCase()}`, moons);
   ui.showDirPanel(b.info);
 
   const p = b.worldPos;
