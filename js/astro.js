@@ -3,7 +3,7 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=187';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=188';
 
 const DEG = Math.PI / 180;
 

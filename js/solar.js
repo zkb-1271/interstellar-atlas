@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=187';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=187';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=187';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=188';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=188';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=188';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -585,23 +585,6 @@ export class SolarSystem {
       this._glow2.material.opacity = Math.min(1, 120 / Math.max(d, 1)) * 0.8;
     }
 
-    // 太阳正圆贴片：远看永远正圆（盖住透视压扁的球），拉近后淡出露真球。
-    // 淡出区间外移到屏幕半径 130–160px：那时太阳已接近画面中心（透视
-    // 压扁可忽略）、球面贴图细节也足够丰富，切换才不突兀。
-    // 位置向相机偏出球面 1.06R，保证深度测试时贴片在球体之前、
-    // 月球之后——日食里月亮仍能正常遮住太阳。
-    if (this._sunDisc && camera) {
-      const sp = this.bodies.get('sun').worldPos;
-      const dSun = camera.position.distanceTo(sp);
-      const rpx = (SUN_RADIUS / (dSun * Math.tan(camera.fov * Math.PI / 360))) * (window.innerHeight / 2);
-      const op = Math.min(1, Math.max(0, (160 - rpx) / 30));
-      this._sunDisc.material.opacity = op;
-      this._sunDisc.visible = op > 0.01;
-      if (this._sunDisc.visible) {
-        _sunToCam.copy(camera.position).sub(sp).normalize();
-        this._sunDisc.position.copy(_sunToCam.multiplyScalar(SUN_RADIUS * 1.06));
-      }
-    }
     // 带粒子尺寸随相机高度微调（参考站 $z 同款）
     if (this.beltMat && camera) {
       const dSun = camera.position.length();
@@ -739,6 +722,25 @@ export class SolarSystem {
     }
 
     this.belt.rotation.y += simSpeed * 0.00035;
+  }
+
+  // 太阳正圆贴片同步——⚠️ 必须在相机位姿定稿「之后」调用
+  //（main.js 的 frame 里 flight.update 之后）。以前放在 update() 里
+  // 用上一帧的相机定位，缩放/拖拽时贴片慢一帧，和球体错位成"双太阳"。
+  syncSunDisc(camera) {
+    if (!this._sunDisc || !camera) return;
+    const sp = this.bodies.get('sun').worldPos;
+    const dSun = camera.position.distanceTo(sp);
+    const rpx = (SUN_RADIUS / (dSun * Math.tan(camera.fov * Math.PI / 360))) * (window.innerHeight / 2);
+    const op = Math.min(1, Math.max(0, (160 - rpx) / 30));
+    this._sunDisc.material.opacity = op;
+    this._sunDisc.visible = op > 0.01 && this.group.visible;
+    if (this._sunDisc.visible) {
+      // 沿视线向相机偏出 1.03R：深度上在球体之前（日食时月球仍能遮挡它），
+      // 且严格落在"相机—日心"视线上，投影与球体同心、零视差
+      _sunToCam.copy(camera.position).sub(sp).normalize();
+      this._sunDisc.position.copy(_sunToCam.multiplyScalar(SUN_RADIUS * 1.03));
+    }
   }
 
   get(id) { return this.bodies.get(id); }

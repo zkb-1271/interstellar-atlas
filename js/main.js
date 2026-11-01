@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=187';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=187';
-import { createDeepSpace } from './starfield.js?v=187';
-import { SolarSystem } from './solar.js?v=187';
-import { FlightController, easeOutQuint } from './flight.js?v=187';
-import { UI } from './ui.js?v=187';
-import { initLoading } from './loading.js?v=187';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=188';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=188';
+import { createDeepSpace } from './starfield.js?v=188';
+import { SolarSystem } from './solar.js?v=188';
+import { FlightController, easeOutQuint } from './flight.js?v=188';
+import { UI } from './ui.js?v=188';
+import { initLoading } from './loading.js?v=188';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -709,6 +709,7 @@ function frame(dt) {
     flight.applyPitchLink(overviewViewHeight());
     flight.update(dt);
     stepTweens(dt);        // 太阳系缩小退场 / 星座淡入淡出
+    solar.syncSunDisc(camera);   // 相机定稿后再定位太阳贴片（防"双太阳"错位）
     // 硬性保险：相机永远留在银河天球（半径 19700）之内，防"飞出天球穿模"
     const camL = camera.position.length();
     if (camL > 19000) camera.position.multiplyScalar(19000 / camL);
