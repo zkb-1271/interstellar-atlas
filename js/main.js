@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=180';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=180';
-import { createDeepSpace } from './starfield.js?v=180';
-import { SolarSystem } from './solar.js?v=180';
-import { FlightController, easeOutQuint } from './flight.js?v=180';
-import { UI } from './ui.js?v=180';
-import { initLoading } from './loading.js?v=180';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=181';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=181';
+import { createDeepSpace } from './starfield.js?v=181';
+import { SolarSystem } from './solar.js?v=181';
+import { FlightController, easeOutQuint } from './flight.js?v=181';
+import { UI } from './ui.js?v=181';
+import { initLoading } from './loading.js?v=181';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -134,7 +134,7 @@ let deepReady = false;        // 深空"落地"后才亮星座标签，避免飞
 // ---------- UI ----------
 const ui = new UI(document.body, {
   onEnterSolar: () => enterSolar(),
-  onGoSolar: () => goOverview(),
+  onGoSolar: () => { positionMode === 'real' ? goRealOverview() : goOverview(); },
   onTab: (id) => { if (id === 'deep') goDeep(); else goOverview(); },
   onOpenEvents: () => openEvents(),
   onCloseEvents: () => ui.hideEvents(),
@@ -151,8 +151,8 @@ const ui = new UI(document.body, {
   onTogglePosition: () => {
     positionMode = positionMode === 'schematic' ? 'real' : 'schematic';
     ui.setPositionMode(positionMode);
-    // 切回示意时回到总览机位，方便对比
-    if (positionMode === 'schematic') goOverview();
+    // 两种排布各回各的机位：示意 = 参考站直线构图；实时 = 以太阳为中心
+    if (positionMode === 'schematic') goOverview(); else goRealOverview();
   },
   onOpenConst: (id) => focusConst(id),
   onConstClose: () => closeConst(),
@@ -256,6 +256,38 @@ function goOverview() {
   flight.flyTo({
     camPos: oc2.camPos, target: oc2.target, duration: 3.0,
     onDone: () => { flight.setRange(0.9, 18500); },
+  });
+}
+
+// 实时轨道总览：行星按真实历表散落各处（不再是一条直线），
+// 相机也换成以太阳为中心的机位——对着太阳、取景收到木星轨道外侧，
+// 别再沿用示意排布那套"给直线定制"的偏心构图
+function goRealOverview() {
+  mode = 'solar';
+  tweens.length = 0;
+  deepArrived = false;
+  deepReady = false;
+  flight.setFreePitch(false);
+  selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
+  solar.setEclipseShadows(null);
+  ui.showViewbar(null); flight.setAutoOrbit(false);
+  solar.setOrbitsVisible(true);
+  setSolarVisible(true);
+  solar.group.scale.setScalar(1);
+  if (skyFade > 0.01) addTween(1.1, e => applySkyFade(skyFade * (1 - e)), () => applySkyFade(0));
+  ui.hideConstPanel();
+  ui.setRailActive(null);
+  flight.follow(null);
+  ui.setMode('solar');
+  ui.hideCard();
+  ui.hideEvents();
+  const vh = OVERVIEW_WIDTH / Math.max(camera.aspect, 0.42);   // 与示意总览同尺度
+  const D = distForViewHeight(vh);
+  flight.flyTo({
+    camPos: new THREE.Vector3(0, Math.sin(BASE_PITCH) * D, Math.cos(BASE_PITCH) * D),
+    target: new THREE.Vector3(0, 0, 0),     // 正对太阳
+    duration: 2.2,
+    onDone: () => flight.setRange(0.9, 18500),
   });
 }
 
