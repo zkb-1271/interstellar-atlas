@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=179';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=179';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=179';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=180';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=180';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=180';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -51,19 +51,22 @@ function makeSunDiscTexture(size = 256) {
   grad.addColorStop(1, 'rgba(249,110,20,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, size, size);
-  // 米粒组织：随机亮斑 / 暗斑，避免变成一块纯色圆
+  // 米粒组织：随机亮斑 / 暗斑。只画到 0.9R——颗粒若碰到边缘，
+  // 轮廓就会毛毛糙糙不像正圆
   let seed = 20260901;
   const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
   g.globalCompositeOperation = 'overlay';
   for (let i = 0; i < 900; i++) {
     const a = rnd() * Math.PI * 2;
-    const r = Math.sqrt(rnd()) * R * 0.96;
+    const r = Math.sqrt(rnd()) * R * 0.90;
     const x = R + Math.cos(a) * r, y = R + Math.sin(a) * r;
     g.fillStyle = rnd() < 0.5 ? 'rgba(255,244,214,0.25)' : 'rgba(200,90,20,0.20)';
     g.beginPath(); g.arc(x, y, 1 + rnd() * 3, 0, Math.PI * 2); g.fill();
   }
   g.globalCompositeOperation = 'destination-in';
-  const edge = g.createRadialGradient(R, R, R * 0.95, R, R, R);
+  // 裁边：实心一直保持到 0.985R，只留最外 1.5% 抗锯齿——
+  // 轮廓必须"锐"，羽化边太宽的话压扁的球体会从边缘透出来
+  const edge = g.createRadialGradient(R, R, R * 0.985, R, R, R);
   edge.addColorStop(0, 'rgba(0,0,0,1)');
   edge.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = edge;
@@ -128,12 +131,14 @@ export class SolarSystem {
     this.bodies.get('sun').holder.add(glow1, glow2);
 
     // 正圆贴片：总览时盖住被透视压扁的球体（见 makeSunDiscTexture 注释）。
-    // 稍微放大一点，把压扁椭圆完整盖住；depthTest 保持开启，
-    // 且每帧把它向相机偏出球面（见 update），日食时月球才能从前面遮住太阳。
+    // 半径取 1.15R：贴片实心区 0.985×1.15R ≈ 1.13R，压扁球体的轮廓
+    //（最长轴 R）被 comfortably 盖住，绝不会从羽化边里透出来。
+    // depthTest 保持开启，且每帧把它向相机偏出球面（见 update），
+    // 日食时月球才能从前面遮住太阳。
     const disc = this._sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({
       map: makeSunDiscTexture(), transparent: true, depthWrite: false }));
     disc.material.color.setRGB(1.35, 1.26, 1.12);   // 与球体同样的过曝喂给 Bloom
-    disc.scale.setScalar(SUN_RADIUS * 2.12);
+    disc.scale.setScalar(SUN_RADIUS * 2.3);
     disc.renderOrder = 4;                            // 压在行星微光晕（3）之上
     this.bodies.get('sun').holder.add(disc);
   }
@@ -580,13 +585,15 @@ export class SolarSystem {
     }
 
     // 太阳正圆贴片：远看永远正圆（盖住透视压扁的球），拉近后淡出露真球。
-    // 按屏幕半径控制淡出；位置向相机偏出球面 1.06R，保证深度测试时
-    // 贴片在球体之前、月球之后——日食里月亮仍能正常遮住太阳。
+    // 淡出区间外移到屏幕半径 130–160px：那时太阳已接近画面中心（透视
+    // 压扁可忽略）、球面贴图细节也足够丰富，切换才不突兀。
+    // 位置向相机偏出球面 1.06R，保证深度测试时贴片在球体之前、
+    // 月球之后——日食里月亮仍能正常遮住太阳。
     if (this._sunDisc && camera) {
       const sp = this.bodies.get('sun').worldPos;
       const dSun = camera.position.distanceTo(sp);
       const rpx = (SUN_RADIUS / (dSun * Math.tan(camera.fov * Math.PI / 360))) * (window.innerHeight / 2);
-      const op = Math.min(1, Math.max(0, (100 - rpx) / 35));
+      const op = Math.min(1, Math.max(0, (160 - rpx) / 30));
       this._sunDisc.material.opacity = op;
       this._sunDisc.visible = op > 0.01;
       if (this._sunDisc.visible) {
