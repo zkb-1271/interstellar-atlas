@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星际模拟 · Interstellar Atlas</title>
-<link rel="stylesheet" href="css/style.css?v=111">
+<link rel="stylesheet" href="css/style.css?v=115">
 <script type="importmap">
 {
   "imports": {
-    "three": "./lib/three.module.js?v=111",
+    "three": "./lib/three.module.js?v=115",
     "three/addons/": "./lib/addons/"
   }
 }
@@ -18,11 +18,60 @@
 <canvas id="scene"></canvas>
 
 <div id="loading">
-  <div class="zh">星际模拟</div>
-  <div class="en">INTERSTELLAR ATLAS</div>
-  <div class="bar"><i></i></div>
+  <div class="sky" aria-hidden="true"><div class="stars"></div></div>
+
+  <div class="stack">
+    <svg class="orrery" viewBox="0 0 360 360" aria-hidden="true">
+      <defs>
+        <radialGradient id="sunCore">
+          <stop offset="0%" stop-color="#fffdf7"/>
+          <stop offset="34%" stop-color="#ffe3b2"/>
+          <stop offset="68%" stop-color="#f0a94c"/>
+          <stop offset="100%" stop-color="#c9701f"/>
+        </radialGradient>
+        <radialGradient id="sunHalo">
+          <stop offset="0%" stop-color="rgba(255,208,136,.42)"/>
+          <stop offset="40%" stop-color="rgba(240,160,70,.14)"/>
+          <stop offset="100%" stop-color="rgba(240,150,60,0)"/>
+        </radialGradient>
+      </defs>
+
+      <g transform="translate(180,178)">
+        <circle class="halo" r="86" fill="url(#sunHalo)"/>
+        <ellipse class="ring r1" rx="132" ry="50.2"/>
+        <ellipse class="ring r2" rx="104" ry="39.5"/>
+        <ellipse class="ring r3" rx="76"  ry="28.9"/>
+        <ellipse class="ring r4" rx="48"  ry="18.2"/>
+        <g class="dial">
+          <ellipse rx="152" ry="57.8"/>
+          <animateTransform attributeName="transform" type="rotate"
+            from="0" to="360" dur="72s" repeatCount="indefinite"/>
+        </g>
+        <g class="ticks">
+          <path d="M0,-150 v-6 M0,150 v6 M-160,0 h-6 M160,0 h6"/>
+        </g>
+        <circle class="planet pj" r="5.2" cx="132" cy="0"/>
+        <circle class="planet ps" r="4.4" cx="104" cy="0"/>
+        <circle class="planet pe" r="3.1" cx="76"  cy="0"/>
+        <circle class="planet pm" r="2.5" cx="48"  cy="0"/>
+        <circle class="sun-glow" r="10"/>
+        <circle class="sun" r="9" fill="url(#sunCore)"/>
+      </g>
+    </svg>
+
+    <div class="plate">
+      <div class="kicker">INTERSTELLAR ATLAS</div>
+      <h1>星际模拟</h1>
+      <div class="rule"><i></i></div>
+      <div class="meters">
+        <div class="track"><i></i></div>
+        <div class="pct">0%</div>
+      </div>
+      <div class="status"><span class="pulse"></span><b>正在校准星历表</b><em>CALIBRATING EPHEMERIS</em></div>
+    </div>
+  </div>
 </div>
 
-<script type="module" src="js/main.js?v=111"></script>
+<script type="module" src="js/main.js?v=115"></script>
 </body>
 </html>

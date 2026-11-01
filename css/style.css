@@ -301,13 +301,102 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 .body-label:hover .en { color: var(--gold-bright); }
 .body-label.dim { opacity: .35; }
 
-/* ---------- 加载屏 ---------- */
+/* ---------- 加载屏（轨道仪 · 观测台质感） ---------- */
 #loading {
-  position: fixed; inset: 0; z-index: 100; background: #030303;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-  transition: opacity 1.2s;
+  position: fixed; inset: 0; z-index: 100; background: #040405;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 1s ease, visibility 0s linear 0s;
+  overflow: hidden;
 }
-#loading.done { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 1.2s, visibility 0s 1.3s; }
+#loading::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(60% 55% at 50% 46%, rgba(217,179,108,.055), rgba(0,0,0,0) 70%);
+}
+#loading .sky { position: absolute; inset: 0; overflow: hidden; }
+#loading .stars i {
+  position: absolute; border-radius: 50%; background: #fff;
+  transform: translate(-50%, -50%);
+}
+#loading .stars i.tw { animation: twinkle linear infinite; }
+@keyframes twinkle { 0%,100% { opacity: .12; } 50% { opacity: .9; } }
+
+#loading .stack {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+#loading .orrery { width: 386px; height: 386px; display: block; margin-bottom: -6px; }
+
+/* 轨道仪 */
+#loading .ring {
+  fill: none; stroke: rgba(217,179,108,.24); stroke-width: .7;
+}
+#loading .ring.r1 { stroke: rgba(217,179,108,.30); stroke-dasharray: 1.5 5; }
+#loading .ring.r3 { stroke: rgba(217,179,108,.18); }
+#loading .ring.r4 { stroke: rgba(217,179,108,.14); }
+#loading .dial { fill: none; stroke: rgba(217,179,108,.22); stroke-width: .7; stroke-dasharray: 1 12; }
+#loading .ticks { fill: none; stroke: rgba(217,179,108,.32); stroke-width: .8; }
+#loading .planet { fill: #e6dcc6; }
+#loading .planet.pj { fill: #d9b98f; }
+#loading .planet.ps { fill: #e4d0a6; }
+#loading .planet.pe { fill: #7bb6c9; }
+#loading .planet.pm { fill: #b4674f; }
+#loading .sun-glow {
+  fill: rgba(255,214,150,.5); filter: blur(9px);
+  animation: sunPulse 4.2s ease-in-out infinite;
+}
+@keyframes sunPulse { 0%,100% { opacity: .45; transform: scale(1); } 50% { opacity: .8; transform: scale(1.12); } }
+
+/* 文字面板 */
+#loading .plate { position: relative; text-align: center; }
+#loading .kicker {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .58em; text-indent: .58em;
+  color: rgba(217,179,108,.55); margin-bottom: 16px;
+}
+#loading h1 {
+  font-family: var(--serif); font-size: 36px; font-weight: 400;
+  letter-spacing: .52em; text-indent: .52em; margin: 0;
+  color: #f4e7cc; text-shadow: 0 0 40px rgba(217,179,108,.35);
+}
+#loading .rule { display: flex; justify-content: center; margin: 18px 0 18px; }
+#loading .rule i {
+  display: block; width: 54px; height: 1px;
+  background: linear-gradient(90deg, rgba(217,179,108,0), rgba(217,179,108,.9), rgba(217,179,108,0));
+  animation: ruleIn 2.4s ease-in-out infinite;
+}
+@keyframes ruleIn { 0%,100% { width: 42px; opacity: .5; } 50% { width: 88px; opacity: 1; } }
+
+#loading .meters {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+}
+#loading .track { width: 220px; height: 1px; background: rgba(255,255,255,.09); overflow: hidden; }
+#loading .track i {
+  display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, rgba(217,179,108,.5), #f0d9a8);
+  box-shadow: 0 0 10px rgba(240,217,168,.6);
+  transition: width .45s cubic-bezier(.25,.8,.3,1);
+}
+#loading .pct {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: rgba(217,179,108,.8); min-width: 34px; text-align: right;
+}
+#loading .status {
+  margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 9px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .22em;
+  color: rgba(190,182,163,.6);
+}
+#loading .status b { font-weight: 400; color: rgba(232,225,210,.86); }
+#loading .status em { font-style: normal; color: rgba(190,182,163,.42); letter-spacing: .18em; }
+#loading .pulse {
+  width: 4px; height: 4px; border-radius: 50%; background: #f0d9a8;
+  box-shadow: 0 0 8px rgba(240,217,168,.9);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+
+/* 退场：整体上浮淡出 */
+#loading.done { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 1s ease, visibility 0s linear 1s; }
+#loading.done .plate { transform: translateY(-8px); transition: transform 1s ease; }
+#loading .plate { transition: transform 1s ease; }
 #loading .zh { font-family: var(--serif); font-size: 34px; letter-spacing: .8em; text-indent: .8em; color: var(--gold-bright); }
 #loading .en { font-family: var(--mono); font-size: 11px; letter-spacing: .6em; text-indent: .6em; color: var(--ink-dim); }
 #loading .bar { width: 180px; height: 1px; background: rgba(217,179,108,.2); overflow: hidden; }

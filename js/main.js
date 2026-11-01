@@ -8,12 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=111';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=111';
-import { createDeepSpace } from './starfield.js?v=111';
-import { SolarSystem } from './solar.js?v=111';
-import { FlightController, easeOutQuint } from './flight.js?v=111';
-import { UI } from './ui.js?v=111';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=115';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=115';
+import { createDeepSpace } from './starfield.js?v=115';
+import { SolarSystem } from './solar.js?v=115';
+import { FlightController, easeOutQuint } from './flight.js?v=115';
+import { UI } from './ui.js?v=115';
+import { initLoading } from './loading.js?v=115';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -38,6 +39,7 @@ composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 // ---------- 世界 ----------
+initLoading();                    // 先挂钩加载管理器，后面的贴图请求才会被统计
 const deepSky = createDeepSpace();
 scene.add(deepSky);
 const constGroup = deepSky.getObjectByName('constellations');
@@ -539,7 +541,6 @@ function bootSolar() {
   ui.setRailActive(null);
 }
 bootSolar();
-setTimeout(() => document.getElementById('loading').classList.add('done'), 700);
 
 // 调试/验收句柄
 window.__scene = {
