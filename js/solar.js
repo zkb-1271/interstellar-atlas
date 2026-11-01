@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=154';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=154';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=154';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=156';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=156';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=156';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -199,7 +199,7 @@ export class SolarSystem {
     const ringR = auToScene(p.elements.a) * SCHEMATIC;
     const rpts = ringPoints(ringR, 256).map(q => new THREE.Vector3(q[0], q[1], q[2]));
     const ringOrbit = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(rpts),
-      new THREE.LineBasicMaterial({ color: 0x93a7c0, transparent: true, opacity: 0.04 }));
+      new THREE.LineBasicMaterial({ color: 0x93a7c0, transparent: true, opacity: 0.075 }));
     this.group.add(ringOrbit);
     entry.orbitRing = ringOrbit;
   }
@@ -503,8 +503,11 @@ export class SolarSystem {
     const on = this._orbitsOn !== false;
     const real = this._posMode === 'real';
     for (const b of this.bodies.values()) {
-      if (b.orbitRing) b.orbitRing.visible = on && !real;
-      if (b.orbit) b.orbit.visible = on && (real || b.orbitAlways);
+      // ⚠️ 必须转成布尔：three 只认 visible === false 为隐藏，
+      //    写成 `on && b.orbitAlways` 在 orbitAlways 未定义时会得到 undefined，
+      //    结果两套轨道线同时显示。
+      if (b.orbitRing) b.orbitRing.visible = !!(on && !real);
+      if (b.orbit) b.orbit.visible = !!(on && (real || b.orbitAlways));
     }
   }
 
