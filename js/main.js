@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=160';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=160';
-import { createDeepSpace } from './starfield.js?v=160';
-import { SolarSystem } from './solar.js?v=160';
-import { FlightController, easeOutQuint } from './flight.js?v=160';
-import { UI } from './ui.js?v=160';
-import { initLoading } from './loading.js?v=160';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=163';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=163';
+import { createDeepSpace } from './starfield.js?v=163';
+import { SolarSystem } from './solar.js?v=163';
+import { FlightController, easeOutQuint } from './flight.js?v=163';
+import { UI } from './ui.js?v=163';
+import { initLoading } from './loading.js?v=163';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -143,6 +143,7 @@ setInterval(() => { if (mode === 'deep' && !document.hidden) ui._setQuote(); }, 
 // ---------- 模式切换 ----------
 function goDeep() {
   mode = 'deep';
+  flight.setFreePitch(true);      // 深空：没有地平线，随便往哪转
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
@@ -171,6 +172,7 @@ function goDeep() {
 function enterSolar() {
   mode = 'solar';
   deepReady = false;
+  flight.setFreePitch(false);
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
   ui.hideConstPanel();
@@ -185,6 +187,7 @@ function enterSolar() {
 function goOverview() {
   mode = 'solar';
   deepReady = false;
+  flight.setFreePitch(false);
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
@@ -374,6 +377,7 @@ let eclipseEvent = null;      // 当前观看的日月食事件
 function jumpEclipse(ev) {
   ui.hideEvents();
   mode = 'solar';
+  flight.setFreePitch(false);
   solar.setOrbitsVisible(true);
   ui.setMode('solar');
   ui.hideCard();
@@ -450,6 +454,7 @@ function openEvents() {
 function jumpAlignment(ev) {
   ui.hideEvents();
   mode = 'solar';
+  flight.setFreePitch(false);
   solar.setOrbitsVisible(true);
   ui.setMode('solar');
   ui.hideCard();
@@ -615,5 +620,6 @@ window.__scene = {
   select: (id) => selectPlanet(id),
   overview: () => goOverview(),
   setPositionMode: (m) => { positionMode = m; },
+  setFreePitch: (v) => flight.setFreePitch(v),
   get state() { return { mode, jd, speedIdx, eclipseView, selectedId, positionMode, deepReady, flying: flight.isFlying }; },
 };

@@ -42,6 +42,12 @@ export class FlightController {
     this.autoOrbit = { on: false, speed: 0.058 };   // 特写环绕速度（约 108s 一圈）
     this._zoomTouched = 0;    // 最近一次缩放时刻（俯仰联动用）
     this.fovForVH = null;     // 由 main 注入：视高 → 视角曲线（全景宽、特写窄）
+    // 深空是"站在球心往外看"：俯仰不受地平线限制，可以翻过极点继续转。
+    // 太阳系模式仍保留 ±1.35 的限制（别钻到黄道面下面）。
+    this.freePitch = false;
+    this._eul = new THREE.Euler(0, 0, 0, 'YXZ');
+    this._quat = new THREE.Quaternion();
+    this._off = new THREE.Vector3();
 
     this._bind();
   }
@@ -53,12 +59,13 @@ export class FlightController {
   }
   _applyCamera() {
     const d = this._dist;
-    const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
-    this.camera.position.set(
-      this.target.x + Math.sin(this.yaw) * cp * d,
-      this.target.y + sp * d,
-      this.target.z + Math.cos(this.yaw) * cp * d);
-    this.camera.lookAt(this.target);
+    // 用欧拉角直接构造朝向：pitch 越过 ±90° 时会自然"翻过头顶"，
+    // 而 lookAt + 固定 up 向量在极点处会退化成万向锁、画面突然翻转。
+    this._eul.set(-this.pitch, this.yaw, 0, 'YXZ');
+    this._quat.setFromEuler(this._eul);
+    this._off.set(0, 0, 1).applyQuaternion(this._quat).multiplyScalar(d);
+    this.camera.position.copy(this.target).add(this._off);
+    this.camera.quaternion.copy(this._quat);
   }
 
   // 由世界坐标反解 rig（给 flyTo 用，兼容旧调用）
@@ -101,14 +108,18 @@ export class FlightController {
       this._drag.t = now;
 
       const k = 0.0024;
-      // 横向拖 → 绕 y 轴转；纵向拖 → 抬起/压低视角（向下拖，视角抬高看向俯视）
+      // 统一成"抓住天空拖"：往哪拖，天空往哪走。
+      //   横向 dx → yaw（向右拖，背景右移）
+      //   纵向 -dy → pitch（向下拖，背景下移；深空里翻过极点也继续）
       this._tYaw += dx * k;
-      this._tPitch = clamp(this._tPitch + dy * k, -1.35, 1.35);
+      const dp = -dy * k;
+      this._tPitch = this.freePitch ? this._tPitch + dp
+                                    : clamp(this._tPitch + dp, -1.35, 1.35);
 
       // 记录瞬时角速度（低通一下，避免抖动），松手后靠它滑行
       const a = Math.min(1, dtm * 14);
       this._inertia.yaw += ((dx * k) / dtm - this._inertia.yaw) * a;
-      this._inertia.pitch += ((dy * k) / dtm - this._inertia.pitch) * a;
+      this._inertia.pitch += (((-dy) * k) / dtm - this._inertia.pitch) * a;
     });
 
     const end = () => {
@@ -159,6 +170,13 @@ export class FlightController {
     const t = 2 * Math.tan(this.camera.fov * Math.PI / 360);
     this.viewHeightRange = [Math.max(0.02, min * t), max * t];
   }
+  setFreePitch(on) {
+    this.freePitch = !!on;
+    if (!on) {
+      this.pitch = clamp(this.pitch, -1.35, 1.35);
+      this._tPitch = clamp(this._tPitch, -1.35, 1.35);
+    }
+  }
   setAutoOrbit(on) { this.autoOrbit.on = on; }
   setAutoOrbitSpeed(v) { this.autoOrbit.speed = v; }
 
@@ -197,7 +215,9 @@ export class FlightController {
       if (!this._drag) {
         const keep = Math.exp(-3.4 * dt);          // 摩擦小一点 → 甩出去滑得更远
         this._tYaw += this._inertia.yaw * dt;
-        this._tPitch = clamp(this._tPitch + this._inertia.pitch * dt, -1.35, 1.35);
+        const dp = this._inertia.pitch * dt;
+        this._tPitch = this.freePitch ? this._tPitch + dp
+                                      : clamp(this._tPitch + dp, -1.35, 1.35);
         this._inertia.yaw *= keep;
         this._inertia.pitch *= keep;
         if (Math.abs(this._inertia.yaw) < 0.004) this._inertia.yaw = 0;
@@ -232,6 +252,7 @@ export class FlightController {
   // 缩放联动俯仰：放大（视高变小）→ 压向黄道面；缩小 → 抬高俯视
   // 默认机位（viewHeight≈128）恰好在 0.03 rad，与参考站基本一致
   applyPitchLink(baseVH = 128) {
+    if (this.freePitch) return;        // 深空不联动，随你转到哪
     if (this._drag || this._flight) return;
     if (performance.now() - this._zoomTouched > 2200) return;
     const vh = clamp(this._tViewHeight, 1, 4000);
