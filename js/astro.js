@@ -3,7 +3,7 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=173';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=174';
 
 const DEG = Math.PI / 180;
 
@@ -231,4 +231,17 @@ export function fmtDateTime(jd) {
   const d = jdToDate(jd);
   const p = n => String(n).padStart(2, '0');
   return `${d.getUTCFullYear()}.${p(d.getUTCMonth() + 1)}.${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+}
+
+// —— 本地时区版（底部时间栏/顶栏时钟用）——
+// 模拟时刻本身无时区，展示成用户手表上的时间才不会"看起来差 8 小时"
+export function fmtDateLocal(jd) {
+  const d = jdToDate(jd);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+}
+export function fmtTimeLocal(jd) {
+  const d = jdToDate(jd);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }

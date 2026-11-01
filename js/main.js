@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=173';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=173';
-import { createDeepSpace } from './starfield.js?v=173';
-import { SolarSystem } from './solar.js?v=173';
-import { FlightController, easeOutQuint } from './flight.js?v=173';
-import { UI } from './ui.js?v=173';
-import { initLoading } from './loading.js?v=173';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=174';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=174';
+import { createDeepSpace } from './starfield.js?v=174';
+import { SolarSystem } from './solar.js?v=174';
+import { FlightController, easeOutQuint } from './flight.js?v=174';
+import { UI } from './ui.js?v=174';
+import { initLoading } from './loading.js?v=174';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -118,7 +118,7 @@ function computeOverviewCam(pitch = BASE_PITCH) {
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
 // ---------- 时间 ----------
-let jd = dateToJD(new Date(Date.UTC(1974, 3, 12)));   // 参考站默认历元 1974.28
+let jd = dateToJD(new Date());   // 默认"今天"：打开页面显示当前时刻（可用速率按钮推进、回到今天一键对齐）
 let speedIdx = 0;                                     // 默认静止
 
 // ---------- 状态 ----------
@@ -525,10 +525,10 @@ function openEvents() {
     setTimeout(() => {
       try {
         alignCache = findAlignments(Math.floor(jd), 3650, 2);
-        ui.fillAlignments(alignCache, fmtDate);
+        ui.fillAlignments(alignCache, fmtDateLocal);
       } catch (err) {
         alignCache = [];
-        ui.fillAlignments([], fmtDate);   // 扫描出错也要把"正在扫描"占位替换掉
+        ui.fillAlignments([], fmtDateLocal);   // 扫描出错也要把"正在扫描"占位替换掉
       }
     }, 60);
   }

@@ -2,9 +2,16 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=173';
+import { QUOTES, PLANETS } from './data.js?v=174';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=173';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=174';
+
+// 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
+const TZ_OFF = -new Date().getTimezoneOffset() / 60;
+const TZ_LABEL = TZ_OFF === 8 ? '北京时间'
+  : `UTC${TZ_OFF >= 0 ? '+' : ''}${TZ_OFF}`;
+const TZ_SHORT = TZ_OFF === 8 ? '北京'
+  : `UTC${TZ_OFF >= 0 ? '+' : ''}${TZ_OFF}`;
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -336,7 +343,7 @@ export class UI {
     p.innerHTML = `
       <button id="eventsClose">✕</button>
       <h2>天象剧场</h2>
-      <div class="sub">CELESTIAL EVENTS · 按真实轨道历表回放</div>
+      <div class="sub">CELESTIAL EVENTS · 按真实轨道历表回放 · 时刻为世界时 UTC</div>
       <h3>日月食 · ECLIPSES</h3>
       <div id="ev-eclipses"></div>
       <h3>行星连珠 · ALIGNMENTS</h3>
@@ -677,12 +684,13 @@ export class UI {
 
   // ---- 每帧更新 ----
   updateDate(jd) {
-    this.clock.innerHTML = `<b>UTC</b> ${fmtDateTime(jd).slice(11, 16)}`;
+    // 底部大字日期与顶栏时钟都用本地时区：不然"回到今天"之后
+    // 屏幕上的时刻比手表慢 8 小时，看起来就像时间坏了
+    this.clock.innerHTML = `<b>${TZ_SHORT}</b> ${fmtTimeLocal(jd)}`;
     const main = this.bigDate.querySelector('#jd-main');
     const sub = this.bigDate.querySelector('#jd-sub');
-    const dt = fmtDateTime(jd);
-    main.textContent = dt.slice(0, 10);
-    sub.textContent = dt.slice(11) + ' · 模拟时间';
+    main.textContent = fmtDateLocal(jd);
+    sub.textContent = `${fmtTimeLocal(jd)} ${TZ_LABEL} · 模拟时间`;
   }
   setActiveSpeed(i) { this.speedBtns.forEach((b, j) => b.classList.toggle('active', i === j)); }
   setPositionMode(m) {
