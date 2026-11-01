@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=102';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=102';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=102';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=107';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=107';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=107';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -14,11 +14,6 @@ export const SUN_RADIUS = displayRadius(696000);
 // 参考站 Zs 表：用于天体尺度/带边界（不是显示半径，是"体量档位"）
 const ZS = { sun: 8, mercury: 4, venus: 5.2, earth: 6.8, moon: 1.6, mars: 6, jupiter: 12.2, saturn: 14.5, uranus: 8.8, neptune: 6.7, pluto: 5, belt: 12 };
 
-// 行星微光晕色（取自参考站 color 字段）
-const PLANET_TINT = {
-  mercury: '#9d9489', venus: '#d8bd8a', earth: '#74b7c2', mars: '#9a5c4c',
-  jupiter: '#d8b48a', saturn: '#e0cba0', uranus: '#8fd7e0', neptune: '#5a7bd8',
-};
 
 const texLoader = new THREE.TextureLoader();
 function loadRealMap(url, mat) {
@@ -100,7 +95,7 @@ export class SolarSystem {
     const entry = this._register(p.id, mesh, p, R);
 
     // 微光晕：总览时行星只有几个像素，靠一层加性柔光让它"亮起来"（参考站同款观感）
-    const tint = PLANET_TINT[p.id] || '#ffffff';
+    const tint = p.color || '#ffffff';
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({
       map: tex(makeGlowSprite('rgba(255,255,255,1)', 'rgba(255,255,255,0)')),
       color: new THREE.Color(tint), blending: THREE.AdditiveBlending,

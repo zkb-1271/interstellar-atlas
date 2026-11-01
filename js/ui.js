@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=102';
+import { QUOTES, PLANETS } from './data.js?v=107';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=102';
+import { fmtDateTime } from './astro.js?v=107';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -358,14 +358,19 @@ export class UI {
     rail.id = 'planetRail';
     rail.innerHTML = '<div class="rail-line"></div>';
     this.railDots = [];
-    const items = [['sun', '太阳'], ...PLANET_NAV.map(p => [p.id, p.cn])];
-    items.forEach(([id, cn], i) => {
-      const au = id === 'sun' ? '—' : (PLANET_NAV.find(x => x.id === id)?.au?.toFixed(2) + ' AU' || '');
-      const d = el('button', 'rail-dot', `<i></i><span class="rn">${cn}</span><span class="ra">${au}</span>`);
-      d.style.top = (i * 40 + 16) + 'px';
-      d.style.animationDelay = (0.15 + i * 0.07) + 's';
-      d.dataset.id = id;
-      d.addEventListener('click', () => this.cb.onSelectPlanet(id));
+    const items = [
+      { id: 'sun', cn: '太阳', au: null, color: '#ffb765' },
+      ...PLANET_NAV.map(p => ({ id: p.id, cn: p.cn, au: p.au, color: p.color })),
+    ];
+    items.forEach((it, i) => {
+      const auTxt = it.au == null ? '' : it.au.toFixed(2);
+      const d = el('button', 'rail-dot',
+        `<i></i><span class="rn">${it.cn}</span><span class="ra">${auTxt}</span>`);
+      d.style.setProperty('--c', it.color || '#d8c49a');
+      d.style.animationDelay = (0.12 + i * 0.055) + 's';
+      d.dataset.id = it.id;
+      d.title = it.au == null ? '太阳' : `${it.cn} · ${it.au.toFixed(2)} AU`;
+      d.addEventListener('click', () => this.cb.onSelectPlanet(it.id));
       rail.appendChild(d);
       this.railDots.push(d);
     });
@@ -416,10 +421,7 @@ export class UI {
     setAutoOrbitView(on) { this.card.querySelector('#pc-auto').classList.toggle('on', on); }
   setRailActive(id) {
     for (const d of this.railDots) {
-      const on = d.dataset.id === id;
-      d.classList.toggle('active', on);
-      d.querySelector('.ra').style.display = on ? '' : 'none';
-      d.querySelector('.rn').style.opacity = on || d.dataset.id === 'sun' ? '1' : '';
+      d.classList.toggle('active', d.dataset.id === id);
     }
   }
 

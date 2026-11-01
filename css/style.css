@@ -23,7 +23,7 @@ body {
   font-family: var(--sans);
   color: var(--ink);
   cursor: none;
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -161,43 +161,6 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 }
 #focusTitle .ft-rule { width: 64px; height: 2px; background: var(--gold); margin: 18px 0 10px; }
 #focusTitle .ft-en { font-size: 11px; letter-spacing: .5em; color: var(--ink-dim); font-family: var(--mono); }
-
-/* ---------- 左侧导航轨（参考站：金线+光点+名字+AU） ---------- */
-#planetRail {
-  position: fixed; left: 64px; top: 50%; transform: translateY(-50%); z-index: 20;
-  width: 2px; height: 360px;
-  background: linear-gradient(to bottom, rgba(217,179,108,0), rgba(217,179,108,.65) 12%, rgba(217,179,108,.65) 88%, rgba(217,179,108,0));
-  opacity: 0; pointer-events: none; transition: opacity .8s;
-}
-#planetRail.show { opacity: 1; pointer-events: auto; }
-#planetRail .rail-dot {
-  position: absolute; left: 0; display: flex; align-items: center; gap: 12px;
-  background: none; border: none; cursor: none; padding: 4px 6px;
-  transform: translate(-50%, -50%);
-}
-#planetRail .rail-dot i {
-  width: 10px; height: 10px; border-radius: 50%; flex: none;
-  background: radial-gradient(circle at 35% 35%, #ffe8b0, #d08c2e 70%);
-  box-shadow: 0 0 10px rgba(240,200,120,.85), 0 0 22px rgba(240,200,120,.3);
-  transition: transform .25s, box-shadow .25s;
-}
-#planetRail .rail-dot .rn {
-  font-size: 13px; letter-spacing: .28em; color: rgba(234,229,218,.55);
-  text-shadow: 0 0 10px rgba(0,0,0,.9); white-space: nowrap; transition: all .25s;
-}
-#planetRail .rail-dot .ra {
-  display: none; font-size: 10px; letter-spacing: .18em; color: var(--gold);
-  font-family: var(--mono); white-space: nowrap; opacity: .9;
-}
-#planetRail .rail-dot:hover i { transform: scale(1.45); box-shadow: 0 0 14px rgba(255,220,150,1), 0 0 34px rgba(255,200,110,.5); }
-#planetRail .rail-dot:hover .rn { color: var(--gold-bright); opacity: 1; }
-#planetRail .rail-dot.active i {
-  transform: scale(1.5);
-  box-shadow: 0 0 0 5px rgba(240,200,120,.12), 0 0 0 1px rgba(240,200,120,.6), 0 0 16px rgba(255,220,150,.95);
-}
-#planetRail .rail-dot.active .rn { color: var(--ink); opacity: 1; }
-#planetRail.show .rail-dot { animation: railIn .55s cubic-bezier(.2,.7,.3,1) backwards; }
-@keyframes railIn { from { opacity: 0; transform: translate(-50%, -50%) translateX(-14px); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
 /* ---------- 档案卡（参考站布局） ---------- */
 #planetCard {
@@ -352,43 +315,71 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(450%); } }
 
 
-/* ---------- 左侧行星导航轨（参考站样式：金线 + 大光点 + 常显名字） ---------- */
+/* ---------- 左侧行星导航轨（金线 + 彩色定位点 + 低对比名字） ---------- */
 #planetRail {
-  position: fixed; left: 64px; top: 50%; transform: translateY(-50%); z-index: 20;
-  width: 2px; height: 360px;
-  background: linear-gradient(to bottom, rgba(217,179,108,0), rgba(217,179,108,.65) 12%, rgba(217,179,108,.65) 88%, rgba(217,179,108,0));
+  position: fixed; left: 14px; top: 50%; transform: translateY(-50%); z-index: 20;
+  width: 208px; height: min(54vh, 460px); padding: 16px 26px 16px 10px; isolation: isolate;
+  display: flex; flex-direction: column; justify-content: space-between;
   opacity: 0; pointer-events: none; transition: opacity .8s;
 }
 #planetRail.show { opacity: 1; pointer-events: auto; }
+/* 极淡的暗底：保证压在太阳强光上时仍可读，又不显成一块面板 */
+
+#planetRail .rail-line {
+  position: absolute; left: 13px; top: 2px; bottom: 2px; width: 1px; z-index: 1;
+  background: linear-gradient(to bottom,
+    rgba(217,179,108,0) 0%, rgba(217,179,108,.5) 10%,
+    rgba(217,179,108,.5) 90%, rgba(217,179,108,0) 100%);
+}
 #planetRail .rail-dot {
-  position: absolute; left: 0; display: flex; align-items: center; gap: 12px;
-  background: none; border: none; cursor: none; padding: 4px 6px;
-  transform: translate(-50%, -50%);
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 11px;
+  background: none; border: none; padding: 0; cursor: none;
+  transition: transform .28s cubic-bezier(.2,.7,.3,1);
 }
 #planetRail .rail-dot i {
-  width: 10px; height: 10px; border-radius: 50%; flex: none;
-  background: radial-gradient(circle at 35% 35%, #ffe8b0, #d08c2e 70%);
-  box-shadow: 0 0 10px rgba(240,200,120,.85), 0 0 22px rgba(240,200,120,.3);
+  width: 8px; height: 8px; border-radius: 50%; flex: none;
+  background: var(--c, #d8c49a);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--c, #d8c49a) 80%, transparent), 0 0 20px color-mix(in srgb, var(--c, #d8c49a) 30%, transparent);
   transition: transform .25s, box-shadow .25s;
 }
-#planetRail .rail-dot span {
-  font-size: 13px; letter-spacing: .28em; color: rgba(234,229,218,.92);
-  text-shadow: 0 0 10px rgba(0,0,0,.9); white-space: nowrap;
-  transition: color .25s, text-shadow .25s;
+#planetRail .rail-dot span.rn {
+  font-size: 11.5px; letter-spacing: .16em; white-space: nowrap;
+  color: rgba(240,235,225,.92); text-shadow: 0 0 14px #000, 0 0 4px #000;
+  opacity: 0; transform: translateX(-7px);
+  transition: opacity .22s, transform .22s, color .22s;
 }
-#planetRail .rail-dot:hover i { transform: scale(1.45); box-shadow: 0 0 14px rgba(255,220,150,1), 0 0 34px rgba(255,200,110,.5); }
-#planetRail .rail-dot:hover span { color: var(--gold-bright); }
-#planetRail .rail-dot.active i {
+#planetRail .rail-dot span.ra {
+  margin-left: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
+  color: rgba(210,200,180,.55); text-shadow: 0 0 10px #000;
+  opacity: 0; transform: translateX(-7px);
+  transition: opacity .22s, transform .22s, color .22s;
+}
+#planetRail .rail-dot:hover span.rn, #planetRail .rail-dot:hover span.ra,
+#planetRail .rail-dot.active span.rn, #planetRail .rail-dot.active span.ra {
+  opacity: 1; transform: translateX(0);
+  /* 浅色底衬：即使在太阳强光上也读得清 */
+  background: rgba(6,6,8,.72); border-radius: 3px;
+  box-shadow: 0 0 0 3px rgba(6,6,8,.72), 0 0 14px 3px rgba(6,6,8,.55);
+}
+#planetRail .rail-dot:hover { transform: translateX(3px); }
+#planetRail .rail-dot:hover i {
   transform: scale(1.5);
-  box-shadow: 0 0 0 5px rgba(240,200,120,.12), 0 0 0 1px rgba(240,200,120,.6), 0 0 16px rgba(255,220,150,.95);
+  box-shadow: 0 0 12px var(--c, #d8c49a), 0 0 26px color-mix(in srgb, var(--c, #d8c49a) 45%, transparent);
 }
-#planetRail .rail-dot.active::before, #planetRail .rail-dot.active::after {
-  content: ''; position: absolute; left: -14px; width: 8px; height: 1px; background: rgba(240,217,168,.9);
+#planetRail .rail-dot:hover span.rn { color: #fff8ea; }
+#planetRail .rail-dot:hover span.ra { color: rgba(230,220,200,.8); }
+#planetRail .rail-dot.active i {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 4px rgba(217,179,108,.1), 0 0 0 1px rgba(217,179,108,.55), 0 0 14px var(--c, #d8c49a);
 }
-#planetRail .rail-dot.active::before { top: 50%; transform: translateY(-50%) rotate(45deg); }
-#planetRail .rail-dot.active::after { top: 50%; transform: translateY(-50%) rotate(-45deg); }
-#planetRail.show .rail-dot { animation: railIn .55s cubic-bezier(.2,.7,.3,1) backwards; }
-@keyframes railIn { from { opacity: 0; transform: translate(-50%, -50%) translateX(-14px); } to { opacity: 1; transform: translate(-50%, -50%); } }
+#planetRail .rail-dot.active span.rn { color: var(--gold-bright); }
+#planetRail .rail-dot.active span.ra { color: rgba(217,179,108,.8); }
+#planetRail .rail-dot.active::after {
+  content: ''; position: absolute; left: -10px; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--gold-bright); box-shadow: 0 0 8px var(--gold-bright);
+}
+#planetRail.show .rail-dot { animation: railIn .5s cubic-bezier(.2,.7,.3,1) backwards; }
+@keyframes railIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
 /* ---------- 星座标签 ---------- */
 .const-label {
@@ -423,3 +414,6 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   margin: 18px 0 8px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.07);
 }
 .pc-sec p { font-size: 13.5px; line-height: 1.9; color: #c9c3b4; }
+
+/* Safari：拖拽环视时不允许选中任何 UI 文本 */
+#labels, #labels *, #overlay, #topbar, #timebar, #planetRail { -webkit-user-select: none; user-select: none; }
