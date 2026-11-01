@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=108';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=108';
-import { createDeepSpace } from './starfield.js?v=108';
-import { SolarSystem } from './solar.js?v=108';
-import { FlightController, easeOutQuint } from './flight.js?v=108';
-import { UI } from './ui.js?v=108';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=111';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=111';
+import { createDeepSpace } from './starfield.js?v=111';
+import { SolarSystem } from './solar.js?v=111';
+import { FlightController, easeOutQuint } from './flight.js?v=111';
+import { UI } from './ui.js?v=111';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -79,6 +79,7 @@ let eclipseView = null;       // 'lunar' | 'solar' | null
 let alignCache = null;
 // 'schematic' = 参考站图谱排布（行星压缩距离排成一线，默认）；'real' = 真实历表
 let positionMode = 'schematic';
+let deepReady = false;        // 深空"落地"后才亮星座标签，避免飞行途中提前出现
 
 // ---------- UI ----------
 const ui = new UI(document.body, {
@@ -118,42 +119,50 @@ function goDeep() {
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
-  solar.setOrbitsVisible(false);
-solar.group.visible = false;
-  setSolarVisible(false);
-  setConstVisible(true);
-  ui.setRailActive(null);          // 深空只看星野，轨道线收起
+  // 关键：飞行过程中太阳系必须还在，否则就是"对着空星空拉远"
+  // 落地（3.6s）后再收起太阳系、点亮星座连线，形成"退场—抵达"的层次
+  solar.setOrbitsVisible(true);
+  setSolarVisible(true);
+  setConstVisible(false);
+  ui.setRailActive(null);
   flight.follow(null);
   ui.setMode('deep');
   ui.hideCard();
+  deepReady = false;
   flight.flyTo({
-    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.6, arc: 0.4,
-    onDone: () => flight.setRange(50, 30000),
+    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.6,
+    onDone: () => {
+      deepReady = true;
+      setSolarVisible(false);
+      setConstVisible(true);
+      solar.setOrbitsVisible(false);
+      flight.setRange(50, 18500);      // 别拉出银河天球（半径 19700）之外
+    },
   });
 }
 
 function enterSolar() {
   mode = 'solar';
+  deepReady = false;
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
-  setConstVisible(false);
   ui.hideConstPanel();
   ui.setMode('solar');
   const oc = computeOverviewCam();
   flight.flyTo({
-    camPos: oc.camPos, target: oc.target, duration: 2.6, arc: 0.3,
-    onDone: () => flight.setRange(60, 30000),
+    camPos: oc.camPos, target: oc.target, duration: 3.0,
+    onDone: () => { setConstVisible(false); flight.setRange(60, 18500); },
   });
 }
 
 function goOverview() {
   mode = 'solar';
+  deepReady = false;
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
-  setConstVisible(false);
   ui.hideConstPanel();
   ui.setRailActive(null);
   flight.follow(null);
@@ -161,7 +170,11 @@ function goOverview() {
   ui.hideCard();
   ui.hideEvents();
   const oc2 = computeOverviewCam();
-  flight.flyTo({ camPos: oc2.camPos, target: oc2.target, duration: 2.6, arc: 0.25 });
+  // 星座连线留到落地再收：从深空飞回来时，连线随视野一起退场更自然
+  flight.flyTo({
+    camPos: oc2.camPos, target: oc2.target, duration: 3.0,
+    onDone: () => { setConstVisible(false); flight.setRange(0.9, 18500); },
+  });
 }
 
 // ---------- 拾取 ----------
@@ -467,11 +480,13 @@ function frame(dt) {
 
     flight.applyPitchLink(overviewViewHeight());
     flight.update(dt);
+    // 从深空飞回时，接近太阳系的过程中把星座连线收掉（别等到最后一帧才跳变）
+    if (mode === 'solar' && constGroup && constGroup.visible && flight.viewHeight < 900) setConstVisible(false);
     updateHover();
 
     ui.updateDate(jd);
     ui.updateOverlay(solar.bodies, camera, mode, hoverId, selectedId, innerWidth, innerHeight);
-  ui.updateConstLabels(window.__constData || [], camera, mode);
+  ui.updateConstLabels(window.__constData || [], camera, mode === 'deep' && deepReady);
 
     composer.render();
   } catch (err) {

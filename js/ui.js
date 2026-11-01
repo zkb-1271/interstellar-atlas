@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=108';
+import { QUOTES, PLANETS } from './data.js?v=111';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=108';
+import { fmtDateTime } from './astro.js?v=111';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -488,13 +488,26 @@ export class UI {
       rec._sx = sx; rec._sy = sy; rec._rpx = rpx0;
     }
 
-    // 标签避让：按屏幕 x 排序，默认放上方；与已放标签横向太近就改放下方（参考站交替排布）
+    // 标签避让：默认放上方；和已放置的标签框冲突就翻到下方；两边都挤就隐藏
     shown.sort((a, b) => a.sx - b.sx);
-    const kept = [];
+    const boxes = [];
+    const pad = 10;
     for (const item of shown) {
-      item._above = !kept.some(k => k._above && Math.abs(k.sx - item.sx) < 110);
+      const r = Math.max(item.rpx, 4), gap = r + 10;
+      const lx = item.sx + r + 14;
+      const w = (item.rec.div.offsetWidth || 96), h = (item.rec.div.offsetHeight || 34);
+      const hit = (above) => {
+        const ly = above ? item.sy - gap : item.sy + gap;
+        const top = above ? ly - h : ly;
+        return boxes.some(b => lx < b.x + b.w + pad && lx + w + pad > b.x &&
+                               top < b.y + b.h + pad && top + h + pad > b.y);
+      };
+      let above = !hit(true);
       item._hide = false;
-      kept.push(item);
+      if (!above && hit(false)) { item._hide = true; continue; }
+      item._above = above;
+      const ly = above ? item.sy - gap : item.sy + gap;
+      boxes.push({ x: lx, y: above ? ly - h : ly, w, h });
     }
 
     for (const item of shown) {
