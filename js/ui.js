@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=159';
+import { QUOTES, PLANETS } from './data.js?v=160';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=159';
+import { fmtDateTime } from './astro.js?v=160';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -446,7 +446,19 @@ export class UI {
   _buildAimTag(root) {
     const t = el('div');
     t.id = 'aimTag';
-    t.innerHTML = '<i class="ring"></i><div class="txt"><b class="cn"></b><em class="en"></em></div>';
+    // 瞄准标记沿用主准星的十字造型（只是更大更亮），不再用圆圈
+    t.innerHTML = `
+      <svg class="cross" width="72" height="72" viewBox="0 0 34 34">
+        <g stroke="rgba(240,217,168,.95)" stroke-width=".85" stroke-linecap="round">
+          <line x1="17" y1="1.2" x2="17" y2="8.6"/>
+          <line x1="17" y1="25.4" x2="17" y2="32.8"/>
+          <line x1="1.2" y1="17" x2="8.6" y2="17"/>
+          <line x1="25.4" y1="17" x2="32.8" y2="17"/>
+          <circle cx="17" cy="17" r="12.2" fill="none" stroke="rgba(240,217,168,.5)"/>
+        </g>
+        <circle cx="17" cy="17" r="1.35" fill="rgba(255,247,228,.98)"/>
+      </svg>
+      <div class="txt"><b class="cn"></b><em class="en"></em></div>`;
     root.appendChild(t);
     this.aimTag = t;
   }

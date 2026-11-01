@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=159';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=159';
-import { createDeepSpace } from './starfield.js?v=159';
-import { SolarSystem } from './solar.js?v=159';
-import { FlightController, easeOutQuint } from './flight.js?v=159';
-import { UI } from './ui.js?v=159';
-import { initLoading } from './loading.js?v=159';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=160';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=160';
+import { createDeepSpace } from './starfield.js?v=160';
+import { SolarSystem } from './solar.js?v=160';
+import { FlightController, easeOutQuint } from './flight.js?v=160';
+import { UI } from './ui.js?v=160';
+import { initLoading } from './loading.js?v=160';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
