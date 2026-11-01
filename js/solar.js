@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=95';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=95';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=95';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=96';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=96';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=96';
 
 export const SUN_RADIUS = 3.27;
 
@@ -380,9 +380,8 @@ export class SolarSystem {
       const entry = this.bodies.get(p.id);
       entry.holder.position.set(pos[0], pos[1], pos[2]);
       const dCam = camera ? camera.position.distanceTo(entry.worldPos) : 900;
-      const grow = Math.min(30, Math.max(1, (p.displayR * 30000) / Math.max(dCam, 0.5)));
-      const maxScale = (13 * dCam * 0.577) / (360 * p.displayR);   // 屏幕半径 ≤13px
-      entry.mesh.scale.setScalar(Math.min(grow, maxScale));
+      // 参考站行为：scale = clamp(K/dist, 1, 30)——特写自然放大占半屏，总览保持可见
+      entry.mesh.scale.setScalar(Math.min(30, Math.max(1, (p.displayR * 30000) / Math.max(dCam, 0.5))));
       entry.worldPos.copy(entry.holder.position);
       // 自转：按真实自转周期 + 模拟儒略日计算相位（参考站同思路，逆行自转取负）
       if (p.rotationHours) {

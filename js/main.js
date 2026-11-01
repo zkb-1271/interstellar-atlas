@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=95';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=95';
-import { createDeepSpace } from './starfield.js?v=95';
-import { SolarSystem } from './solar.js?v=95';
-import { FlightController, easeOutQuint } from './flight.js?v=95';
-import { UI } from './ui.js?v=95';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=96';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=96';
+import { createDeepSpace } from './starfield.js?v=96';
+import { SolarSystem } from './solar.js?v=96';
+import { FlightController, easeOutQuint } from './flight.js?v=96';
+import { UI } from './ui.js?v=96';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -202,7 +202,8 @@ function selectPlanet(id) {
   ui.showFocusTitle(b.info, cat);
   ui.showCard(b.info, `${cat === '恒星' ? 'STAR' : cat === '卫星' ? 'SATELLITE' : 'PLANET'} · ${b.info.en.toUpperCase()}`);
   ui.showDirPanel(b.info);
-  flight.setAutoOrbitSpeed(0.06);
+  flight.setAutoOrbit(false);
+  ui.setAutoOrbitView(false);
 
   const p = b.worldPos;
   const dist = b.displayR * 90 + 6;
