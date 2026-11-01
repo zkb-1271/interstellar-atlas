@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=184';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=184';
-import { createDeepSpace } from './starfield.js?v=184';
-import { SolarSystem } from './solar.js?v=184';
-import { FlightController, easeOutQuint } from './flight.js?v=184';
-import { UI } from './ui.js?v=184';
-import { initLoading } from './loading.js?v=184';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=185';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=185';
+import { createDeepSpace } from './starfield.js?v=185';
+import { SolarSystem } from './solar.js?v=185';
+import { FlightController, easeOutQuint } from './flight.js?v=185';
+import { UI } from './ui.js?v=185';
+import { initLoading } from './loading.js?v=185';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -160,7 +160,6 @@ const ui = new UI(document.body, {
 ui.setActiveSpeed(speedIdx);
 ui.setPositionMode(positionMode);
 ui.fillEclipses(ECLIPSES);
-ui.fillArticles(ARTICLES);
 ui.setMode('deep');
 setInterval(() => { if (mode === 'deep' && !document.hidden) ui._setQuote(); }, 12000);
 
@@ -351,7 +350,7 @@ function clearAim() {
 }
 
 function updateAim() {
-  if (mode !== 'deep' || !constGroup) {
+  if (mode !== 'deep' || !constGroup || skyFade < 0.5) {
     if (aimConst || aimNeb) clearAim();
     return;
   }
@@ -452,7 +451,7 @@ function setViewAngle(v) {
   const b = solar.get(selectedId);
   if (!b) return;
   const p = b.worldPos;
-  const toSun = p.clone().normalize();                       // 行星→太阳
+  const toSun = p.clone().negate().normalize();              // 行星→太阳（太阳在原点，取反向）
   const perp = new THREE.Vector3().crossVectors(toSun, new THREE.Vector3(0, 1, 0)).normalize();
   // 有卫星系的星球要退远一点；彗星用 focusR 取景（要看彗发和彗尾，不是看彗核）
   const frameR = b.focusR || b.displayR;
@@ -547,7 +546,7 @@ function setViewSpot(id) {
     flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.2, arc: 0.12, onDone: () => flight.setRange(...v.range) });
   } else {
     const moonP = moon.worldPos;
-    const toSun = ep.clone().normalize();                        // 地→日（日面方向）
+    const toSun = ep.clone().negate().normalize();               // 地→日（太阳在原点，取反向）
     const toEarth = ep.clone().sub(moonP).normalize();
     const spots = {
       // 远景：日—月—地全线 + 投向地球的影子

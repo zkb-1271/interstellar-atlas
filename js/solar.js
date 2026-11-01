@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=184';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=184';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=184';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=185';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=185';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=185';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -671,9 +671,10 @@ export class SolarSystem {
     // "吞日"不成立。日食演出时把月球贴到日地连线上 1.4 单位处——
     // 那里月面角径恰好等于太阳角径，本影锥尖也刚好触地（与月食红月同级的夸张）
     if (this.forceMoonOnAxis) {
-      const toSunE = earth.worldPos.clone().normalize();
-      me.holder.position.copy(toSunE.multiplyScalar(1.4));
-      me.worldPos.copy(me.holder.position);
+      // holder 局部于地球：偏移 = 地→日方向 ×1.4；worldPos = 地心 + 偏移
+      const toSun = earth.worldPos.clone().negate().normalize();
+      me.holder.position.copy(toSun.multiplyScalar(1.4));
+      me.worldPos.copy(earth.worldPos).add(me.holder.position);
     }
 
     // 地影锥：贴地球、指向背阳面（锥体沿 -y 延伸，故把 +y 对准太阳方向）
