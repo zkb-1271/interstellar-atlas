@@ -87,32 +87,111 @@ export function createDeepSpace() {
   group.add(buildStarLayer(9000, 1.5, 0.6, 42424, 0.88, 0.55));
   group.add(buildStarLayer(3600, 2.4, 0.65, 51515, 0.8, 0.4));
 
-  // 星座：连线 + 亮星
+  // 星座：每个星座独立材质，才能单独高亮（瞄准哪条就亮哪条）
   const constGroup = new THREE.Group();
-  const lineMat = new THREE.LineBasicMaterial({ color: 0xd8c49a, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
   window.__constData = [];
+  const recs = [];
   for (const c of CONSTELLATIONS) {
     const dirs = c.stars.map(([ra, dec]) => skyDir(ra, dec).multiplyScalar(R * 0.995));
     const pts = [];
     for (const [a, b] of c.lines) { pts.push(dirs[a], dirs[b]); }
     const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    constGroup.add(new THREE.LineSegments(geo, lineMat));
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0xd8c49a, transparent: true, opacity: 0.26,
+      blending: THREE.AdditiveBlending, depthWrite: false });
+    const lines = new THREE.LineSegments(geo, lineMat);
+    constGroup.add(lines);
+
     // 亮星点：halo + core 双层
     const sp = new Float32Array(dirs.length * 3);
     dirs.forEach((d, i) => { sp[i * 3] = d.x; sp[i * 3 + 1] = d.y; sp[i * 3 + 2] = d.z; });
     const sg = new THREE.BufferGeometry();
     sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-    constGroup.add(new THREE.Points(sg, new THREE.PointsMaterial({
-      map: new THREE.CanvasTexture(makeStarSprite()), color: 0xfff3dd, size: 20,
-      sizeAttenuation: false, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending })));
-    constGroup.add(new THREE.Points(sg, new THREE.PointsMaterial({
-      map: new THREE.CanvasTexture(makeStarSprite()), color: 0xfff8ea, size: 8,
-      sizeAttenuation: false, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending })));
+    const haloMat = new THREE.PointsMaterial({
+      map: new THREE.CanvasTexture(makeStarSprite()), color: 0xfff3dd, size: 14,
+      sizeAttenuation: false, transparent: true, opacity: 0.30, depthWrite: false, blending: THREE.AdditiveBlending });
+    const coreMat = new THREE.PointsMaterial({
+      map: new THREE.CanvasTexture(makeStarSprite()), color: 0xfff8ea, size: 5.5,
+      sizeAttenuation: false, transparent: true, opacity: 0.92, depthWrite: false, blending: THREE.AdditiveBlending });
+    constGroup.add(new THREE.Points(sg, haloMat));
+    constGroup.add(new THREE.Points(sg, coreMat));
+
     const center = dirs.reduce((acc, d) => acc.add(d.clone().normalize()), new THREE.Vector3()).normalize().multiplyScalar(R * 0.99);
-    window.__constData.push({ id: c.id, en: c.en, cn: c.cn, desc: c.desc, img: c.img, center });
+    const rec = { id: c.id, en: c.en, cn: c.cn, desc: c.desc, img: c.img, center,
+                  lineMat, haloMat, coreMat };
+    recs.push(rec);
+    window.__constData.push(rec);
   }
+
+  // 瞄准高亮：目标星座连线变金、星点变亮变大，其余压暗
+  constGroup.userData.setHighlight = (id) => {
+    for (const r of recs) {
+      const on = r.id === id;
+      const rest = id ? 0.45 : 1;      // 有目标时，其它星座整体压暗
+      r.lineMat.opacity = on ? 0.92 : 0.26 * rest;
+      r.lineMat.color.setHex(on ? 0xffe2a8 : 0xd8c49a);
+      r.haloMat.opacity = (on ? 0.8 : 0.22) * (on ? 1 : rest);
+      r.haloMat.size = on ? 16 : 14;
+      r.coreMat.opacity = on ? 1 : 0.85 * rest;
+      r.coreMat.size = on ? 7.5 : 5.5;
+    }
+  };
   constGroup.name = 'constellations';
   group.add(constGroup);
+
+  // ---------- 远处星云（发射星云 / 反射星云）----------
+  const nebGroup = new THREE.Group();
+  const NEB = [
+    { rgb: [150, 72, 190], size: 5200, op: 0.22 },   // 紫
+    { rgb: [58, 120, 205], size: 6000, op: 0.19 },   // 蓝
+    { rgb: [205, 96, 68], size: 4600, op: 0.20 },    // 红
+    { rgb: [70, 178, 168], size: 4200, op: 0.17 },   // 青
+    { rgb: [190, 130, 62], size: 6800, op: 0.16 },   // 金褐
+    { rgb: [120, 90, 210], size: 3400, op: 0.19 },   // 蓝紫
+    { rgb: [176, 70, 120], size: 3800, op: 0.17 },   // 洋红
+  ];
+  // 默认深空机位朝这个方向看：先在这一带手放三团，保证一进来就能看见
+  const vd = new THREE.Vector3(5200, -5600, -12600).normalize();
+  const vu = new THREE.Vector3().crossVectors(vd, new THREE.Vector3(0, 1, 0)).normalize();
+  const vv = new THREE.Vector3().crossVectors(vu, vd).normalize();
+  const HERO = [
+    { kx: 0.42, ky: 0.20, rgb: [150, 72, 190], size: 5600, op: 0.30 },
+    { kx: -0.46, ky: -0.16, rgb: [205, 96, 68], size: 4800, op: 0.26 },
+    { kx: 0.06, ky: -0.50, rgb: [58, 120, 205], size: 6400, op: 0.24 },
+  ];
+  for (const h of HERO) {
+    const dir = vd.clone().addScaledVector(vu, h.kx).addScaledVector(vv, h.ky).normalize();
+    const tex = new THREE.CanvasTexture(makeNebulaSprite(30 + h.kx * 90, 256, h.rgb));
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: tex, transparent: true, opacity: h.op, depthWrite: false,
+      blending: THREE.AdditiveBlending }));
+    sp.position.copy(dir.multiplyScalar(R * 0.93));
+    sp.scale.setScalar(h.size);
+    nebGroup.add(sp);
+  }
+
+  const nr = { s: 90210 };
+  NEB.forEach((n, i) => {
+    // 偏向银道面分布（真实星云大多在银盘上）
+    let x = rand(nr) * 2 - 1, y = rand(nr) * 2 - 1, z = rand(nr) * 2 - 1;
+    const l = Math.hypot(x, y, z) || 1; x /= l; y /= l; z /= l;
+    y *= 0.42;
+    const ct = Math.cos(0.5), st = Math.sin(0.5);
+    const y2 = y * ct - x * st, x2 = y * st + x * ct;
+    const dir = new THREE.Vector3(x2, y2, z).normalize();
+
+    const tex = new THREE.CanvasTexture(makeNebulaSprite(30 + i * 37, 256, n.rgb));
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: tex, transparent: true, opacity: n.op, depthWrite: false,
+      blending: THREE.AdditiveBlending, color: 0xffffff }));
+    sp.position.copy(dir.multiplyScalar(R * 0.93));
+    sp.scale.setScalar(n.size);
+    nebGroup.add(sp);
+  });
+  nebGroup.name = 'nebulae';
+  group.add(nebGroup);
 
   return group;
 }

@@ -43,7 +43,12 @@ initLoading();                    // 先挂钩加载管理器，后面的贴图�
 const deepSky = createDeepSpace();
 scene.add(deepSky);
 const constGroup = deepSky.getObjectByName('constellations');
-function setConstVisible(v) { if (constGroup) constGroup.visible = v; }
+const nebGroup = deepSky.getObjectByName('nebulae');
+// 星云属于深空装饰：进太阳系要一起收起，别给太阳系背景染上彩色雾
+function setConstVisible(v) {
+  if (constGroup) constGroup.visible = v;
+  if (nebGroup) nebGroup.visible = v;
+}
 function setSolarVisible(v) { solar.group.visible = v; }
 const solar = new SolarSystem(scene);
 const flight = new FlightController(camera, canvas);
@@ -188,7 +193,9 @@ canvas.addEventListener('pointerup', e => {
   if (!downXY) return;
   const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
   downXY = null;
-  if (moved < 5 && hoverId && mode === 'solar' && !flight.isFlying) selectPlanet(hoverId);
+  if (moved >= 5 || flight.isFlying) return;
+  if (hoverId && mode === 'solar') selectPlanet(hoverId);
+  else if (aimConst && mode === 'deep') focusConst(aimConst.id);
 });
 canvas.addEventListener('pointermove', e => {
   pointer.x = (e.clientX / innerWidth) * 2 - 1;
@@ -219,6 +226,39 @@ function setHover(id) {
   ui.hoverId = id;
   ui.setReticleHover(!!id);
   canvas.style.cursor = id ? 'none' : 'none';
+}
+
+// ---------- 深空：星座瞄准 ----------
+let aimConst = null;
+const _cv = new THREE.Vector3();
+function updateConstAim() {
+  if (mode !== 'deep' || !constGroup || !window.__constData) {
+    if (aimConst) {
+      aimConst = null;
+      constGroup?.userData.setHighlight?.(null);
+      ui.hideConstAim();
+      if (mode !== 'deep') ui.setReticleHover(false);
+    }
+    return;
+  }
+  const mx = (pointer.x * 0.5 + 0.5) * innerWidth;
+  const my = (-pointer.y * 0.5 + 0.5) * innerHeight;
+  let best = null, bd = 110;
+  for (const c of window.__constData) {
+    _cv.copy(c.center).project(camera);
+    if (_cv.z > 1) continue;
+    const sx = (_cv.x * 0.5 + 0.5) * innerWidth;
+    const sy = (-_cv.y * 0.5 + 0.5) * innerHeight;
+    const d = Math.hypot(sx - mx, sy - my);
+    if (d < bd) { bd = d; best = c; }
+  }
+  if (best !== aimConst) {
+    aimConst = best;
+    constGroup.userData.setHighlight?.(best ? best.id : null);
+    ui.setReticleHover(!!best);
+    if (!best) ui.hideConstAim();
+  }
+  if (best) ui.showConstAim(best, mx, my);
 }
 
 // ---------- 聚焦天体 ----------
@@ -485,6 +525,7 @@ function frame(dt) {
     // 从深空飞回时，接近太阳系的过程中把星座连线收掉（别等到最后一帧才跳变）
     if (mode === 'solar' && constGroup && constGroup.visible && flight.viewHeight < 900) setConstVisible(false);
     updateHover();
+    updateConstAim();
 
     ui.updateDate(jd);
     ui.updateOverlay(solar.bodies, camera, mode, hoverId, selectedId, innerWidth, innerHeight);

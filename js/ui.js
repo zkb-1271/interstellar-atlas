@@ -82,6 +82,7 @@ export class UI {
     this._buildRail(root);
     this._buildViewbar(root);
     this._buildHint(root);
+    this._buildAimTag(root);
 
     // 准星跟随
     window.addEventListener('mousemove', e => {
@@ -343,7 +344,7 @@ export class UI {
         this.constLabelMap.set(c.id, div);
       }
       v.copy(c.center).project(camera);
-      const ok = active && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
+      const ok = active && c.id !== this.aimId && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
       div.style.opacity = ok ? '0.85' : '0';
       div.style.pointerEvents = ok ? 'auto' : 'none';
       if (ok) {
@@ -377,6 +378,23 @@ export class UI {
     root.appendChild(rail);
     this.rail = rail;
   }
+
+  _buildAimTag(root) {
+    const t = el('div');
+    t.id = 'aimTag';
+    t.innerHTML = '<i class="ring"></i><div class="txt"><b class="cn"></b><em class="en"></em></div>';
+    root.appendChild(t);
+    this.aimTag = t;
+  }
+  showConstAim(c, x, y) {
+    this.aimId = c.id;                 // 被瞄准的星座不再显示常驻名字，避免和瞄准标记叠在一起
+    this.aimTag.classList.add('show');
+    this.aimTag.style.left = x + 'px';
+    this.aimTag.style.top = y + 'px';
+    this.aimTag.querySelector('.cn').textContent = c.cn;
+    this.aimTag.querySelector('.en').textContent = c.en + ' · 点击凝望';
+  }
+  hideConstAim() { this.aimId = null; this.aimTag.classList.remove('show'); }
 
   _buildHint(root) {
     this.hint = el('div', '', '点击行星聚焦 · 拖动环视 · 滚轮缩放');

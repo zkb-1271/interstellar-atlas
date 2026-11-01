@@ -227,11 +227,13 @@ export function makeSunTexture(seed = 55) {
   return cv;
 }
 
-// 暖褐星云团块
-export function makeNebulaSprite(hue = 30, size = 512) {
+// 星云团块：rgb 给底色（默认暖褐），不同色相可做发射星云
+export function makeNebulaSprite(hue = 30, size = 512, rgb = null) {
   const [cv, ctx] = canvas(size, size);
   const fbm = makeNoise(hue * 7 + 13);
   const img = ctx.createImageData(size, size);
+  const base = rgb || [120, 68, 42];
+  const gain = rgb ? 1.35 : 1;
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const dx = (x - size / 2) / (size / 2), dy = (y - size / 2) / (size / 2);
     const d = Math.sqrt(dx * dx + dy * dy);
@@ -241,9 +243,9 @@ export function makeNebulaSprite(hue = 30, size = 512) {
     const alpha = Math.pow(Math.max(0, n * 0.75 + n2 * 0.25 - 0.32), 1.25) * Math.pow(a, 1.5) * 2.6;
     const i = (y * size + x) * 4;
     const warm = n * 0.7 + n2 * 0.3;
-    img.data[i]     = 120 + warm * 135;
-    img.data[i + 1] = 68 + warm * 95;
-    img.data[i + 2] = 42 + warm * 62;
+    img.data[i]     = Math.min(255, base[0] + warm * 135 * gain);
+    img.data[i + 1] = Math.min(255, base[1] + warm * 95 * gain);
+    img.data[i + 2] = Math.min(255, base[2] + warm * 62 * gain);
     img.data[i + 3] = Math.min(235, alpha * 255);
   }
   ctx.putImageData(img, 0, 0);
