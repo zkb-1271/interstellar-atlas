@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=176';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=176';
-import { createDeepSpace } from './starfield.js?v=176';
-import { SolarSystem } from './solar.js?v=176';
-import { FlightController, easeOutQuint } from './flight.js?v=176';
-import { UI } from './ui.js?v=176';
-import { initLoading } from './loading.js?v=176';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=177';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=177';
+import { createDeepSpace } from './starfield.js?v=177';
+import { SolarSystem } from './solar.js?v=177';
+import { FlightController, easeOutQuint } from './flight.js?v=177';
+import { UI } from './ui.js?v=177';
+import { initLoading } from './loading.js?v=177';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -329,7 +329,7 @@ function updateAim() {
   const my = (-pointer.y * 0.5 + 0.5) * innerHeight;
   const tanH = Math.tan(camera.fov * Math.PI / 360);
 
-  // 星座：固定 110px 容差
+  // 星座：识别区 85px（原来 110 太大，"还没到就有变化"）
   let bc = null, bcScore = 1;
   for (const c of window.__constData || []) {
     _cv.copy(c.center).project(camera);
@@ -337,7 +337,7 @@ function updateAim() {
     const sx = (_cv.x * 0.5 + 0.5) * innerWidth;
     const sy = (-_cv.y * 0.5 + 0.5) * innerHeight;
     const d = Math.hypot(sx - mx, sy - my);
-    const score = d / 110;
+    const score = d / 85;
     if (score < bcScore) { bcScore = score; bc = c; }
   }
 
@@ -354,6 +354,10 @@ function updateAim() {
     const score = Math.hypot(sx - mx, sy - my) / Math.max(rpx * 0.8, 22);
     if (score < bnScore) { bnScore = score; bn = n; }
   }
+
+  // 迟滞：已经瞄准的目标按 1.3 倍识别区保留，防止在边缘来回闪烁
+  if (bc && aimConst && bc.id === aimConst.id) bcScore /= 1.3;
+  if (bn && aimNeb && bn.info.id === aimNeb.info.id) bnScore /= 1.3;
 
   // 两者都命中时，按"离中心更近"的那一个算
   const kind = bn && (!bc || bnScore <= bcScore) ? 'neb' : (bc ? 'const' : null);

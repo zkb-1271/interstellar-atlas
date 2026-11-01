@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=176';
+import { QUOTES, PLANETS } from './data.js?v=177';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=176';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=177';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -68,7 +68,9 @@ export class UI {
     this.leader.setAttribute('stroke', 'rgba(217,179,108,0.55)');
     this.leader.setAttribute('stroke-width', '1');
     this.svg.appendChild(this.leader);
-    this.hoverRing.style.display = 'none';
+    // 淡入淡出代替 display 硬切：两种指针形态之间要有过渡
+    this.hoverRing.style.opacity = '0';
+    this.hoverRing.style.transition = 'opacity .22s ease';
     this.leader.style.display = 'none';
     root.appendChild(this.svg);
 
@@ -765,7 +767,7 @@ export class UI {
       if (id === hoverId && rpx > 2 && rpx < 90) {
         const rr = Math.max(rpx * 1.45 + 8, 16);
         const tk = rr + 7;
-        this.hoverRing.style.display = '';
+        this.hoverRing.style.opacity = '1';
         this.hoverRing.setAttribute('transform', `translate(${sx},${sy})`);
         this.ringFill.setAttribute('r', rr);
         this.ringCircle.setAttribute('r', rr);
@@ -778,7 +780,7 @@ export class UI {
         ringShown = true;
       }
     }
-    if (!ringShown) { this.hoverRing.style.display = 'none'; this.leader.style.display = 'none'; }
+    if (!ringShown) { this.hoverRing.style.opacity = '0'; this.leader.style.display = 'none'; }
   }
 
   setReticleHover(on) {

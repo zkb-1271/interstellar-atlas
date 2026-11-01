@@ -485,7 +485,7 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 /* ---------- 星座瞄准标记 ---------- */
 #aimTag {
   position: fixed; z-index: 61; pointer-events: none; opacity: 0;
-  transform: translate(-50%, -50%); transition: opacity .18s;
+  transform: translate(-50%, -50%); transition: opacity .28s ease;
 }
 #aimTag.show { opacity: 1; }
 #aimTag .cross {
