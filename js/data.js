@@ -384,7 +384,7 @@ export const QUOTES = [
 //           月球这类极端值在 solar.js 里单独处理）
 export const MOONS = {
   mars: [
-    { id: 'phobos', r: 0.035, orbit: 3.0, period: 0.32,
+    { id: 'phobos', tex: 'moons/phoebe.jpg', r: 0.035, orbit: 3.0, period: 0.32,
       info: { kind: 'moon', en: 'PHOBOS', cn: '火卫一', radiusKm: 11, gravity: '0.0006', periodDays: 0.32, rotationHours: 7.66, tempC: '-40', moons: '—',
         desc: '火星最大的卫星，也是一颗"正在坠落"的卫星。',
         sections: [
@@ -392,7 +392,7 @@ export const MOONS = {
           { t: '轨道与命运', text: '它每 7.4 小时绕火星一圈，比火星自转还快，所以在火星天空里从西边升起、东边落下。潮汐作用正让它每年靠近火星约 1.8 厘米，几千万年后它将撞上火星或碎成一道行星环。' },
           { t: '探测', text: '1971 年水手 9 号首次拍到它，此后的海盗号、火星全球勘测者都曾近距离成像。日本 MMX 计划将于 2020 年代末采样返回。' },
         ] } },
-    { id: 'deimos', r: 0.035, orbit: 6.9, period: 1.26,
+    { id: 'deimos', tex: 'moons/tethys.jpg', r: 0.035, orbit: 6.9, period: 1.26,
       info: { kind: 'moon', en: 'DEIMOS', cn: '火卫二', radiusKm: 6, gravity: '0.0003', periodDays: 1.26, rotationHours: 30.3, tempC: '-40', moons: '—',
         desc: '火星较小、较远的卫星，表面被细尘填平了。',
         sections: [
@@ -478,7 +478,7 @@ export const MOONS = {
         ] } },
   ],
   uranus: [
-    { id: 'titania', r: 0.035, orbit: 17.2, period: 8.7,
+    { id: 'titania', tex: 'planets/moon-2k.jpg', r: 0.035, orbit: 17.2, period: 8.7,
       info: { kind: 'moon', en: 'TITANIA', cn: '天卫三', radiusKm: 789, gravity: '0.379', periodDays: 8.71, rotationHours: 209, tempC: '-203', moons: '—',
         desc: '天王星最大的卫星，表面有巨大的峡谷系统。',
         sections: [
@@ -486,7 +486,7 @@ export const MOONS = {
           { t: '探测', text: '1986 年旅行者 2 号飞掠时只拍到了它南半球的一小部分，其余仍是空白。' },
           { t: '峡谷', text: '天卫三的地壳像被拉伸过：一系列平行的断层崖切开了整个半球，落差可达数公里。普遍认为这是早期内部的水结冰膨胀、把地壳顶裂的结果——和木卫二、土卫二那种由潮汐维持的活跃完全是两种机制。' },
         ] } },
-    { id: 'oberon', r: 0.035, orbit: 22.0, period: 13.5,
+    { id: 'oberon', tex: 'moons/phoebe.jpg', tint: '#b7a99a', r: 0.035, orbit: 22.0, period: 13.5,
       info: { kind: 'moon', en: 'OBERON', cn: '天卫四', radiusKm: 761, gravity: '0.346', periodDays: 13.46, rotationHours: 323, tempC: '-198', moons: '—',
         desc: '天王星最外侧的大卫星，表面布满古老陨击坑。',
         sections: [

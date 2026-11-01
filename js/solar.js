@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=188';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=188';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=188';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=189';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=189';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=189';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -20,7 +20,8 @@ const _sunToCam = new THREE.Vector3();   // 太阳贴片朝相机偏移的复用
 function loadRealMap(url, mat) {
   texLoader.load(url, t => {
     t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 4;
+    t.anisotropy = 8;
+    t.anisotropy = 8;
     mat.map = t;
     if (mat.emissiveMap) mat.emissiveMap = t;
     mat.needsUpdate = true;
@@ -170,6 +171,7 @@ export class SolarSystem {
       const mcv = makePlanetTexture('moon', 30 + i * 11); addCraters(mcv, 60);
       const mMat = new THREE.MeshStandardMaterial({ map: tex(mcv), roughness: 0.97 });
       if (md.tex) loadRealMap(`assets/tex/${md.tex}`, mMat);
+      if (md.tint) mMat.color.set(md.tint);   // 复用贴图时用色调区分天体
       const mMesh = new THREE.Mesh(
         new THREE.SphereGeometry(mR, 24, 16), mMat);
       // 卫星轨道金圈：与卫星实际路径同一平面（同半径、同倾角）。
