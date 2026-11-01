@@ -3,8 +3,8 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=122';
-import { CONSTELLATIONS } from './data.js?v=122';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=125';
+import { CONSTELLATIONS } from './data.js?v=125';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -69,7 +69,13 @@ export function createDeepSpace() {
   skyTex.colorSpace = THREE.SRGBColorSpace;
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(R * 0.985, 64, 40),
-    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, color: 0xd4d0ca }));
+    new THREE.MeshBasicMaterial({
+      map: skyTex, side: THREE.BackSide, color: 0xd4d0ca,
+      depthWrite: false, depthTest: false,     // 纯背景板：不参与深度，避免和 20000 半径的星点 z-fighting
+    }));
+  sky.renderOrder = -1000;
+  sky.rotation.y = Math.PI;        // 把贴图接缝转到默认视角背后，避免画面正中一条竖线
+  skyTex.wrapS = THREE.RepeatWrapping;
   group.add(sky);
 
   group.add(buildStarLayer(3500, 1.1, 0.75, 12345, 0));      // 弥散远景

@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=122';
+import { QUOTES, PLANETS } from './data.js?v=125';
 const PLANET_NAV = PLANETS;
-import { fmtDateTime } from './astro.js?v=122';
+import { fmtDateTime } from './astro.js?v=125';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -331,7 +331,7 @@ export class UI {
   hideConstPanel() { this.constPanel.classList.remove('show'); }
 
   // 深空星座标签（投影更新）
-  updateConstLabels(list, camera, mode) {
+  updateConstLabels(list, camera, active) {
     if (!this.constLabelMap) this.constLabelMap = new Map();
     const v = new (camera.position.constructor)();
     for (const c of list) {
@@ -343,7 +343,7 @@ export class UI {
         this.constLabelMap.set(c.id, div);
       }
       v.copy(c.center).project(camera);
-      const ok = mode === 'deep' && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
+      const ok = active && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
       div.style.opacity = ok ? '0.85' : '0';
       div.style.pointerEvents = ok ? 'auto' : 'none';
       if (ok) {
