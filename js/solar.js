@@ -94,6 +94,15 @@ export class SolarSystem {
       if (md.tex) loadRealMap(`assets/tex/${md.tex}`, mMat);
       const mMesh = new THREE.Mesh(
         new THREE.SphereGeometry(md.r, 24, 16), mMat);
+      // 卫星轨道金圈（参考站放大细节：细金线圆环）
+      const ringGeo = new THREE.RingGeometry(md.orbit * 0.985, md.orbit * 1.015, 96);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xd8c49a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2 - 0.12;
+      mesh.add(ring);
+      entry.moonRings = entry.moonRings || [];
+      entry.moonRings.push(ringMat);
       this.get(p.id).holder.add(mMesh);     // 挂在 holder：跟随公转位置但不随自转
       return { mesh: mMesh, orbitR: md.orbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05 };
     });
@@ -393,6 +402,12 @@ export class SolarSystem {
       for (const mo of entry.moons || []) {
         const ang = (jd / mo.period) * Math.PI * 2 + mo.phase;
         mo.mesh.position.set(Math.cos(ang) * mo.orbitR, Math.sin(ang * 0.9) * mo.orbitR * mo.incl, -Math.sin(ang) * mo.orbitR);
+      }
+      // 卫星轨道圈渐显（相机接近时）
+      if (entry.moonRings && camera) {
+        const dCam = camera.position.distanceTo(entry.worldPos);
+        const op = Math.min(0.45, Math.max(0, (500 - dCam) / 350)) * 0.9;
+        for (const rm of entry.moonRings) rm.opacity = op;
       }
     }
 

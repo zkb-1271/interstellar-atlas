@@ -27,10 +27,34 @@ export class FlightController {
     this.onFlightDone = null;
     this.autoOrbit = { on: false, speed: 0.10 };   // 天象观景位自动环绕
     this._up = new THREE.Vector3(0, 1, 0);
+    // 缩放联动俯仰（参考站立体感）：滚轮缩放时相机俯仰角随距离平滑过渡
+    this._pitch = { activeUntil: 0, lastR: null, targetPhi: null };
+    this.controls.addEventListener('change', () => {
+      const r = this.camera.position.distanceTo(this.controls.target);
+      const p = this._pitch;
+      if (p.lastR !== null && Math.abs(r - p.lastR) / Math.max(p.lastR, 1) > 0.008) {
+        p.activeUntil = performance.now() + 1600;
+        const t = Math.min(1, Math.max(0, (Math.log(r) - Math.log(60)) / (Math.log(900) - Math.log(60))));
+        p.targetPhi = (90 - (6 + 49 * t)) * Math.PI / 180;   // 仰角 6°→55°
+      }
+      p.lastR = r;
+    });
   }
 
   setAutoOrbit(on) { this.autoOrbit.on = on; }
   setAutoOrbitSpeed(v) { this.autoOrbit.speed = v; }
+
+  // 缩放联动俯仰：缩放激活期（1.6s）内把相机俯仰平滑拉向距离对应值
+  _applyPitchLink(dt) {
+    const p = this._pitch;
+    if (performance.now() > p.activeUntil || p.targetPhi === null) return;
+    const off = this.camera.position.clone().sub(this.controls.target);
+    const sph = new THREE.Spherical().setFromVector3(off);
+    let d = p.targetPhi - sph.phi;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    sph.phi += d * Math.min(1, dt * 2.5);
+    this.camera.position.copy(this.controls.target).add(off.setFromSpherical(sph));
+  }
 
   // 自动环绕：非飞行状态下绕观察点缓慢公转
   _applyAutoOrbit(dt) {
@@ -111,6 +135,7 @@ export class FlightController {
         this._lastFollow.copy(this.followBody.worldPos);
       }
       this.controls.update();
+      this._applyPitchLink(dt);
       this._applyAutoOrbit(dt);
     }
   }
