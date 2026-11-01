@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=177';
+import { QUOTES, PLANETS } from './data.js?v=178';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=177';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=178';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -92,7 +92,6 @@ export class UI {
     this._buildViewbar(root);
     this._buildHint(root);
     this._buildAimTag(root);
-    this._buildKnow(root);
     this._buildTip(root);
 
     // 准星跟随
@@ -111,7 +110,6 @@ export class UI {
     // Esc 关闭浮层
     window.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
-      this.hideKnow();
       this.hideEvents();
     });
   }
@@ -131,7 +129,7 @@ export class UI {
     this.tabs.style.opacity = '0';
     this.tabs.style.transition = 'opacity .8s';
     this.tabEls = {};
-    for (const [id, label] of [['deep', '深空'], ['solar', '太阳系'], ['events', '天象'], ['knowledge', '知识']]) {
+    for (const [id, label] of [['deep', '深空'], ['solar', '太阳系'], ['events', '天象']]) {
       const b = el('button', 'tab', label);
       b.addEventListener('click', () => {
         if (id === 'events') this.cb.onOpenEvents();
@@ -524,65 +522,7 @@ export class UI {
     this.aimTag = t;
   }
 
-  // ---------- 知识库 ----------
-  _buildKnow(root) {
-    const p = el('aside');
-    p.id = 'knowPanel';
-    p.innerHTML = `
-      <button id="knowClose">✕</button>
-      <div class="kp-head">
-        <div class="kp-kicker">常识 · CODEX</div>
-        <h2>太阳系知识库</h2>
-        <div class="sub">NINE ESSAYS ON THE SOLAR SYSTEM</div>
-      </div>
-      <div class="kp-list" id="knowList"></div>
-      <div class="kp-detail" id="knowDetail"></div>`;
-    root.appendChild(p);
-    this.knowPanel = p;
-    this.knowList = p.querySelector('#knowList');
-    this.knowDetail = p.querySelector('#knowDetail');
-    p.querySelector('#knowClose').addEventListener('click', () => this.cb.onCloseKnow());
-    this.knowDetail.addEventListener('click', e => {
-      if (e.target.closest('#knowBack')) this._knowListMode();
-    });
-  }
-
-  fillArticles(list) {
-    this.knowList.innerHTML = list.map((a, i) => `
-      <button class="kp-item" data-id="${a.id}">
-        <span class="no">${String(i + 1).padStart(2, '0')}</span>
-        <span class="body">
-          <span class="tt">${a.cn}</span>
-          <span class="en">${a.en}</span>
-          <span class="lead">${a.lead || ''}</span>
-        </span>
-        <span class="arrow">→</span>
-      </button>`).join('');
-    this.knowList.querySelectorAll('.kp-item').forEach(b => {
-      b.addEventListener('click', () => this.showArticle(list.find(a => a.id === b.dataset.id)));
-    });
-  }
-
-  showArticle(a) {
-    if (!a) return;
-    this.knowDetail.innerHTML = `
-      <button id="knowBack">← 返回目录</button>
-      <div class="kp-kicker">${a.kicker || ''}</div>
-      <h3>${a.cn}</h3>
-      <div class="sub">${a.en}</div>
-      <p class="lead">${a.lead || ''}</p>
-      ${(a.stats || []).length ? `<div class="kp-stats">${a.stats.map(s =>
-        `<div><span>${s[0]}</span><b>${s[1]}</b></div>`).join('')}</div>` : ''}
-      <div class="kp-body">${(a.sections || []).map(s =>
-        `<div class="kp-sec"><h4>${s.t}</h4><p>${s.text}</p></div>`).join('')}</div>`;
-    this.knowPanel.classList.add('detail');
-    this.knowDetail.scrollTop = 0;
-  }
-
-  _knowListMode() { this.knowPanel.classList.remove('detail'); }
-  showKnow() { this._knowListMode(); this.knowPanel.classList.add('show'); }
-  hideKnow() { this.knowPanel.classList.remove('show'); }
-  get knowOpen() { return this.knowPanel.classList.contains('show'); }
+  // ---------- 知识库（已按需求移除入口与面板） ----------
   showConstAim(c, x, y) {
     this.aimId = c.id;                 // 被瞄准的星座不再显示常驻名字，避免和瞄准标记叠在一起
     this.aimKind = 'const';
