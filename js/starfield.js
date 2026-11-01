@@ -3,8 +3,8 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=125';
-import { CONSTELLATIONS } from './data.js?v=125';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=129';
+import { CONSTELLATIONS } from './data.js?v=129';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）

@@ -324,27 +324,15 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
-#loading .orrery { width: 386px; height: 386px; display: block; margin-bottom: -6px; }
-
-/* 轨道仪 */
-#loading .ring {
-  fill: none; stroke: rgba(217,179,108,.24); stroke-width: .7;
+#loading .galaxy {
+  width: 600px; height: 600px; display: block; margin-bottom: -34px;
+  filter: blur(0.4px) saturate(1.05);
+  animation: galaxyIn 2.4s cubic-bezier(.2,.7,.3,1) both;
 }
-#loading .ring.r1 { stroke: rgba(217,179,108,.30); stroke-dasharray: 1.5 5; }
-#loading .ring.r3 { stroke: rgba(217,179,108,.18); }
-#loading .ring.r4 { stroke: rgba(217,179,108,.14); }
-#loading .dial { fill: none; stroke: rgba(217,179,108,.22); stroke-width: .7; stroke-dasharray: 1 12; }
-#loading .ticks { fill: none; stroke: rgba(217,179,108,.32); stroke-width: .8; }
-#loading .planet { fill: #e6dcc6; }
-#loading .planet.pj { fill: #d9b98f; }
-#loading .planet.ps { fill: #e4d0a6; }
-#loading .planet.pe { fill: #7bb6c9; }
-#loading .planet.pm { fill: #b4674f; }
-#loading .sun-glow {
-  fill: rgba(255,214,150,.5); filter: blur(9px);
-  animation: sunPulse 4.2s ease-in-out infinite;
+@keyframes galaxyIn {
+  from { opacity: 0; transform: scale(.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
-@keyframes sunPulse { 0%,100% { opacity: .45; transform: scale(1); } 50% { opacity: .8; transform: scale(1.12); } }
 
 /* 文字面板 */
 #loading .plate { position: relative; text-align: center; }
