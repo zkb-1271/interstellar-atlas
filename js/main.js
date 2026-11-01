@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=93';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=93';
-import { createDeepSpace } from './starfield.js?v=93';
-import { SolarSystem } from './solar.js?v=93';
-import { FlightController, easeOutQuint } from './flight.js?v=93';
-import { UI } from './ui.js?v=93';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=95';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=95';
+import { createDeepSpace } from './starfield.js?v=95';
+import { SolarSystem } from './solar.js?v=95';
+import { FlightController, easeOutQuint } from './flight.js?v=95';
+import { UI } from './ui.js?v=95';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -39,6 +39,7 @@ const deepSky = createDeepSpace();
 scene.add(deepSky);
 const constGroup = deepSky.getObjectByName('constellations');
 function setConstVisible(v) { if (constGroup) constGroup.visible = v; }
+function setSolarVisible(v) { solar.group.visible = v; }
 const solar = new SolarSystem(scene);
 const flight = new FlightController(camera, canvas);
 
@@ -99,6 +100,8 @@ function goDeep() {
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
   solar.setOrbitsVisible(false);
+solar.group.visible = false;
+  setSolarVisible(false);
   setConstVisible(true);
   ui.setRailActive(null);          // 深空只看星野，轨道线收起
   flight.follow(null);
@@ -113,6 +116,7 @@ function goDeep() {
 function enterSolar() {
   mode = 'solar';
   solar.setOrbitsVisible(true);
+  setSolarVisible(true);
   setConstVisible(false);
   ui.hideConstPanel();
   ui.setMode('solar');
@@ -129,6 +133,7 @@ function goOverview() {
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
   solar.setOrbitsVisible(true);
+  setSolarVisible(true);
   setConstVisible(false);
   ui.hideConstPanel();
   ui.setRailActive(null);
@@ -349,6 +354,7 @@ function jumpAlignment(ev) {
   selectedId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(false);
+  setSolarVisible(true);
   setConstVisible(false);
   ui.hideConstPanel();
   speedIdx = 0; ui.setActiveSpeed(0);
@@ -475,6 +481,7 @@ camera.lookAt(ORIGIN);
 flight.setTarget(ORIGIN);
 flight.setRange(50, 30000);
 solar.setOrbitsVisible(false);
+solar.group.visible = false;
 setTimeout(() => document.getElementById('loading').classList.add('done'), 900);
 
 // 调试/验收句柄
