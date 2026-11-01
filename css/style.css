@@ -342,20 +342,31 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 #loading .stars i.tw { animation: twinkle linear infinite; }
 @keyframes twinkle { 0%,100% { opacity: .12; } 50% { opacity: .9; } }
 
+#loading .milkyway {
+  /* 真实银河全景：整幅铺满、压暗压灰，让文字仍是主角；
+     略大于视口给缓动留余量，极慢的推近+微旋（Ken Burns）保住"活"的感觉 */
+  position: absolute; inset: -6%;
+  background: url('../assets/tex/sky/milky-way-8k.jpg') center 42% / cover no-repeat;
+  opacity: .5; filter: saturate(.85) brightness(.8);
+  animation: mwIn 1.6s ease-out both, mwDrift 36s ease-in-out infinite alternate;
+}
+@keyframes mwIn {
+  from { opacity: 0; }
+  to   { opacity: .5; }
+}
+@keyframes mwDrift {
+  from { transform: scale(1) rotate(0deg); }
+  to   { transform: scale(1.1) rotate(1.2deg); }
+}
+/* 中央提亮、四周压黑的柔光罩：银河可见，文字可读 */
+#loading::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(115% 90% at 50% 46%, rgba(4,4,5,.18), rgba(4,4,5,.82) 78%);
+}
 #loading .stack {
   position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   transform: translateY(14vh);
-}
-#loading .galaxy {
-  /* 星系即背景：铺满整屏，无边无框，缓慢旋转（尺寸由 loading-boot.js 按视口设定） */
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  display: block; pointer-events: none;
-  animation: galaxyIn 2.8s ease-out both;
-}
-@keyframes galaxyIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 /* 文字面板 */
