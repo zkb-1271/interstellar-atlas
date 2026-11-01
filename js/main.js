@@ -8,12 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=97';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=97';
-import { createDeepSpace } from './starfield.js?v=97';
-import { SolarSystem } from './solar.js?v=97';
-import { FlightController, easeOutQuint } from './flight.js?v=97';
-import { UI } from './ui.js?v=97';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=100';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate } from './astro.js?v=100';
+import { createDeepSpace } from './starfield.js?v=100';
+import { SolarSystem } from './solar.js?v=100';
+import { FlightController, easeOutQuint } from './flight.js?v=100';
+import { UI } from './ui.js?v=100';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -50,10 +50,16 @@ function computeOverviewCam() {
   // 参考站捕获相机（dist=900，z-up→y-up 换算：从黄道面下方 887 处低角度平视）
   // 参考站 rig 捕获值（z-up→y-up 直接换算）
   // 参考站模型 + 参考图六点拟合解（D132/E0/L57/tR-0.6，贴黄道面低角度）
-  // 连珠构图（网格搜索解：8 行星横贯全屏 x∈[-0.99,0.98]、y≤0.10）+ 20° 倾角
-  const L = 208 * Math.PI / 180, D = 360, E = 123;
+  // 参考视频第 3 秒画面九点拟合解（L162.5/D592/E60/tR-0.54）
+  const L = 162.5 * Math.PI / 180, D = 592, E = 60;
   const camPos = new THREE.Vector3(Math.cos(L) * D, E, -Math.sin(L) * D);
-  const target = new THREE.Vector3(0, 0, 0);
+  const dSun = camPos.clone().negate().normalize();
+  const tR = -0.54, tU = 0.1;
+  const f = new THREE.Vector3(
+    dSun.x * Math.cos(tR) + dSun.z * Math.sin(tR),
+    dSun.y + tU,
+    -dSun.x * Math.sin(tR) + dSun.z * Math.cos(tR));
+  const target = camPos.clone().add(f.multiplyScalar(D));
   return { camPos, target };
 }
 const ORIGIN = new THREE.Vector3(0, 0, 0);

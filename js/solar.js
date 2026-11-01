@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=97';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=97';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=97';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=100';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene } from './astro.js?v=100';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=100';
 
 export const SUN_RADIUS = 3.27;
 
@@ -373,7 +373,7 @@ export class SolarSystem {
     // 最小屏幕尺寸钳制（参考站行为）：行星/太阳永不小于数像素
     const fovT = Math.tan((camera ? camera.fov : 60) * Math.PI / 360);
     const bodyScale = (displayR, dist) =>
-      Math.min(30, Math.max(1, (displayR * 30000) / Math.max(dist, 0.5)));
+      Math.min(30, Math.max(1, (displayR * 2000) / Math.max(dist, 0.5)));
 
     for (const p of PLANETS) {
       const { pos } = planetPosition(p.id, T);
@@ -408,7 +408,7 @@ export class SolarSystem {
     }
     const me = this.bodies.get('moon');
     me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
-    if (camera) me.mesh.scale.setScalar(Math.min(30, Math.max(1, (0.264 * 48000) / Math.max(camera.position.distanceTo(me.worldPos), 0.5))));
+    if (camera) me.mesh.scale.setScalar(Math.min(30, Math.max(1, (0.264 * 2000) / Math.max(camera.position.distanceTo(me.worldPos), 0.5))));
     earth.holder.updateWorldMatrix(true, true);
     me.holder.getWorldPosition(me.worldPos);
     // 日食视觉吸附：简化月历的误差足以让本影锥尖端错过地球，
