@@ -41,6 +41,7 @@ export class FlightController {
     this._inertia = { yaw: 0, pitch: 0 };   // 甩动角速度（rad/s）
     this.autoOrbit = { on: false, speed: 0.058 };   // 特写环绕速度（约 108s 一圈）
     this._zoomTouched = 0;    // 最近一次缩放时刻（俯仰联动用）
+    this.fovForVH = null;     // 由 main 注入：视高 → 视角曲线（全景宽、特写窄）
 
     this._bind();
   }
@@ -64,7 +65,12 @@ export class FlightController {
   _poseFrom(camPos, target) {
     const off = camPos.clone().sub(target);
     const d = off.length() || 1e-3;
-    const vh = 2 * d * Math.tan(this.camera.fov * Math.PI / 360);
+    // 视高与视角互相依赖（距离 d 固定时：fov 变宽 → 视高变大），迭代两次收敛。
+    // 不这么做的话，从总览（60°）飞向特写（40°）会落错取景。
+    let vh = 2 * d * Math.tan(this.camera.fov * Math.PI / 360);
+    if (this.fovForVH) {
+      for (let i = 0; i < 3; i++) vh = 2 * d * Math.tan(this.fovForVH(vh) * Math.PI / 360);
+    }
     return {
       target: target.clone(),
       viewHeight: vh,
@@ -204,6 +210,14 @@ export class FlightController {
       this.pitch += (this._tPitch - this.pitch) * k;
       this.viewHeight = Math.exp(
         Math.log(this.viewHeight) * (1 - k) + Math.log(this._tViewHeight) * k);
+    }
+    // 视角跟着取景走：全景 60°、特写 40°（必须在 _applyCamera 之前，距离由 fov 反推）
+    if (this.fovForVH) {
+      const f = this.fovForVH(this.viewHeight);
+      if (Math.abs(f - this.camera.fov) > 0.02) {
+        this.camera.fov = f;
+        this.camera.updateProjectionMatrix();
+      }
     }
     this._applyCamera();
   }

@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=156';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=156';
-import { createDeepSpace } from './starfield.js?v=156';
-import { SolarSystem } from './solar.js?v=156';
-import { FlightController, easeOutQuint } from './flight.js?v=156';
-import { UI } from './ui.js?v=156';
-import { initLoading } from './loading.js?v=156';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, ARTICLES } from './data.js?v=158';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=158';
+import { createDeepSpace } from './starfield.js?v=158';
+import { SolarSystem } from './solar.js?v=158';
+import { FlightController, easeOutQuint } from './flight.js?v=158';
+import { UI } from './ui.js?v=158';
+import { initLoading } from './loading.js?v=158';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -27,10 +27,26 @@ renderer.toneMappingExposure = 1.05;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020204);
 
-// 参考站总览是正交投影的"图谱"构图。这里用 40° 透视 + 按视高反推距离，
-// 在中心平面上的取景范围与正交完全一致（视宽 197.8），但行星特写更有立体感。
-const OVERVIEW_FOV = 40;
-const camera = new THREE.PerspectiveCamera(OVERVIEW_FOV, innerWidth / innerHeight, 0.02, 200000);
+// 参考站总览是正交投影的"图谱"构图。这里用透视 + 按视高反推距离，
+// 在中心平面上的取景范围与正交完全一致（视宽 197.8）。
+//
+// ⚠️ 视角分两档，别再用一个固定 FOV：
+//   全景（总览 / 拉远）用 60°，特写用 40°。
+//   只用 40° 的话，天球背景（银河、星点）会被整体放大 1.6 倍，
+//   在太阳系视图里看起来"银河被拉近了"。视高 viewHeight 才是构图基准，
+//   FOV 只决定相机站多远，所以切换 FOV 不会动行星的位置。
+const FOV_TIGHT = 40;      // 特写：透视收敛，行星占满画面
+const FOV_WIDE = 60;       // 全景：背景回到正常尺度
+function fovForVH(vh) {
+  // 只在"总览尺度"附近放宽到 60°：贴太近（特写）和拉太远（深空）都回到 40°。
+  // 深空保持窄视角是刻意的——那里银河占满画面才有尺度感；
+  // 太阳系总览则必须用广角，否则整个天球背景会被放大 1.6 倍。
+  const lg = Math.log(Math.max(vh, 0.5));
+  const up   = Math.min(1, Math.max(0, (lg - Math.log(40))  / (Math.log(120)  - Math.log(40))));
+  const down = Math.min(1, Math.max(0, (lg - Math.log(600)) / (Math.log(4000) - Math.log(600))));
+  return FOV_TIGHT + (FOV_WIDE - FOV_TIGHT) * up * (1 - down);
+}
+const camera = new THREE.PerspectiveCamera(FOV_WIDE, innerWidth / innerHeight, 0.02, 200000);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -52,6 +68,7 @@ function setConstVisible(v) {
 function setSolarVisible(v) { solar.group.visible = v; }
 const solar = new SolarSystem(scene);
 const flight = new FlightController(camera, canvas);
+flight.fovForVH = fovForVH;          // 让飞行层自己按视高调视角
 
 // ---------- 视角常量 ----------
 const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：带斜穿画面（参考站构图）
@@ -62,8 +79,8 @@ const DEEP_CAM = new THREE.Vector3(-5200, 5600, 12600);   // 对准银道带：�
 // pitch 取 0.03 弧度（≈1.7°）：与参考站 0° 几乎一致，但让黄道面有极轻微的
 // 椭圆厚度，小行星带才是一条有体的尘带而不是一根线。
 const BASE_PITCH = 0.058;
-const _tanHalf = () => Math.tan(OVERVIEW_FOV * Math.PI / 360);
-const distForViewHeight = vh => vh / (2 * _tanHalf());
+const _tanHalf = () => Math.tan(FOV_TIGHT * Math.PI / 360);   // 特写取景用的半角
+const distForViewHeight = vh => vh / (2 * Math.tan(FOV_WIDE * Math.PI / 360));
 
 function computeOverviewCam(pitch = BASE_PITCH) {
   const vh = OVERVIEW_WIDTH / Math.max(camera.aspect, 0.42);
