@@ -108,31 +108,32 @@ export const QUOTES = [
   { text:'行星只是光芒的碎屑，恒星才是夜空真正的主人。', who:'佚名', year:'—' },
 ];
 
-// 主要卫星（局部于行星，orbit 为行星半径倍数，period 天）
+// 主要卫星：r = 卫星半径（行星半径的倍数）、orbit = 轨道半径（行星半径的倍数）
+// ⚠️ 行星显示半径现在只有 0.5~1.2，卫星必须按行星半径换算，否则贴到镜头前会比行星还大
 export const MOONS = {
   mars: [
-    { name: '火卫一 Phobos', r: 0.30, orbit: 2.6, period: 0.32 },
-    { name: '火卫二 Deimos', r: 0.24, orbit: 4.0, period: 1.26 },
+    { name: '火卫一 Phobos', r: 0.06, orbit: 2.0, period: 0.32 },
+    { name: '火卫二 Deimos', r: 0.05, orbit: 2.8, period: 1.26 },
   ],
   jupiter: [
-    { name: '木卫一 Io', tex: 'moons/io.jpg', r: 0.42, orbit: 1.6, period: 1.77 },
-    { name: '木卫二 Europa', tex: 'moons/europa.jpg', r: 0.38, orbit: 2.1, period: 3.55 },
-    { name: '木卫三 Ganymede', tex: 'moons/ganymede.jpg', r: 0.55, orbit: 2.9, period: 7.15 },
-    { name: '木卫四 Callisto', tex: 'moons/callisto.jpg', r: 0.50, orbit: 3.9, period: 16.7 },
+    { name: '木卫一 Io', tex: 'moons/io.jpg', r: 0.10, orbit: 1.9, period: 1.77 },
+    { name: '木卫二 Europa', tex: 'moons/europa.jpg', r: 0.09, orbit: 2.3, period: 3.55 },
+    { name: '木卫三 Ganymede', tex: 'moons/ganymede.jpg', r: 0.13, orbit: 2.9, period: 7.15 },
+    { name: '木卫四 Callisto', tex: 'moons/callisto.jpg', r: 0.12, orbit: 3.6, period: 16.7 },
   ],
   saturn: [
-    { name: '土卫一 Mimas', tex: 'moons/mimas.jpg', r: 0.26, orbit: 3.0, period: 0.94 },
-    { name: '土卫二 Enceladus', tex: 'moons/enceladus.jpg', r: 0.30, orbit: 3.5, period: 1.37 },
-    { name: '土卫四 Dione', tex: 'moons/dione.jpg', r: 0.32, orbit: 4.0, period: 2.74 },
-    { name: '土卫五 Rhea', tex: 'moons/rhea.jpg', r: 0.36, orbit: 4.6, period: 4.52 },
-    { name: '土卫六 Titan', tex: 'moons/titan.jpg', r: 0.52, orbit: 5.4, period: 15.9 },
+    { name: '土卫一 Mimas', tex: 'moons/mimas.jpg', r: 0.06, orbit: 2.6, period: 0.94 },
+    { name: '土卫二 Enceladus', tex: 'moons/enceladus.jpg', r: 0.07, orbit: 2.9, period: 1.37 },
+    { name: '土卫四 Dione', tex: 'moons/dione.jpg', r: 0.08, orbit: 3.2, period: 2.74 },
+    { name: '土卫五 Rhea', tex: 'moons/rhea.jpg', r: 0.09, orbit: 3.6, period: 4.52 },
+    { name: '土卫六 Titan', tex: 'moons/titan.jpg', r: 0.12, orbit: 4.0, period: 15.9 },
   ],
   uranus: [
-    { name: '天卫三 Titania', r: 0.38, orbit: 2.4, period: 8.7 },
-    { name: '天卫四 Oberon', r: 0.36, orbit: 3.0, period: 13.5 },
+    { name: '天卫三 Titania', r: 0.10, orbit: 2.2, period: 8.7 },
+    { name: '天卫四 Oberon', r: 0.09, orbit: 2.9, period: 13.5 },
   ],
   neptune: [
-    { name: '海卫一 Triton', tex: 'moons/triton.jpg', r: 0.44, orbit: 2.6, period: -5.88 },
+    { name: '海卫一 Triton', tex: 'moons/triton.jpg', r: 0.10, orbit: 2.4, period: -5.88 },
   ],
 };
 

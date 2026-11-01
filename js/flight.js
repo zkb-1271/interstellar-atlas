@@ -39,7 +39,7 @@ export class FlightController {
 
     this._drag = null;        // 拖拽状态
     this._inertia = { yaw: 0, pitch: 0 };   // 甩动角速度（rad/s）
-    this.autoOrbit = { on: false, speed: 0.10 };
+    this.autoOrbit = { on: false, speed: 0.058 };   // 特写环绕速度（约 108s 一圈）
     this._zoomTouched = 0;    // 最近一次缩放时刻（俯仰联动用）
 
     this._bind();

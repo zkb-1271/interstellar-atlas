@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=119';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=119';
-import { createDeepSpace } from './starfield.js?v=119';
-import { SolarSystem } from './solar.js?v=119';
-import { FlightController, easeOutQuint } from './flight.js?v=119';
-import { UI } from './ui.js?v=119';
-import { initLoading } from './loading.js?v=119';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=122';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=122';
+import { createDeepSpace } from './starfield.js?v=122';
+import { SolarSystem } from './solar.js?v=122';
+import { FlightController, easeOutQuint } from './flight.js?v=122';
+import { UI } from './ui.js?v=122';
+import { initLoading } from './loading.js?v=122';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -230,18 +230,17 @@ function selectPlanet(id) {
   selectedId = id;
   eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
-  ui.showViewbar(null); flight.setAutoOrbit(true);
+  ui.showViewbar(null); flight.setAutoOrbit(true);   // 特写默认缓慢环绕
   ui.setAutoOrbitView(true);
   const cat = id === 'sun' ? '恒星' : id === 'moon' ? '卫星' : '行星';
   ui.showFocusTitle(b.info, cat);
   ui.showCard(b.info, `${cat === '恒星' ? 'STAR' : cat === '卫星' ? 'SATELLITE' : 'PLANET'} · ${b.info.en.toUpperCase()}`);
   ui.showDirPanel(b.info);
-  flight.setAutoOrbit(false);
-  ui.setAutoOrbitView(false);
 
   const p = b.worldPos;
   // 特写距离：行星半径 ≈ 画面半高的 0.42（"占半屏"），按 fov 反解
-  const dist = Math.max(b.displayR * 5.6, 0.6);
+  // 有卫星系的星球要退远一点，否则卫星掠过镜头时会被放得比行星还大
+  const dist = Math.max(b.displayR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
   let dir;
   if (id === 'sun') dir = camera.position.clone().sub(p).normalize();
   else dir = p.clone().negate().normalize();              // 行星 → 太阳（亮面朝向相机）
@@ -268,7 +267,8 @@ function setViewAngle(v) {
   const p = b.worldPos;
   const toSun = p.clone().normalize();                       // 行星→太阳
   const perp = new THREE.Vector3().crossVectors(toSun, new THREE.Vector3(0, 1, 0)).normalize();
-  const dist = Math.max(b.displayR * 5.6, 0.6);
+  // 有卫星系的星球要退远一点，否则卫星掠过镜头时会被放得比行星还大
+  const dist = Math.max(b.displayR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
   let dir;
   if (v === 'sun') dir = toSun.clone();                      // 向阳面：从太阳看
   else if (v === 'dark') dir = toSun.clone().negate();       // 背光面

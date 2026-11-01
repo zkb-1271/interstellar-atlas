@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=119';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=119';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=119';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=122';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=122';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=122';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -106,23 +106,33 @@ export class SolarSystem {
     entry.halo = halo;
     entry.spin = p.spin;
     entry.moons = (MOONS[p.id] || []).map((md, i) => {
+      // md.r / md.orbit 都是"行星半径的倍数"——行星半径现在只有 0.5~1.2，
+      // 卫星必须跟着缩，否则贴到镜头前会变成比行星还大的球
+      const mR = R * md.r;
+      const mOrbit = R * md.orbit;
       const mcv = makePlanetTexture('moon', 30 + i * 11); addCraters(mcv, 60);
       const mMat = new THREE.MeshStandardMaterial({ map: tex(mcv), roughness: 0.97 });
       if (md.tex) loadRealMap(`assets/tex/${md.tex}`, mMat);
       const mMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(md.r, 24, 16), mMat);
-      // 卫星轨道金圈（参考站放大细节：细金线圆环）
-      const ringGeo = new THREE.RingGeometry(md.orbit * 0.985, md.orbit * 1.015, 96);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: 0xd8c49a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
+        new THREE.SphereGeometry(mR, 24, 16), mMat);
+      // 卫星轨道金圈：用 LineLoop 保证永远是 1px 细线（RingGeometry 近看会变成粗带）
+      const ringPts = [];
+      for (let k = 0; k < 180; k++) {
+        const a = (k / 180) * Math.PI * 2;
+        ringPts.push(new THREE.Vector3(Math.cos(a) * mOrbit, Math.sin(a) * mOrbit, 0));
+      }
+      const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+      const ringMat = new THREE.LineBasicMaterial({
+        color: 0xd8c49a, transparent: true, opacity: 0, depthWrite: false });
+      const ring = new THREE.LineLoop(ringGeo, ringMat);
       ring.rotation.x = Math.PI / 2 - 0.12;
       mesh.add(ring);
       entry.moonRings = entry.moonRings || [];
       entry.moonRings.push(ringMat);
       this.get(p.id).holder.add(mMesh);     // 挂在 holder：跟随公转位置但不随自转
-      return { mesh: mMesh, orbitR: md.orbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05 };
+      return { mesh: mMesh, orbitR: mOrbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05 };
     });
+    entry.moonOuter = entry.moons.reduce((m, o) => Math.max(m, o.orbitR), 0);
 
     if (p.id === 'earth') {
       const clouds = new THREE.Mesh(
@@ -444,17 +454,20 @@ export class SolarSystem {
       // 自转：按真实自转周期 + 模拟儒略日计算相位（逆行取负）
       if (p.rotationHours) {
         const dir = p.rotationHours < 0 ? -1 : 1;
-        entry.mesh.rotation.y = dir * ((jd * 24 / Math.abs(p.rotationHours)) % 1) * Math.PI * 2;
+        entry.mesh.rotation.y = dir * ((jd * 24 / Math.abs(p.rotationHours)) % 1) * Math.PI * 2
+                              + dir * clockT * 0.045;      // 待机自转（暂停时也有生命感）
       }
       if (entry.clouds) entry.clouds.rotation.y += simSpeed * 0.0008;
       for (const mo of entry.moons || []) {
-        const ang = (jd / mo.period) * Math.PI * 2 + mo.phase;
+        // 待机自转：即使时间暂停，卫星也按自己的节奏缓慢绕行（周期越长走得越慢）
+        const idle = (clockT * Math.PI * 2) / (12 + 1.6 * Math.abs(mo.period));
+        const ang = (jd / mo.period) * Math.PI * 2 + mo.phase + idle;
         mo.mesh.position.set(Math.cos(ang) * mo.orbitR, Math.sin(ang * 0.9) * mo.orbitR * mo.incl, -Math.sin(ang) * mo.orbitR);
       }
       // 卫星轨道圈渐显（相机接近时）
       if (entry.moonRings && camera) {
         const dCam = camera.position.distanceTo(entry.worldPos);
-        const op = Math.min(0.4, Math.max(0, (12 - dCam) / 9)) * 0.9;
+        const op = Math.min(0.34, Math.max(0, (14 - dCam) / 10)) * 0.9;
         for (const rm of entry.moonRings) rm.opacity = op;
       }
     }
