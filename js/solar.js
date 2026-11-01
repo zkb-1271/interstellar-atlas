@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=107';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=107';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=107';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=108';
+import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=108';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=108';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);

@@ -3,8 +3,8 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=107';
-import { CONSTELLATIONS } from './data.js?v=107';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=108';
+import { CONSTELLATIONS } from './data.js?v=108';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -69,17 +69,17 @@ export function createDeepSpace() {
   skyTex.colorSpace = THREE.SRGBColorSpace;
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(R * 0.985, 64, 40),
-    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, color: 0x5d5749 }));
+    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, color: 0xd4d0ca }));
   group.add(sky);
 
-  group.add(buildStarLayer(2200, 1.0, 0.42, 12345, 0));      // 弥散远景
-  group.add(buildStarLayer(2000, 1.5, 0.55, 54321, 0.55));   // 银河带
-  group.add(buildStarLayer(600, 2.2, 0.7, 999, 0.75));       // 银河亮星
-  group.add(buildStarLayer(120, 3.6, 0.8, 777, 0));          // 近景亮星
+  group.add(buildStarLayer(3500, 1.1, 0.75, 12345, 0));      // 弥散远景
+  group.add(buildStarLayer(2600, 1.8, 0.9, 54321, 0.55));    // 银河带
+  group.add(buildStarLayer(700, 2.6, 1.0, 999, 0.75));       // 银河亮星
+  group.add(buildStarLayer(180, 4.2, 1.0, 777, 0));          // 近景亮星
   // 白色微尘：参考站那种细碎密集的星尘（颗粒是银河的骨架）
-  group.add(buildStarLayer(12000, 1.0, 0.30, 31337, 0.92, 0.72));
-  group.add(buildStarLayer(7000, 1.3, 0.32, 42424, 0.88, 0.55));
-  group.add(buildStarLayer(3000, 2.0, 0.38, 51515, 0.8, 0.4));
+  group.add(buildStarLayer(16000, 1.0, 0.55, 31337, 0.92, 0.72));
+  group.add(buildStarLayer(9000, 1.5, 0.6, 42424, 0.88, 0.55));
+  group.add(buildStarLayer(3600, 2.4, 0.65, 51515, 0.8, 0.4));
 
   // 星座：连线 + 亮星
   const constGroup = new THREE.Group();
