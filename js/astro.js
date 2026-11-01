@@ -3,7 +3,7 @@
 //  JD(儒略日) ⇄ 公历、开普勒方程求解、行星/月球位置、连珠搜索
 // ============================================================
 
-import { ORBITAL_ELEMENTS, AU } from './data.js?v=129';
+import { ORBITAL_ELEMENTS, AU } from './data.js?v=144';
 
 const DEG = Math.PI / 180;
 
@@ -77,11 +77,36 @@ function solveKepler(M, e) {
 // 行星日心黄道坐标（three.js: x,y 平面为黄道面, y 向上）
 // 返回 {pos: THREE-free [x,y,z] 场景单位, lon: 日心黄经 rad}
 export function planetPosition(id, T) {
+  return bodyPosition(PLANET_ELEMENTS_REF[id], T);
+}
+
+// 通用：任意轨道要素 → 场景坐标（彗星用同一套）
+export function bodyPosition(el, T) {
   const jd = T * 36525 + 2451545.0;
-  const el = PLANET_ELEMENTS_REF[id];
   const ref = refPosition(el, jd);
-  const h = auToScene(el.a) * ref.ratio;
+  const h = auToScene(el.a) * ref.ratio * SCHEMATIC;
   return { pos: [Math.cos(ref.lon) * h, Math.sin(ref.lat) * h, Math.sin(ref.lon) * h], r: h, lon: ref.lon };
+}
+
+// 通用：采样一条轨道椭圆（画轨道线用）
+export function orbitPointsFrom(el, n = 256) {
+  const O = el.node * DEG, inc = el.i * DEG, w = el.peri * DEG - O;
+  const pts = [];
+  for (let k = 0; k < n; k++) {
+    const M = (k / n) * 2 * Math.PI;
+    let f = M;
+    for (let b = 0; b < 5; b++) f -= (f - el.e * Math.sin(f) - M) / (1 - el.e * Math.cos(f));
+    const h = 2 * Math.atan2(Math.sqrt(1 + el.e) * Math.sin(f / 2), Math.sqrt(1 - el.e) * Math.cos(f / 2));
+    const p = el.a * (1 - el.e * Math.cos(f));
+    const g = h + w;
+    const v = p * (Math.cos(O) * Math.cos(g) - Math.sin(O) * Math.sin(g) * Math.cos(inc));
+    const E2 = p * (Math.sin(O) * Math.cos(g) + Math.cos(O) * Math.sin(g) * Math.cos(inc));
+    const x = p * Math.sin(g) * Math.sin(inc);
+    const lon = Math.atan2(E2, v), lat = Math.atan2(x, Math.hypot(v, E2));
+    const hU = auToScene(p) * SCHEMATIC;
+    pts.push([Math.cos(lon) * hU, Math.sin(lat) * hU, Math.sin(lon) * hU]);
+  }
+  return pts;
 }
 // —— 参考站「示意排布」：所有行星按压缩轨道距离排在 +X 一条线上 ——
 // 源码 jye(): r = Vye(t,e) 微扰；x = cos(r)·o；z = sin(r)·o·(1-ecc)；再 ×Fs()
@@ -114,26 +139,9 @@ const PLANET_ELEMENTS_REF = {
   neptune: {a:30.0699,e:.0086,i:1.77,node:131.784,peri:48.124,l0:304.348,period:60189}
 };
 
-// 轨道椭圆采样// 轨道椭圆采样（画轨道线用）：给一组平近点角，返回场景坐标点列
+// 行星轨道（画轨道线用）
 export function planetOrbitPoints(id, T, n = 256) {
-  const el = PLANET_ELEMENTS_REF[id];
-  const O = el.node * DEG, inc = el.i * DEG, w = el.peri * DEG - O;
-  const pts = [];
-  for (let k = 0; k < n; k++) {
-    const M = (k / n) * 2 * Math.PI;
-    let f = M;
-    for (let b = 0; b < 5; b++) f -= (f - el.e * Math.sin(f) - M) / (1 - el.e * Math.cos(f));
-    const h = 2 * Math.atan2(Math.sqrt(1 + el.e) * Math.sin(f / 2), Math.sqrt(1 - el.e) * Math.cos(f / 2));
-    const p = el.a * (1 - el.e * Math.cos(f));
-    const g = h + w;
-    const v = p * (Math.cos(O) * Math.cos(g) - Math.sin(O) * Math.sin(g) * Math.cos(inc));
-    const E2 = p * (Math.sin(O) * Math.cos(g) + Math.cos(O) * Math.sin(g) * Math.cos(inc));
-    const x = p * Math.sin(g) * Math.sin(inc);
-    const lon = Math.atan2(E2, v), lat = Math.atan2(x, Math.hypot(v, E2));
-    const hU = auToScene(p);
-    pts.push([Math.cos(lon) * hU, Math.sin(lat) * hU, Math.sin(lon) * hU]);
-  }
-  return pts;
+  return orbitPointsFrom(PLANET_ELEMENTS_REF[id], n);
 }
 
 // —— 月球（Meeus 简化截断，精度 ~1°，够演示月食）——

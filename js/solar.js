@@ -4,9 +4,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, AU } from './data.js?v=129';
-import { planetPosition, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=129';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture } from './textures.js?v=129';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=144';
+import { planetPosition, bodyPosition, orbitPointsFrom, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=144';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=144';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -44,6 +44,7 @@ export class SolarSystem {
     this._buildSun();
     for (const p of PLANETS) this._buildPlanet(p);
     this._buildBelt();
+    this._buildComets();
     this._buildShadowCones();
   }
 
@@ -130,7 +131,14 @@ export class SolarSystem {
       entry.moonRings = entry.moonRings || [];
       entry.moonRings.push(ringMat);
       this.get(p.id).holder.add(mMesh);     // 挂在 holder：跟随公转位置但不随自转
-      return { mesh: mMesh, orbitR: mOrbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05 };
+      // 卫星也注册进 bodies：可悬停、可点开档案卡
+      const mid = 'moon-' + (md.id || (p.id + '-' + i));
+      this.bodies.set(mid, {
+        id: mid, mesh: mMesh, holder: null, info: md.info || { kind: 'moon', en: 'MOON', cn: '卫星' },
+        displayR: mR, worldPos: new THREE.Vector3(), isMoon: true, parent: p.id,
+      });
+      return { mesh: mMesh, orbitR: mOrbit, period: md.period, phase: i * 2.1, incl: md.incl ?? 0.05,
+               entry: this.bodies.get(mid) };
     });
     entry.moonOuter = entry.moons.reduce((m, o) => Math.max(m, o.orbitR), 0);
 
@@ -377,6 +385,62 @@ export class SolarSystem {
     this.group.add(this.oort);
   }
 
+  _buildComets() {
+    this.comets = [];
+    const tailTex = tex(makeTailTexture());
+    tailTex.generateMipmaps = false;                 // mipmap 会把边缘透明糊回来，露出平面轮廓
+    tailTex.minFilter = THREE.LinearFilter;
+    tailTex.magFilter = THREE.LinearFilter;
+    const UP = new THREE.Vector3(0, 1, 0);
+
+    for (const c of COMETS) {
+      const R = Math.max(0.055, c.radiusKm * 0.016);
+      const holder = new THREE.Group();
+
+      const nucleus = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(R, 1),
+        new THREE.MeshStandardMaterial({ color: 0x7d838b, roughness: 1, metalness: 0 }));
+      holder.add(nucleus);
+
+      // 彗发
+      const coma = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: tex(makeGlowSprite('rgba(226,244,255,0.95)', 'rgba(120,170,255,0)')),
+        color: new THREE.Color(c.color), blending: THREE.AdditiveBlending,
+        depthWrite: false, transparent: true, opacity: 0.85 }));
+      coma.scale.setScalar(R * 26);
+      holder.add(coma);
+
+      // 彗尾：始终朝向相机的羽状平面（顶端贴彗核，向 -Y 展开）
+      const tGeo = new THREE.PlaneGeometry(1, 1);
+      tGeo.translate(0, -0.5, 0);
+      const tail = new THREE.Mesh(tGeo, new THREE.MeshBasicMaterial({
+        map: tailTex, color: new THREE.Color(c.color), transparent: true,
+        opacity: 0.75, blending: THREE.AdditiveBlending,
+        depthWrite: false, side: THREE.DoubleSide }));
+      tail.frustumCulled = false;
+      holder.add(tail);
+
+      this.group.add(holder);
+
+      const id = 'comet-' + c.id;
+      const entry = {
+        id, mesh: nucleus, holder, info: c.info || c, displayR: R,
+        worldPos: new THREE.Vector3(), coma, tail, comet: c, isComet: true,
+        focusR: c.focusR || R * 4,
+      };
+      this.bodies.set(id, entry);
+      this.comets.push(entry);
+
+      // 轨道线
+      const pts = orbitPointsFrom(c.elements, 420).map(q => new THREE.Vector3(q[0], q[1], q[2]));
+      const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.12, depthWrite: false }));
+      this.group.add(line);
+      entry.orbit = line;
+    }
+    this._cometUp = UP;
+  }
+
   _buildShadowCones() {
     const mkCone = (len, r1, r2, color, opacity) => {
       // r1=天体处半径(粗端, y=0)，r2=末端半径；锥体沿 -y 延伸
@@ -463,6 +527,7 @@ export class SolarSystem {
         const idle = (clockT * Math.PI * 2) / (12 + 1.6 * Math.abs(mo.period));
         const ang = (jd / mo.period) * Math.PI * 2 + mo.phase + idle;
         mo.mesh.position.set(Math.cos(ang) * mo.orbitR, Math.sin(ang * 0.9) * mo.orbitR * mo.incl, -Math.sin(ang) * mo.orbitR);
+        if (mo.entry) mo.mesh.getWorldPosition(mo.entry.worldPos);   // 供悬停/聚焦/标签使用
       }
       // 卫星轨道圈渐显（相机接近时）
       if (entry.moonRings && camera) {
@@ -480,7 +545,8 @@ export class SolarSystem {
       const mmat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.96, emissiveMap: tex(cv), emissive: new THREE.Color(0, 0, 0) });
       loadRealMap('assets/tex/planets/moon-2k.jpg', mmat);
       const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.264, 40, 28), mmat);
-      this._register('moon', mesh, MOON_INFO, 0.264, this.get('earth').holder);
+      const me0 = this._register('moon', mesh, MOON_INFO, 0.264, this.get('earth').holder);
+      me0.isMoon = true;
     }
     const me = this.bodies.get('moon');
     me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
@@ -526,6 +592,33 @@ export class SolarSystem {
           this.shadowSpot.visible = true;
         } else this.shadowSpot.visible = false;
       } else this.shadowSpot.visible = false;
+    }
+
+    // 彗星：位置 + 彗尾朝向（永远背向太阳），越靠近太阳尾巴越长越亮
+    if (this.comets) {
+      for (const c of this.comets) {
+        const p = bodyPosition(c.comet.elements, T).pos;
+        c.holder.position.set(p[0], p[1], p[2]);
+        c.worldPos.copy(c.holder.position);
+        const r = Math.hypot(p[0], p[1], p[2]) || 1;
+        const toSun = new THREE.Vector3(-p[0], -p[1], -p[2]).normalize();
+        const away = toSun.clone().negate();                       // 尾巴朝背日方向
+        // 广告牌：局部 +Y 对齐尾巴方向，法线朝相机
+        if (camera) {
+          const toCam = camera.position.clone().sub(c.holder.position).normalize();
+          const right = new THREE.Vector3().crossVectors(away, toCam);
+          if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
+          right.normalize();
+          const fwd = new THREE.Vector3().crossVectors(right, away).normalize();
+          c.tail.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, away, fwd));
+        }
+        const act = Math.min(1, 80 / r);
+        const L = c.comet.tailLen * (0.42 + act * 0.85);
+        c.tail.scale.set(L * 0.55, L, 1);
+        c.tail.material.opacity = 0.22 + act * 0.62;
+        c.coma.material.opacity = 0.18 + act * 0.7;
+        c.coma.scale.setScalar(c.displayR * (14 + act * 26));
+      }
     }
 
     this.belt.rotation.y += simSpeed * 0.00035;

@@ -227,6 +227,32 @@ export function makeSunTexture(seed = 55) {
   return cv;
 }
 
+// 彗尾：羽状 plume（顶端在图像顶部，也就是几何体的 +Y 端）
+export function makeTailTexture(w = 128, h = 512) {
+  const [cv, ctx] = canvas(w, h);
+  const img = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    const t = y / (h - 1);                       // 0 = 彗核端，1 = 尾梢
+    const half = (w * 0.34) * (1 - t * 0.80);    // 越往外越细，四周留出透明余量
+    const fadeIn = Math.min(1, Math.pow(t / 0.26, 0.65));   // 彗核处柔入（别一刀切）
+    const fadeOut = Math.pow(1 - t, 1.35);       // 尾梢消散
+    for (let x = 0; x < w; x++) {
+      const dx = (x - w / 2) / Math.max(half, 1);
+      const edge = Math.max(0, 1 - Math.abs(dx));           // 硬边置零，避免看到平面轮廓
+      const a = Math.exp(-dx * dx * 2.6) * Math.pow(edge, 0.7) * fadeIn * fadeOut;
+      // 靠近彗核偏暖白，远端偏冷蓝
+      const warm = Math.max(0, 1 - t * 3);
+      const i = (y * w + x) * 4;
+      img.data[i]     = 200 + warm * 55;
+      img.data[i + 1] = 226 + warm * 26;
+      img.data[i + 2] = 255;
+      img.data[i + 3] = Math.min(255, a * 255 * 1.35);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
 // 星云团块：rgb 给底色（默认暖褐），不同色相可做发射星云
 export function makeNebulaSprite(hue = 30, size = 512, rgb = null) {
   const [cv, ctx] = canvas(size, size);

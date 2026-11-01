@@ -84,8 +84,80 @@ export const PLANETS = [
 export const SUN_INFO = { en:'SUN', cn:'太阳', radiusKm:696000, gravity:274, tempC:'5,500（表面）',
   desc:'一颗 46 亿岁的黄矮星，占据太阳系 99.86% 的质量。它每秒把约 400 万吨物质转化为光与热。' };
 
-export const MOON_INFO = { en:'MOON', cn:'月球', radiusKm:1737, gravity:1.62, periodDays:27.32,
-  desc:'地球唯一的天然卫星，潮汐锁定使它永远以同一面朝向我们。' };
+export const MOON_INFO = {
+  kind: 'moon', en: 'MOON', cn: '月球', radiusKm: 1737, gravity: 1.62, periodDays: 27.32,
+  rotationHours: 655.7, tempC: '-23（均温）', moons: '—',
+  desc: '地球唯一的天然卫星，潮汐锁定使它永远以同一面朝向我们。',
+  sections: [
+    { t: '概览', text: '月球直径 3475 公里，是太阳系中相对母星最大的卫星之一。它诞生于 45 亿年前一次火星大小天体的斜撞，飞溅的碎屑在轨道上重新聚合成形。' },
+    { t: '表面', text: '正面大片深色的"月海"是 30 多亿年前熔岩漫流填平的玄武岩平原；背面则以明亮的月球高地为主，陨击坑密布。由于潮汐锁定，我们从地球上永远看不到它的背面。' },
+    { t: '对人类的意义', text: '它稳定着地球自转轴的倾角，驱动潮汐，也为地球挡下了不少撞击。1969–1972 年共有 12 人踏上月面，阿波罗计划带回 382 公斤月岩；NASA 的阿尔忒弥斯计划正把人类重新送回那里。' },
+  ] };
+
+// ============================================================
+//  著名彗星（轨道要素取自 JPL Small-Body Database 的近似值）
+//  l0 = 平黄经（2000 年），period 单位：年
+// ============================================================
+export const COMETS = [
+  {
+    id: 'halley', en: '1P/HALLEY', cn: '哈雷彗星', color: '#bfe4ff',
+    radiusKm: 5.5, tailLen: 9, focusR: 7,
+    au: 17.83,
+    elements: { a: 17.834, e: 0.9674, i: 162.26, node: 58.42, peri: 111.33, l0: 177.7, period: 75.32 },
+    info: {
+      kind: 'comet', en: '1P/HALLEY', cn: '哈雷彗星', radiusKm: 5.5, gravity: '~0.0004',
+      periodDays: 27510, rotationHours: 52.8, tempC: '-70（近日）', moons: '—',
+      desc: '人类第一颗被预言回归的彗星，每 76 年一次。',
+      sections: [
+        { t: '概览', text: '哈雷彗星是一颗 15×8 公里的"花生"状冰岩混合体，绕日一周约 76 年。它是唯一一颗能用肉眼看到、且一生中可能看到两次的短周期彗星。' },
+        { t: '历史', text: '1705 年哈雷用牛顿力学推算出它与 1531、1607、1682 年的是同一颗，并预言 1758 年回归——它在哈雷去世 16 年后如期归来。1910 年回归时地球甚至穿过了它的彗尾，引发过一场"氰化物恐慌"。' },
+        { t: '探测', text: '1986 年回归时，一支叫"哈雷舰队"的国际探测器群前去迎接：苏联织女星 1/2 号、欧洲乔托号、日本彗星号与先驱号。乔托号冲进彗发 596 公里处，拍下了第一张彗核特写。下一次回归是 2061 年。' },
+      ] },
+  },
+  {
+    id: 'encke', en: '2P/ENCKE', cn: '恩克彗星', color: '#cfe8d8',
+    radiusKm: 2.4, tailLen: 6.5, focusR: 5,
+    au: 2.22,
+    elements: { a: 2.215, e: 0.8483, i: 11.78, node: 334.57, peri: 186.5, l0: 261.1, period: 3.30 },
+    info: {
+      kind: 'comet', en: '2P/ENCKE', cn: '恩克彗星', radiusKm: 2.4, gravity: '~0.0001',
+      periodDays: 1206, rotationHours: 11.1, tempC: '-', moons: '—',
+      desc: '周期最短的著名彗星，每 3.3 年回归一次。',
+      sections: [
+        { t: '概览', text: '恩克彗星的轨道完全落在地球轨道以内，周期只有 3.3 年，是已知最短周期的彗星之一。它被认为是金牛座流星雨的母体。' },
+        { t: '为什么重要', text: '它的轨道在持续缩短——每次近日点都会损失物质并受非引力效应影响，回归周期每次减少约 2.5 小时。这个"恩克效应"成了研究彗核演化的经典案例。' },
+      ] },
+  },
+  {
+    id: 'churyumov', en: '67P/C-G', cn: '67P 楚留莫夫-格拉西缅科', color: '#d8d2c4',
+    radiusKm: 2.0, tailLen: 5.5, focusR: 4.2,
+    au: 3.46,
+    elements: { a: 3.463, e: 0.641, i: 7.04, node: 50.15, peri: 12.79, l0: 165.5, period: 6.44 },
+    info: {
+      kind: 'comet', en: '67P/CHURYUMOV-GERASIMENKO', cn: '67P 彗星', radiusKm: 2.0, gravity: '~0.0001',
+      periodDays: 2352, rotationHours: 12.4, tempC: '-70', moons: '—',
+      desc: '罗塞塔号陪伴了两年的"橡皮鸭"，人类第一次登陆彗核。',
+      sections: [
+        { t: '概览', text: '67P 由两块连接在一起的团块组成，形似一只橡皮鸭，最长处 4.1 公里。2014 年 ESA 的罗塞塔号抵达并释放菲莱着陆器，人类第一次站上一颗彗星。' },
+        { t: '发现', text: '罗塞塔号发现它表面有 19 处"喷口"，水汽和尘埃从裂缝中喷出形成彗发；还测到了甘氨酸、磷和分子氧——这些都与生命起源的化学有关。' },
+        { t: '结局', text: '2016 年 9 月 30 日，罗塞塔号受控撞向彗核，在坠落过程中发回了最后一批近距离数据。' },
+      ] },
+  },
+  {
+    id: 'wild2', en: '81P/WILD 2', cn: '维尔特二号彗星', color: '#c9d8f0',
+    radiusKm: 2.0, tailLen: 5, focusR: 3.8,
+    au: 3.45,
+    elements: { a: 3.45, e: 0.5374, i: 3.24, node: 136.10, peri: 41.76, l0: 251.6, period: 6.41 },
+    info: {
+      kind: 'comet', en: '81P/WILD 2', cn: '维尔特二号彗星', radiusKm: 2.0, gravity: '~0.0001',
+      periodDays: 2341, rotationHours: 13.5, tempC: '-', moons: '—',
+      desc: '星尘号从它身上带回彗星物质，人类第一次拿到彗星样本。',
+      sections: [
+        { t: '概览', text: '维尔特二号的轨道在 1974 年被木星引力改写，从柯伊伯带来到内太阳系，因此彗核表面很"年轻"，布满刚被阳光烤开的坑洞。' },
+        { t: '星尘号', text: '2004 年 NASA 星尘号穿过它的彗发，用气凝胶收集了上千颗尘埃颗粒，2006 年返回地球。样本里发现了甘氨酸、橄榄石和高温下才能形成的矿物——说明彗星物质来自太阳系各处，被原行星盘充分混合。' },
+      ] },
+  },
+];
 
 // 真实天象日期（极大时刻，UTC）
 export const ECLIPSES = [
@@ -112,28 +184,118 @@ export const QUOTES = [
 // ⚠️ 行星显示半径现在只有 0.5~1.2，卫星必须按行星半径换算，否则贴到镜头前会比行星还大
 export const MOONS = {
   mars: [
-    { name: '火卫一 Phobos', r: 0.06, orbit: 2.0, period: 0.32 },
-    { name: '火卫二 Deimos', r: 0.05, orbit: 2.8, period: 1.26 },
+    { id: 'phobos', r: 0.06, orbit: 2.0, period: 0.32,
+      info: { kind: 'moon', en: 'PHOBOS', cn: '火卫一', radiusKm: 11, gravity: '0.0006', periodDays: 0.32, rotationHours: 7.66, tempC: '-40', moons: '—',
+        desc: '火星最大的卫星，也是一颗"正在坠落"的卫星。',
+        sections: [
+          { t: '概览', text: '火卫一是一块 27×22×18 公里的土豆形岩块，表面被 12 公里长的斯蒂克尼陨击坑切出一道大口子。它离火星表面只有 6000 公里，是太阳系中距主星最近的卫星。' },
+          { t: '轨道与命运', text: '它每 7.4 小时绕火星一圈，比火星自转还快，所以在火星天空里从西边升起、东边落下。潮汐作用正让它每年靠近火星约 1.8 厘米，几千万年后它将撞上火星或碎成一道行星环。' },
+          { t: '探测', text: '1971 年水手 9 号首次拍到它，此后的海盗号、火星全球勘测者都曾近距离成像。日本 MMX 计划将于 2020 年代末采样返回。' },
+        ] } },
+    { id: 'deimos', r: 0.05, orbit: 2.8, period: 1.26,
+      info: { kind: 'moon', en: 'DEIMOS', cn: '火卫二', radiusKm: 6, gravity: '0.0003', periodDays: 1.26, rotationHours: 30.3, tempC: '-40', moons: '—',
+        desc: '火星较小、较远的卫星，表面被细尘填平了。',
+        sections: [
+          { t: '概览', text: '火卫二只有 15×12×11 公里，形状不规则但表面比火卫一平滑得多——陨击坑被一层厚厚的风化尘填平了。' },
+          { t: '轨道', text: '它每 30 小时绕火星一圈，轨道接近圆且稳定，正缓慢远离火星。从火星表面看，它只是一颗挂在天空里的小亮点，比我们的月亮小得多。' },
+        ] } },
   ],
   jupiter: [
-    { name: '木卫一 Io', tex: 'moons/io.jpg', r: 0.10, orbit: 1.9, period: 1.77 },
-    { name: '木卫二 Europa', tex: 'moons/europa.jpg', r: 0.09, orbit: 2.3, period: 3.55 },
-    { name: '木卫三 Ganymede', tex: 'moons/ganymede.jpg', r: 0.13, orbit: 2.9, period: 7.15 },
-    { name: '木卫四 Callisto', tex: 'moons/callisto.jpg', r: 0.12, orbit: 3.6, period: 16.7 },
+    { id: 'io', tex: 'moons/io.jpg', r: 0.10, orbit: 1.9, period: 1.77,
+      info: { kind: 'moon', en: 'IO', cn: '木卫一', radiusKm: 1821, gravity: '1.80', periodDays: 1.77, rotationHours: 42.5, tempC: '-143（火山口 1600）', moons: '—',
+        desc: '太阳系火山活动最剧烈的天体，表面被硫黄染成黄橙色。',
+        sections: [
+          { t: '概览', text: '木卫一只比月球大一点点，却有 400 多座活火山。它被木星和另外三颗伽利略卫星的引力反复揉搓，固体潮把内部烤化，火山喷发柱可高达 300 公里。' },
+          { t: '表面', text: '几乎没有陨击坑——火山喷出的硫和二氧化硫不断把地表抹平。颜色从亮黄到暗橙不一，全是不同形态的硫化物。' },
+          { t: '探测', text: '1610 年伽利略发现它。1979 年旅行者 1 号拍到了正在喷发的火山羽流，伽利略号、朱诺号此后长期监测它的火山活动。' },
+        ] } },
+    { id: 'europa', tex: 'moons/europa.jpg', r: 0.09, orbit: 2.3, period: 3.55,
+      info: { kind: 'moon', en: 'EUROPA', cn: '木卫二', radiusKm: 1561, gravity: '1.31', periodDays: 3.55, rotationHours: 85.2, tempC: '-160', moons: '—',
+        desc: '冰壳之下藏着全球性海洋，是寻找地外生命的头号目标。',
+        sections: [
+          { t: '概览', text: '木卫二表面是太阳系最光滑的固体表面之一，几乎只有纵横交错的褐色裂纹。冰壳厚约 15–25 公里，下面可能是深达 100 公里的液态海洋，含水量是地球海洋的两倍。' },
+          { t: '为什么值得去', text: '液态水、岩石海底、潮汐加热带来的能量——生命所需的三要素这里都齐了。表面的褐色条纹被认为是海水上涌留下的盐和硫化物。' },
+          { t: '探测', text: '旅行者号、伽利略号已经对它做过详细测绘；NASA 的欧罗巴快船已于 2024 年发射，预计 2030 年抵达。' },
+        ] } },
+    { id: 'ganymede', tex: 'moons/ganymede.jpg', r: 0.13, orbit: 2.9, period: 7.15,
+      info: { kind: 'moon', en: 'GANYMEDE', cn: '木卫三', radiusKm: 2634, gravity: '1.43', periodDays: 7.15, rotationHours: 171.7, tempC: '-163', moons: '—',
+        desc: '太阳系最大的卫星，比水星还大，也是唯一拥有磁场的卫星。',
+        sections: [
+          { t: '概览', text: '直径 5268 公里，比水星还大 8%。它的核心是一颗液态铁核，因此产生了太阳系卫星中独一无二的磁场，还有自己的极光。' },
+          { t: '表面', text: '两种地貌拼在一起：古老的深色区域布满陨击坑，年轻的浅色区域则是被冰火山改写过的沟槽地形。冰壳下同样可能存在咸水海洋。' },
+          { t: '探测', text: 'ESA 的 JUICE 探测器于 2023 年发射，2031 年后将进入木卫三轨道，成为第一个环绕非月球卫星的探测器。' },
+        ] } },
+    { id: 'callisto', tex: 'moons/callisto.jpg', r: 0.12, orbit: 3.6, period: 16.7,
+      info: { kind: 'moon', en: 'CALLISTO', cn: '木卫四', radiusKm: 2410, gravity: '1.24', periodDays: 16.69, rotationHours: 400.5, tempC: '-139', moons: '—',
+        desc: '太阳系陨击坑最密集的表面，40 亿年几乎没变过。',
+        sections: [
+          { t: '概览', text: '木卫四是伽利略卫星中最外围的一颗，也是表面最古老、陨击坑最密的天体——它几乎完整保留了太阳系早期的轰炸记录。' },
+          { t: '为什么重要', text: '它位于木星强辐射带之外，是未来载人探测木星系时最可能的落脚点。地下也可能有咸水层。' },
+        ] } },
   ],
   saturn: [
-    { name: '土卫一 Mimas', tex: 'moons/mimas.jpg', r: 0.06, orbit: 2.6, period: 0.94 },
-    { name: '土卫二 Enceladus', tex: 'moons/enceladus.jpg', r: 0.07, orbit: 2.9, period: 1.37 },
-    { name: '土卫四 Dione', tex: 'moons/dione.jpg', r: 0.08, orbit: 3.2, period: 2.74 },
-    { name: '土卫五 Rhea', tex: 'moons/rhea.jpg', r: 0.09, orbit: 3.6, period: 4.52 },
-    { name: '土卫六 Titan', tex: 'moons/titan.jpg', r: 0.12, orbit: 4.0, period: 15.9 },
+    { id: 'mimas', tex: 'moons/mimas.jpg', r: 0.06, orbit: 2.6, period: 0.94,
+      info: { kind: 'moon', en: 'MIMAS', cn: '土卫一', radiusKm: 198, gravity: '0.064', periodDays: 0.94, rotationHours: 22.6, tempC: '-209', moons: '—',
+        desc: '被一个 130 公里宽的巨坑砸出了一个"死星"的样子。',
+        sections: [
+          { t: '概览', text: '直径只有 396 公里，却拥有太阳系相对尺寸最大的陨击坑——赫歇尔坑宽 130 公里，深 10 公里，几乎把它砸穿了。' },
+          { t: '争议', text: '它表面看起来毫无地质活动，但轨道摆动暗示内部可能藏着液态水，这让"死寂冰球"的形象变得可疑。' },
+        ] } },
+    { id: 'enceladus', tex: 'moons/enceladus.jpg', r: 0.07, orbit: 2.9, period: 1.37,
+      info: { kind: 'moon', en: 'ENCELADUS', cn: '土卫二', radiusKm: 252, gravity: '0.113', periodDays: 1.37, rotationHours: 32.9, tempC: '-198', moons: '—',
+        desc: '南极喷出百公里高的冰羽流，是土星环 E 环的来源。',
+        sections: [
+          { t: '概览', text: '直径 504 公里，表面是太阳系反射率最高的地方——新雪一样的冰。南极的"虎纹"裂缝里持续喷出水汽、盐和有机分子。' },
+          { t: '生命线索', text: '卡西尼号穿越羽流时探测到盐、二氧化硅和有机分子，说明冰下海洋与岩石海底正在发生水热反应——这正是地球深海热泉孕育生命的条件。' },
+          { t: '探测', text: '卡西尼号 2005 年首次发现羽流。至今没有专门的着陆任务，但它是行星科学界呼声最高的目标之一。' },
+        ] } },
+    { id: 'dione', tex: 'moons/dione.jpg', r: 0.08, orbit: 3.2, period: 2.74,
+      info: { kind: 'moon', en: 'DIONE', cn: '土卫四', radiusKm: 561, gravity: '0.232', periodDays: 2.74, rotationHours: 65.7, tempC: '-186', moons: '—',
+        desc: '表面有明亮的冰崖网络，像被划开的冰面。',
+        sections: [
+          { t: '概览', text: '直径 1123 公里。最醒目的是后随半球上那片明亮的"千丝万缕"——构造断裂形成的冰崖，阳光斜照时格外耀眼。' },
+          { t: '与土卫二的关系', text: '它与土卫二处于 1:2 轨道共振，引力拉扯是土卫二内部加热的重要来源之一。' },
+        ] } },
+    { id: 'rhea', tex: 'moons/rhea.jpg', r: 0.09, orbit: 3.6, period: 4.52,
+      info: { kind: 'moon', en: 'RHEA', cn: '土卫五', radiusKm: 764, gravity: '0.264', periodDays: 4.52, rotationHours: 108.4, tempC: '-174', moons: '—',
+        desc: '土星第二大卫星，一颗几乎纯冰的脏雪球。',
+        sections: [
+          { t: '概览', text: '直径 1528 公里，约四分之三是水冰。表面古老、陨击坑密布，有一条明亮的裂缝系统横贯。' },
+          { t: '趣闻', text: '2008 年卡西尼号曾探测到疑似稀薄氧气外逸层——冰面被磁层粒子轰击分解出水分子所致。' },
+        ] } },
+    { id: 'titan', tex: 'moons/titan.jpg', r: 0.12, orbit: 4.0, period: 15.9,
+      info: { kind: 'moon', en: 'TITAN', cn: '土卫六', radiusKm: 2575, gravity: '1.35', periodDays: 15.95, rotationHours: 382.7, tempC: '-179', moons: '—',
+        desc: '唯一有浓密大气的卫星，地表有液态甲烷的河流与湖泊。',
+        sections: [
+          { t: '概览', text: '直径 5150 公里，比水星还大。1.5 bar 的氮气大气比地球还浓，橙色雾霾来自甲烷和氮气在紫外线下的化学反应。' },
+          { t: '甲烷循环', text: '在 -179°C 的地表，甲烷和乙烷可以像水一样蒸发、成云、下雨、汇成湖海。惠更斯号 2005 年降落时拍到了河道与卵石——那是一条干涸的甲烷河。' },
+          { t: '探测', text: 'NASA 的蜻蜓号旋翼机计划 2028 年发射，将在土卫六表面多点起降，寻找前生命化学的证据。' },
+        ] } },
   ],
   uranus: [
-    { name: '天卫三 Titania', r: 0.10, orbit: 2.2, period: 8.7 },
-    { name: '天卫四 Oberon', r: 0.09, orbit: 2.9, period: 13.5 },
+    { id: 'titania', r: 0.10, orbit: 2.2, period: 8.7,
+      info: { kind: 'moon', en: 'TITANIA', cn: '天卫三', radiusKm: 789, gravity: '0.379', periodDays: 8.71, rotationHours: 209, tempC: '-203', moons: '—',
+        desc: '天王星最大的卫星，表面有巨大的峡谷系统。',
+        sections: [
+          { t: '概览', text: '直径 1578 公里，一半是冰一半是岩石。最醒目的是一条长达 1600 公里的峡谷——墨西拿峡谷，比地球的大峡谷还长。' },
+          { t: '探测', text: '1986 年旅行者 2 号飞掠时只拍到了它南半球的一小部分，其余仍是空白。' },
+        ] } },
+    { id: 'oberon', r: 0.09, orbit: 2.9, period: 13.5,
+      info: { kind: 'moon', en: 'OBERON', cn: '天卫四', radiusKm: 761, gravity: '0.346', periodDays: 13.46, rotationHours: 323, tempC: '-198', moons: '—',
+        desc: '天王星最外侧的大卫星，表面布满古老陨击坑。',
+        sections: [
+          { t: '概览', text: '直径 1523 公里，是天王星第二大卫星。表面暗红偏灰，坑底有神秘的深色物质，可能是从内部渗出的碳质材料。' },
+        ] } },
   ],
   neptune: [
-    { name: '海卫一 Triton', tex: 'moons/triton.jpg', r: 0.10, orbit: 2.4, period: -5.88 },
+    { id: 'triton', tex: 'moons/triton.jpg', r: 0.10, orbit: 2.4, period: -5.88,
+      info: { kind: 'moon', en: 'TRITON', cn: '海卫一', radiusKm: 1353, gravity: '0.779', periodDays: -5.88, rotationHours: -141, tempC: '-235', moons: '—',
+        desc: '逆向公转的"外来者"，表面有氮气间歇泉。',
+        sections: [
+          { t: '概览', text: '海卫一是太阳系唯一一颗大型逆行卫星——它绕海王星的方向与行星自转相反，几乎可以肯定是被俘获的柯伊伯带天体。' },
+          { t: '表面', text: '表面温度 -235°C，是太阳系最冷的地方之一，却仍有活动：旅行者 2 号拍到了 8 公里高的氮气喷流，像黑色烟柱一样斜插进稀薄的大气。' },
+          { t: '命运', text: '潮汐正在让它缓慢靠近海王星，几十亿年后它会被撕碎，形成一道比土星环更壮观的环。' },
+        ] } },
   ],
 };
 

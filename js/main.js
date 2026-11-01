@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=129';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=129';
-import { createDeepSpace } from './starfield.js?v=129';
-import { SolarSystem } from './solar.js?v=129';
-import { FlightController, easeOutQuint } from './flight.js?v=129';
-import { UI } from './ui.js?v=129';
-import { initLoading } from './loading.js?v=129';
+import { PLANETS, ECLIPSES, CONSTELLATIONS } from './data.js?v=144';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDate, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=144';
+import { createDeepSpace } from './starfield.js?v=144';
+import { SolarSystem } from './solar.js?v=144';
+import { FlightController, easeOutQuint } from './flight.js?v=144';
+import { UI } from './ui.js?v=144';
+import { initLoading } from './loading.js?v=144';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -216,6 +216,7 @@ function updateHover() {
     const d = Math.hypot(dx, dy);
     const dist = camera.position.distanceTo(b.worldPos);
     const rpx = (b.displayR / (dist * Math.tan(camera.fov * Math.PI / 360))) * (innerHeight / 2);
+    if (b.isMoon && rpx < 3) continue;      // 总览时别误点到贴在行星上的卫星
     if (d < Math.max(rpx + 6, 14) && d < bestD) { bestD = d; bestId = id; }
   }
   setHover(bestId);
@@ -272,15 +273,18 @@ function selectPlanet(id) {
   solar.setEclipseShadows(null);
   ui.showViewbar(null); flight.setAutoOrbit(true);   // 特写默认缓慢环绕
   ui.setAutoOrbitView(true);
-  const cat = id === 'sun' ? '恒星' : id === 'moon' ? '卫星' : '行星';
+  const kind = b.info.kind || (id === 'sun' ? 'star' : 'planet');
+  const cat = kind === 'star' ? '恒星' : kind === 'moon' ? '卫星' : kind === 'comet' ? '彗星' : '行星';
+  const enKind = kind === 'star' ? 'STAR' : kind === 'moon' ? 'SATELLITE' : kind === 'comet' ? 'COMET' : 'PLANET';
   ui.showFocusTitle(b.info, cat);
-  ui.showCard(b.info, `${cat === '恒星' ? 'STAR' : cat === '卫星' ? 'SATELLITE' : 'PLANET'} · ${b.info.en.toUpperCase()}`);
+  ui.showCard(b.info, `${enKind} · ${b.info.en.toUpperCase()}`);
   ui.showDirPanel(b.info);
 
   const p = b.worldPos;
   // 特写距离：行星半径 ≈ 画面半高的 0.42（"占半屏"），按 fov 反解
-  // 有卫星系的星球要退远一点，否则卫星掠过镜头时会被放得比行星还大
-  const dist = Math.max(b.displayR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
+  // 有卫星系的星球要退远一点；彗星用 focusR 取景（要看彗发和彗尾，不是看彗核）
+  const frameR = b.focusR || b.displayR;
+  const dist = Math.max(frameR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
   let dir;
   if (id === 'sun') dir = camera.position.clone().sub(p).normalize();
   else dir = p.clone().negate().normalize();              // 行星 → 太阳（亮面朝向相机）
@@ -295,7 +299,7 @@ function selectPlanet(id) {
   const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
   const shift = dist * _tanHalf() * camera.aspect * 0.30;
   const target = p.clone().add(camRight.multiplyScalar(shift));
-  flight.flyTo({ camPos, target, duration: 2.0, arc: 0, easing: easeOutQuint, onDone: () => flight.setRange(b.displayR * 1.6, 4000) });
+  flight.flyTo({ camPos, target, duration: 2.0, arc: 0, easing: easeOutQuint, onDone: () => flight.setRange(frameR * 1.2, 4000) });
   flight.follow(b);
   ui.setRailActive(id);
 }
@@ -307,8 +311,9 @@ function setViewAngle(v) {
   const p = b.worldPos;
   const toSun = p.clone().normalize();                       // 行星→太阳
   const perp = new THREE.Vector3().crossVectors(toSun, new THREE.Vector3(0, 1, 0)).normalize();
-  // 有卫星系的星球要退远一点，否则卫星掠过镜头时会被放得比行星还大
-  const dist = Math.max(b.displayR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
+  // 有卫星系的星球要退远一点；彗星用 focusR 取景（要看彗发和彗尾，不是看彗核）
+  const frameR = b.focusR || b.displayR;
+  const dist = Math.max(frameR * 5.6, 0.6, (b.moonOuter || 0) * 1.45);
   let dir;
   if (v === 'sun') dir = toSun.clone();                      // 向阳面：从太阳看
   else if (v === 'dark') dir = toSun.clone().negate();       // 背光面
