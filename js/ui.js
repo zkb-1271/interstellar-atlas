@@ -2,9 +2,9 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=182';
+import { QUOTES, PLANETS } from './data.js?v=183';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=182';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=183';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -133,7 +133,6 @@ export class UI {
       const b = el('button', 'tab', label);
       b.addEventListener('click', () => {
         if (id === 'events') this.cb.onOpenEvents();
-        else if (id === 'knowledge') this.cb.onOpenKnow();
         else this.cb.onTab(id);
       });
       this.tabEls[id] = b;
