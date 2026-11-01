@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>星际模拟 · Interstellar Atlas</title>
-<link rel="stylesheet" href="css/style.css?v=178">
+<link rel="stylesheet" href="css/style.css?v=179">
 <script type="importmap">
 {
   "imports": {
-    "three": "./lib/three.module.js?v=178",
+    "three": "./lib/three.module.js?v=179",
     "three/addons/": "./lib/addons/"
   }
 }
@@ -20,9 +20,10 @@
 <div id="loading">
   <div class="sky" aria-hidden="true"><div class="stars"></div></div>
 
-  <div class="stack">
-    <canvas class="galaxy" width="600" height="600"></canvas>
+  <!-- 全屏旋转星系背景（巨大、无边、缓慢差速自转） -->
+  <canvas class="galaxy" aria-hidden="true"></canvas>
 
+  <div class="stack">
     <div class="plate">
       <div class="kicker">INTERSTELLAR ATLAS</div>
       <h1>星际模拟</h1>
@@ -37,7 +38,7 @@
 </div>
 
 <!-- 启动屏动画：普通脚本，解析到这里立刻开始转，不等 three.js 模块链 -->
-<script src="js/loading-boot.js?v=178"></script>
-<script type="module" src="js/main.js?v=178"></script>
+<script src="js/loading-boot.js?v=179"></script>
+<script type="module" src="js/main.js?v=179"></script>
 </body>
 </html>

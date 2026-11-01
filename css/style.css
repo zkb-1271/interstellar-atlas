@@ -345,17 +345,17 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 #loading .stack {
   position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transform: translateY(14vh);
 }
 #loading .galaxy {
-  /* 尺寸跟随视口：矮窗口上不能再让 600px 的星系把文字面板挤出屏幕 */
-  width: min(600px, 62vmin); height: min(600px, 62vmin);
-  display: block; margin-bottom: calc(min(600px, 62vmin) * -0.056);
-  filter: blur(0.4px) saturate(1.05);
-  animation: galaxyIn 2.4s cubic-bezier(.2,.7,.3,1) both;
+  /* 星系即背景：铺满整屏，无边无框，缓慢旋转（尺寸由 loading-boot.js 按视口设定） */
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; pointer-events: none;
+  animation: galaxyIn 2.8s ease-out both;
 }
 @keyframes galaxyIn {
-  from { opacity: 0; transform: scale(.92); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* 文字面板 */
