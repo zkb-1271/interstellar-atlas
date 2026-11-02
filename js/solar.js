@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=189';
 import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=189';
 import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=189';
+import { assetURL } from './assets.js?v=189';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -18,7 +19,7 @@ const ZS = { sun: 8, mercury: 4, venus: 5.2, earth: 6.8, moon: 1.6, mars: 6, jup
 const texLoader = new THREE.TextureLoader();
 const _sunToCam = new THREE.Vector3();   // 太阳贴片朝相机偏移的复用向量
 function loadRealMap(url, mat) {
-  texLoader.load(url, t => {
+  texLoader.load(assetURL(url), t => {
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     t.anisotropy = 8;
@@ -114,7 +115,7 @@ export class SolarSystem {
   _buildSun() {
     const geo = new THREE.SphereGeometry(SUN_RADIUS, 64, 32);
     const mat = new THREE.MeshBasicMaterial({ map: tex(makeSunTexture()) });
-    texLoader.load('assets/tex/planets/sun_sss-4k.jpg', t => {
+    texLoader.load(assetURL('assets/tex/planets/sun_sss-4k.jpg'), t => {
       t.colorSpace = THREE.SRGBColorSpace;
       mat.map = t; mat.needsUpdate = true;
     });
@@ -207,7 +208,7 @@ export class SolarSystem {
       const clouds = new THREE.Mesh(
         new THREE.SphereGeometry(R * 1.018, 48, 32),
         new THREE.MeshStandardMaterial({ map: null, transparent: true, depthWrite: false, roughness: 1, opacity: 0.9 }));
-      texLoader.load('assets/tex/planets/earth_clouds_nasa-2k.jpg', t => {
+      texLoader.load(assetURL('assets/tex/planets/earth_clouds_nasa-2k.jpg'), t => {
         t.colorSpace = THREE.SRGBColorSpace;
         // 参考站的云图是灰度 JPG：只能当 alphaMap 用，否则会变成不透明外壳盖住地表
         clouds.material.map = null;
@@ -232,7 +233,7 @@ export class SolarSystem {
       }
       const ring = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
         map: tex(makeRingTexture()), side: THREE.DoubleSide, transparent: true, depthWrite: false }));
-      texLoader.load('assets/tex/planets/saturn-ring-2k.png', t => {
+      texLoader.load(assetURL('assets/tex/planets/saturn-ring-2k.png'), t => {
         t.colorSpace = THREE.SRGBColorSpace;
         ring.material.map = t; ring.material.needsUpdate = true;
       });

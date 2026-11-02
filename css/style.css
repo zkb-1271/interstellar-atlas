@@ -346,7 +346,7 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   /* 真实银河全景：整幅铺满、压暗压灰，让文字仍是主角；
      略大于视口给缓动留余量，极慢的推近+微旋（Ken Burns）保住"活"的感觉 */
   position: absolute; inset: -6%;
-  background: url('../assets/tex/sky/milky-way-8k.jpg') center 42% / cover no-repeat;
+  background: url('../assets/tex/sky/milky-way-4k.jpg') center 42% / cover no-repeat;
   opacity: .78; filter: saturate(.95) brightness(1.05);
   animation: mwIn 1.6s ease-out both, mwDrift 36s ease-in-out infinite alternate;
 }

@@ -1,3 +1,4 @@
 node_modules/
+dist/
+assets/tex/sky/milky-way-8k.jpg
 .DS_Store
-*.log

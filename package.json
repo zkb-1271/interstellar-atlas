@@ -1,0 +1,13 @@
+{
+  "name": "interstellar-atlas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 serve.py 8823",
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

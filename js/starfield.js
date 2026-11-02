@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { makeStarSprite, makeNebulaSprite } from './textures.js?v=189';
 import { CONSTELLATIONS, NEBULAE } from './data.js?v=189';
+import { assetURL } from './assets.js?v=189';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -65,7 +66,7 @@ export function createDeepSpace() {
   const group = new THREE.Group();
 
   // 真实银河全景天球（NASA/Spitzer GLIMPSE 全景，合成 8192×4096）
-  const skyTex = new THREE.TextureLoader().load('assets/tex/sky/milky-way-8k.jpg');
+  const skyTex = new THREE.TextureLoader().load(assetURL('assets/tex/sky/milky-way-4k.jpg'));
   skyTex.colorSpace = THREE.SRGBColorSpace;
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(R * 0.985, 64, 40),

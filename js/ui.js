@@ -5,6 +5,7 @@
 import { QUOTES, PLANETS } from './data.js?v=189';
 const PLANET_NAV = PLANETS;
 import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=189';
+import { assetURL } from './assets.js?v=189';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -428,7 +429,7 @@ export class UI {
     q('#cp-en').textContent = o.en;
     q('#cp-sub').textContent = o.sub || '';
     const img = q('#cp-img');
-    img.style.backgroundImage = o.img ? `url(${o.img})` : 'none';
+    img.style.backgroundImage = o.img ? `url(${assetURL(o.img)})` : 'none';
     img.style.display = o.img ? '' : 'none';
     q('#cp-desc').innerHTML = (o.sections && o.sections.length
       ? [{ t: '概览', text: o.desc }, ...o.sections]
