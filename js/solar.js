@@ -4,10 +4,10 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=193';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=193';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=193';
-import { assetURL } from './assets.js?v=193';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=195';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=195';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=195';
+import { assetURL } from './assets.js?v=195';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -78,6 +78,45 @@ function makeSunDiscTexture(size = 256) {
   return tex(cv);
 }
 
+// 大气边缘辉光（Fresnel 壳层）：球心几乎透明、越靠边缘越亮，
+// 让行星有"包裹一层大气"的厚度感，而不是一块贴纸。加性混合，
+// 不写深度，不会遮住地表细节。
+function addAtmoRim(mesh, R, color, strength = 0.42) {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: new THREE.Color(color) },
+      uStrength: { value: strength },
+    },
+    vertexShader: `
+      varying vec3 vN;
+      varying vec3 vV;
+      void main() {
+        vN = normalize(normalMatrix * normal);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uStrength;
+      varying vec3 vN;
+      varying vec3 vV;
+      void main() {
+        float f = 1.0 - max(dot(normalize(vN), normalize(vV)), 0.0);
+        f = pow(f, 3.0);
+        gl_FragColor = vec4(uColor, f * uStrength);
+      }`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.FrontSide,
+  });
+  const rim = new THREE.Mesh(new THREE.SphereGeometry(R * 1.03, 48, 32), mat);
+  rim.renderOrder = 2;
+  mesh.add(rim);
+  return rim;
+}
+
 export class SolarSystem {
   constructor(scene) {
     this.scene = scene;
@@ -116,7 +155,7 @@ export class SolarSystem {
   _buildSun() {
     const geo = new THREE.SphereGeometry(SUN_RADIUS, 64, 32);
     const mat = new THREE.MeshBasicMaterial({ map: tex(makeSunTexture()) });
-    texLoader.load(assetURL('assets/tex/planets/sun_sss-4k.jpg'), t => {
+    texLoader.load(assetURL('assets/tex/planets/sun-4k.jpg'), t => {
       t.colorSpace = THREE.SRGBColorSpace;
       mat.map = t; mat.needsUpdate = true;
     });
@@ -153,6 +192,10 @@ export class SolarSystem {
     if (p.tex) loadRealMap(`assets/tex/${p.tex}`, mat);       // NASA 真图覆盖
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), mat);
     const entry = this._register(p.id, mesh, p, R);
+    // 有大气层的行星加一圈边缘辉光（地球最亮，金星/气巨柔一些）
+    if (p.atmo) {
+      entry.rim = addAtmoRim(mesh, R, p.atmo, p.id === 'earth' ? 0.55 : 0.4);
+    }
 
     // 微光晕：总览时行星只有几个像素，靠一层加性柔光让它"亮起来"（参考站同款观感）
     const tint = p.color || '#ffffff';
@@ -209,7 +252,7 @@ export class SolarSystem {
       const clouds = new THREE.Mesh(
         new THREE.SphereGeometry(R * 1.018, 48, 32),
         new THREE.MeshStandardMaterial({ map: null, transparent: true, depthWrite: false, roughness: 1, opacity: 0.9 }));
-      texLoader.load(assetURL('assets/tex/planets/earth_clouds_nasa-2k.jpg'), t => {
+      texLoader.load(assetURL('assets/tex/planets/earth-clouds-4k.jpg'), t => {
         t.colorSpace = THREE.SRGBColorSpace;
         // 参考站的云图是灰度 JPG：只能当 alphaMap 用，否则会变成不透明外壳盖住地表
         clouds.material.map = null;
@@ -234,7 +277,7 @@ export class SolarSystem {
       }
       const ring = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
         map: tex(makeRingTexture()), side: THREE.DoubleSide, transparent: true, depthWrite: false }));
-      texLoader.load(assetURL('assets/tex/planets/saturn-ring-2k.png'), t => {
+      texLoader.load(assetURL('assets/tex/planets/saturn-ring.png'), t => {
         t.colorSpace = THREE.SRGBColorSpace;
         ring.material.map = t; ring.material.needsUpdate = true;
       });
@@ -654,7 +697,7 @@ export class SolarSystem {
     if (!moonEntry) {
       const cv = makePlanetTexture('moon', 11); addCraters(cv, 110);
       const mmat = new THREE.MeshStandardMaterial({ map: tex(cv), roughness: 0.96, emissiveMap: tex(cv), emissive: new THREE.Color(0, 0, 0) });
-      loadRealMap('assets/tex/planets/moon-2k.jpg', mmat);
+      loadRealMap('assets/tex/planets/moon-4k.jpg', mmat);
       // 月球半径用真实比例：0.455 × 0.273 ≈ 0.124（以前用显示公式算出
       // 0.264，月地比 0.58，比真实的 0.273 大了一倍多）
       const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.124, 40, 28), mmat);

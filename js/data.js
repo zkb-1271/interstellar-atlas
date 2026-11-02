@@ -23,7 +23,7 @@ export const ORBITAL_ELEMENTS = {
 
 // 展示半径：2.2 * sqrt(真实半径/地球半径)——特写真实、总览可见
 export const PLANETS = [
-  { id:'mercury', color:'#a89c8d', en:'MERCURY', cn:'水星', type:'rocky', tex:'planets/mercury-2k.jpg', au:0.387, elements:{a:.3871,e:.2056,i:7.005,node:48.331,peri:77.456,l0:252.251,period:87.969}, displayR:0.304, spin:0.017,
+  { id:'mercury', color:'#a89c8d', en:'MERCURY', cn:'水星', type:'rocky', tex:'planets/mercury-4k.jpg', au:0.387, elements:{a:.3871,e:.2056,i:7.005,node:48.331,peri:77.456,l0:252.251,period:87.969}, displayR:0.304, spin:0.017,
     radiusKm:2440,  gravity:3.7,  periodDays:87.97,  rotationHours:1407.6, tempC:'-173 ~ 427', moons:0,
     sections:[
       { t:'概览', text:'离太阳最近的行星，也是八大行星里最小的一颗。它以 88 天的速度绕日狂奔，罗马人因此把它当作信使之神墨丘利。表面与月球惊人地相似，布满 40 多亿年来的陨击疤痕。' },
@@ -31,7 +31,7 @@ export const PLANETS = [
       { t:'卫星与探测', text:'水星没有卫星。人类对它知之甚少：1974 年水手 10 号首次飞掠，2011 年信使号进入环绕轨道，绘制了全星表面地图；2026 年后贝皮·科隆坡号将接棒继续解码这颗灼热的金属世界。' },
   { t:'怎样看到它', text:'离太阳太近，只在日出前或日落后很短的时间里贴地平线出现，是八大行星中最难用肉眼捕捉的一颗。传说哥白尼终生没能亲眼见到它——要看清它，最好等它处在“东大距”或“西大距”时，用双筒望远镜在对准地平线的开阔处扫过去。' }
     ] },
-  { id:'venus', color:'#e0c489',   en:'VENUS',   cn:'金星', type:'venus', tex:'planets/venus_atmosphere-2k.jpg', au:0.723, elements:{a:.7233,e:.0068,i:3.395,node:76.68,peri:131.533,l0:181.98,period:224.701}, displayR:0.446, spin:-0.004,
+  { id:'venus', color:'#e0c489', atmo:'#f2ddb0',   en:'VENUS',   cn:'金星', type:'venus', tex:'planets/venus-2k.jpg', au:0.723, elements:{a:.7233,e:.0068,i:3.395,node:76.68,peri:131.533,l0:181.98,period:224.701}, displayR:0.446, spin:-0.004,
     radiusKm:6052,  gravity:8.87, periodDays:224.70, rotationHours:-5832.5, tempC:'464（均温）', moons:0,
     sections:[
       { t:'概览', text:'夜空中最亮的行星，中国人称它启明星与长庚星。大小与地球相仿，却是同一颗太阳下走向两个极端的孪生兄弟——464°C 的均温让它成为太阳系最热的行星。' },
@@ -39,7 +39,7 @@ export const PLANETS = [
       { t:'卫星与探测', text:'金星没有卫星。苏联 Venera 系列探测器在 1970–80 年代陆续着陆，传回地表照片——每个都只存活了几十分钟便被高温高压摧毁；麦哲伦号雷达则揭开了它火山密布的表面。' },
   { t:'怎样看到它', text:'最亮时约 -4.9 等，比夜空中任何恒星都亮。日落后西方天空的“长庚星”、日出前东方的“启明星”都是它。用一架小望远镜就能看到它像月亮一样有盈缺——这是伽利略 1610 年证明“金星绕太阳转”的关键证据。' }
     ] },
-  { id:'earth', color:'#7bb6c9',   en:'EARTH',   cn:'地球', type:'earth', tex:'planets/earth_daymap-2k.jpg', au:1, elements:{a:1,e:.0167,i:0,node:0,peri:102.937,l0:100.464,period:365.256}, displayR:0.455, spin:1.0,
+  { id:'earth', color:'#7bb6c9', atmo:'#5fa8ff',   en:'EARTH',   cn:'地球', type:'earth', tex:'planets/earth-4k.jpg', au:1, elements:{a:1,e:.0167,i:0,node:0,peri:102.937,l0:100.464,period:365.256}, displayR:0.455, spin:1.0,
     radiusKm:6371,  gravity:9.81, periodDays:365.26, rotationHours:23.93, tempC:'15（均温）', moons:1,
     sections:[
       { t:'概览', text:'目前已知唯一存在生命的世界，太阳系第五大行星。液态海洋覆盖 71% 的表面，一颗恰到好处距离的恒星、一层保护性的大气和一个巨大的月球，共同塑造了这颗蓝色弹珠。' },
@@ -47,7 +47,7 @@ export const PLANETS = [
       { t:'卫星与探测', text:'唯一的天然卫星月球诞生于 45 亿年前的一次天体撞击，它稳定着地轴、驱动潮汐。人类是这颗行星的探测者也是居住者：从 1968 年阿波罗 8 号回望地球的那张照片开始，我们第一次把自己的家园看成一颗行星。' },
   { t:'怎样看到它', text:'我们站在它上面。若从月球回望，地球是一个比我们看到的月亮大近 4 倍的蓝白色球体，且始终停在月空的同一位置（月球被潮汐锁定）。1968 年阿波罗 8 号在绕月时拍下的“地出”，是第一次有人类亲手按下快门拍下完整的家园。' }
     ] },
-  { id:'mars', color:'#b4674f',    en:'MARS',    cn:'火星', type:'mars', tex:'planets/mars-2k.jpg', au:1.524, elements:{a:1.5237,e:.0934,i:1.85,node:49.558,peri:336.041,l0:355.433,period:686.98}, displayR:0.349, spin:0.97,
+  { id:'mars', color:'#b4674f', atmo:'#d99a63',    en:'MARS',    cn:'火星', type:'mars', tex:'planets/mars-4k.jpg', au:1.524, elements:{a:1.5237,e:.0934,i:1.85,node:49.558,peri:336.041,l0:355.433,period:686.98}, displayR:0.349, spin:0.97,
     radiusKm:3390,  gravity:3.71, periodDays:686.98, rotationHours:24.62, tempC:'-63（均温）', moons:2,
     sections:[
       { t:'概览', text:'锈红色的沙漠世界。铁氧化物尘暴给它染上血液般的颜色，中国人称它荧惑。它拥有太阳系最高的火山奥林帕斯山（21 公里）和最深的峡谷水手谷。' },
@@ -55,7 +55,7 @@ export const PLANETS = [
       { t:'卫星与探测', text:'两颗小卫星火卫一与火卫二形似土豆，可能是被俘获的小行星。火星是人类探测器造访最多的行星：从 1976 年海盗号到毅力号与祝融号，寻找古老生命痕迹的旅程至今仍在继续。' },
   { t:'怎样看到它', text:'冲日前后亮度可达 -2.9 等，肉眼就是一颗明显的橙红色“星”，颜色来自表面的氧化铁尘埃。火星与地球每 26 个月才有一次适合观测的冲日；它还会逆行——在星空中画出一段回头的小环，这是所有外行星共有的现象。' }
     ] },
-  { id:'jupiter', color:'#d9b98f', en:'JUPITER', cn:'木星', type:'jupiter', tex:'planets/jupiter-2k.jpg', au:5.203, elements:{a:5.2029,e:.0484,i:1.304,node:100.464,peri:14.331,l0:34.351,period:4332.589}, displayR:1.246, spin:2.4,
+  { id:'jupiter', color:'#d9b98f', atmo:'#e8d3b4', en:'JUPITER', cn:'木星', type:'jupiter', tex:'planets/jupiter-4k.jpg', au:5.203, elements:{a:5.2029,e:.0484,i:1.304,node:100.464,peri:14.331,l0:34.351,period:4332.589}, displayR:1.246, spin:2.4,
     radiusKm:69911, gravity:24.79, periodDays:4332.6, rotationHours:9.93, tempC:'-108（云顶）', moons:95,
     sections:[
       { t:'概览', text:'太阳系无可争议的王者：质量是其余七颗行星总和的 2.5 倍，可装下 1300 个地球。大红斑是一场刮了至少三百年的风暴，能吞下整个地球。' },
@@ -63,7 +63,7 @@ export const PLANETS = [
       { t:'卫星与探测', text:'已确认 95 颗卫星，四颗伽利略卫星最著名：木卫一布满活火山，木卫二冰壳下藏着全球海洋，木卫三是太阳系最大卫星。1979 年旅行者号首次近观，1995–2003 年伽利略号环绕探测，朱诺号至今仍在工作。' },
   { t:'怎样看到它', text:'与金星并列夜空中最亮的两颗“星”。一副双筒望远镜就能看到四颗伽利略卫星排成一条线，并在一夜之间明显换位——这正是 1610 年伽利略推翻“天体只绕地球转”的证据。小望远镜还能看到赤道云带与大红斑。' }
     ] },
-  { id:'saturn', color:'#e4d0a6',  en:'SATURN',  cn:'土星', type:'saturn', tex:'planets/saturn-2k.jpg', au:9.537, elements:{a:9.5367,e:.0539,i:2.486,node:113.666,peri:93.057,l0:50.077,period:10759.22}, displayR:1.154, spin:2.2, ring:true,
+  { id:'saturn', color:'#e4d0a6', atmo:'#efe4c2',  en:'SATURN',  cn:'土星', type:'saturn', tex:'planets/saturn-4k.jpg', au:9.537, elements:{a:9.5367,e:.0539,i:2.486,node:113.666,peri:93.057,l0:50.077,period:10759.22}, displayR:1.154, spin:2.2, ring:true,
     radiusKm:58232, gravity:10.44, periodDays:10759, rotationHours:10.66, tempC:'-139（云顶）', moons:146,
     sections:[
       { t:'概览', text:'以壮观光环著称的气态巨行星。环系宽达 28 万公里，厚度却常常只有 10 米——由无数冰粒与碎石构成，密度比水还低，理论上它能浮在足够大的海面上。' },
@@ -71,7 +71,7 @@ export const PLANETS = [
       { t:'卫星与探测', text:'146 颗卫星构成一个迷你太阳系：土卫六有大氣和液态甲烷湖，土卫二南极喷出冰羽流——它们是寻找生命的热门目标。卡西尼号 2004–2017 年环绕探测 13 年，最终葬身土星大气。' },
   { t:'怎样看到它', text:'肉眼可见，但它只是一颗不起眼的淡黄色亮星。望远镜里的环才是它的身份证：环面每约 15 年侧对地球一次，那时环几乎“消失”成一条细线；再过七八年又会张开到最大角度。用 30 倍以上的望远镜就能看出这个变化。' }
     ] },
-  { id:'uranus', color:'#8fd3dd',  en:'URANUS',  cn:'天王星', type:'ice', tex:'planets/uranus-2k.jpg', au:19.19, elements:{a:19.1892,e:.0473,i:.773,node:74.006,peri:173.005,l0:314.055,period:30685.4}, displayR:0.814, spin:-1.4,
+  { id:'uranus', color:'#8fd3dd', atmo:'#9ff0ea',  en:'URANUS',  cn:'天王星', type:'ice', tex:'planets/uranus-2k.jpg', au:19.19, elements:{a:19.1892,e:.0473,i:.773,node:74.006,peri:173.005,l0:314.055,period:30685.4}, displayR:0.814, spin:-1.4,
     radiusKm:25362, gravity:8.69, periodDays:30687, rotationHours:-17.24, tempC:'-197（均温）', moons:28,
     sections:[
       { t:'概览', text:'一颗躺着自转的冰巨星，自转轴倾角 98°，几乎平行于轨道面——可能源于远古的一次巨型撞击。每个极点会经历长达 42 年的极昼与极夜。' },
@@ -79,7 +79,7 @@ export const PLANETS = [
       { t:'卫星与探测', text:'28 颗卫星以莎士比亚与蒲柏笔下的人物命名（泰坦妮亚、奥伯龙……）。它是唯一只被一艘探测器造访过的大行星：1986 年旅行者 2 号飞掠 5.5 小时，拍下的照片至今仍是主流资料。' },
   { t:'怎样看到它', text:'视星等约 5.7，在极暗的夜空里勉强可见——它是第一颗被望远镜发现的行星，赫歇尔 1781 年正是靠望远镜在双子座附近找到了这个“不该存在的圆面”。想自己找到它，需要一份星图、一片没有光污染的天空和一点耐心。' }
     ] },
-  { id:'neptune', color:'#5f82d6', en:'NEPTUNE', cn:'海王星', type:'ice', tex:'planets/neptune-2k.jpg', au:30.07, elements:{a:30.0699,e:.0086,i:1.77,node:131.784,peri:48.124,l0:304.348,period:60189}, displayR:0.804, spin:1.5,
+  { id:'neptune', color:'#5f82d6', atmo:'#7fa2ff', en:'NEPTUNE', cn:'海王星', type:'ice', tex:'planets/neptune-2k.jpg', au:30.07, elements:{a:30.0699,e:.0086,i:1.77,node:131.784,peri:48.124,l0:304.348,period:60189}, displayR:0.804, spin:1.5,
     radiusKm:24622, gravity:11.15, periodDays:60190, rotationHours:16.11, tempC:'-201（均温）', moons:16,
     sections:[
       { t:'概览', text:'靠数学而非望远镜发现的行星：天文学家从天王星轨道的扰动推算出它的位置，1846 年在预测点附近 1° 内找到它。深度蓝色的表面刮着太阳系最猛烈的风。' },

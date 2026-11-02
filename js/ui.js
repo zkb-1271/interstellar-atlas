@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=193';
+import { QUOTES, PLANETS } from './data.js?v=195';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=193';
-import { assetURL } from './assets.js?v=193';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=195';
+import { assetURL } from './assets.js?v=195';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -357,12 +357,12 @@ export class UI {
     // 资料来源：与目录面板最后一项对齐，也给数字一个出处
     const kind = info.kind || 'planet';
     const src = kind === 'moon'
-      ? '轨道与影像：NASA / JPL 卫星数据表、旅行者与卡西尼任务公开影像'
+      ? '轨道与影像：NASA / JPL 卫星数据表、旅行者与卡西尼任务公开影像 ｜ 表面贴图：Solar System Scope (CC BY 4.0)'
       : kind === 'comet'
       ? '轨道要素：JPL Small-Body Database ｜ 影像：ESA Rosetta / NASA Stardust'
       : kind === 'star'
       ? '数据：NASA Solar Dynamics Observatory、SOHO ｜ 影像：SDO / 太阳动力学天文台'
-      : '轨道要素：JPL Approximate Positions of the Planets ｜ 数据：NASA Planetary Fact Sheet ｜ 影像：NASA / JPL-Caltech';
+      : '轨道要素：JPL Approximate Positions of the Planets ｜ 数据：NASA Planetary Fact Sheet ｜ 表面贴图：Solar System Scope (CC BY 4.0)';
     this.card.querySelector('#pc-src').innerHTML =
       `<div class="ps-k">资料来源 · SOURCES</div><p>${src}</p><p class="ps-note">本站为演示性可视化：行星半径为视觉放大，轨道距离在「示意排布」下经过分段压缩。</p>`;
 
