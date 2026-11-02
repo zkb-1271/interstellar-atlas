@@ -46,14 +46,38 @@
   const stEn = root.querySelector('.status em');
 
   const t0 = performance.now();
-  let value = 0, finished = false;
+  let target = 0;      // 真实加载进度（THREE LoadingManager 推过来）
+  let shown = 0;       // 屏幕上正在动画的进度
+  let finished = false;
 
+  // 只记录真实目标值，渲染交给下方的 rAF 平滑循环
   const paint = v => {
-    value = Math.max(value, Math.min(1, Number.isFinite(v) ? v : 0));
-    const p = Math.round(value * 100);
-    if (track) track.style.width = p + '%';
+    target = Math.max(target, Math.min(1, Number.isFinite(v) ? v : 0));
+  };
+
+  const render = v => {
+    const p = Math.round(v * 100);
+    if (track) track.style.width = (v * 100).toFixed(2) + '%';
     if (pctEl) pctEl.textContent = p + '%';
   };
+
+  // 进度条动画：指数趋近真实值（不跳变）；真实进度停滞时也缓慢爬升，
+  // 但封顶 92%——只有真正加载完才允许到 100%，不假装完成。
+  // 之前进度条"完全不动"就是因为只在回调里一次性设宽度：本地/缓存
+  // 命中时贴图几百毫秒就加载完，条子要么卡在 0%，要么瞬间跳满。
+  const tick = () => {
+    if (finished) {
+      shown += (1 - shown) * 0.2;
+      if (1 - shown < 0.004) shown = 1;
+    } else {
+      shown += (target - shown) * 0.14;
+      if (target - shown < 0.003) shown = target;
+      if (shown < 0.92 && target < 0.92) shown = Math.min(0.92, shown + 0.0035);
+    }
+    render(shown);
+    if (!(finished && shown >= 1)) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 
   // ---- 状态文案轮播 ----
   let pi = 0;
@@ -71,10 +95,10 @@
     if (finished) return;
     finished = true;
     clearInterval(phraseTimer);
-    paint(1);
     if (stZh) stZh.textContent = '准备就绪';
     if (stEn) stEn.textContent = 'READY';
-    setTimeout(() => root.classList.add('done'), 300);
+    // 先让进度条走满（rAF 里收尾），再整体淡出
+    setTimeout(() => root.classList.add('done'), 620);
   };
 
   const scheduleFinish = (minMs = 1700) => {
@@ -84,14 +108,13 @@
 
   // 兜底：就算场景模块整个加载失败，加载屏也要能自己退场
   setTimeout(finish, 9000);
-  setTimeout(() => { if (value === 0) paint(0.35); }, 700);
 
   // 交给 js/loading.js（在 three.js 模块里）接入真实加载进度
   window.__loadingBoot = {
     paint: v => paint(v),
     scheduleFinish,
     finish,
-    get value() { return value; },
+    get value() { return target; },
     get finished() { return finished; },
   };
 })();
