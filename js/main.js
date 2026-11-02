@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=190';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=190';
-import { createDeepSpace } from './starfield.js?v=190';
-import { SolarSystem } from './solar.js?v=190';
-import { FlightController, easeOutQuint } from './flight.js?v=190';
-import { UI } from './ui.js?v=190';
-import { initLoading } from './loading.js?v=190';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=191';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=191';
+import { createDeepSpace } from './starfield.js?v=191';
+import { SolarSystem } from './solar.js?v=191';
+import { FlightController } from './flight.js?v=191';
+import { UI } from './ui.js?v=191';
+import { initLoading } from './loading.js?v=191';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -139,7 +139,17 @@ const ui = new UI(document.body, {
   onOpenEvents: () => openEvents(),
   onCloseEvents: () => ui.hideEvents(),
   onSpeed: (i) => { speedIdx = i; ui.setActiveSpeed(i); },
-  onToday: () => { jd = dateToJD(new Date()); },
+  // 「实时」：跳到现在 → 切真实历表 → 从这一刻起按真实时间流动
+  //（倍速在按钮的悬停面板里调，速度值仍是 SPEEDS 里的实时倍率）
+  onRealtime: () => {
+    jd = dateToJD(new Date());
+    positionMode = 'real';
+    ui.setPositionMode('real');
+    speedIdx = 1;            // 点击即回到 1:1 真实时间；想加速用悬停面板
+    ui.setActiveSpeed(speedIdx);
+    ui.flashSpeedPop?.();   // 提示倍速面板（1:1 下运动极慢）
+    goRealOverview();      // 以太阳为中心的真实机位，行星按历表散落各处
+  },
   onCloseCard: () => closeCard(),
   onPlanetNav: (dir) => navPlanet(dir),
   onSelectPlanet: (id) => selectPlanet(id),
@@ -209,7 +219,7 @@ function goDeep() {
   deepReady = false;
   flight.onFlightCancel = arriveDeep;
   flight.flyTo({
-    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.6,
+    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.8,
     onDone: arriveDeep,
   });
 }
@@ -228,7 +238,7 @@ function enterSolar() {
   ui.setMode('solar');
   const oc = computeOverviewCam();
   flight.flyTo({
-    camPos: oc.camPos, target: oc.target, duration: 3.0,
+    camPos: oc.camPos, target: oc.target, duration: 3.3,
     onDone: () => { flight.setRange(60, 18500); },
   });
 }
@@ -254,7 +264,7 @@ function goOverview() {
   ui.hideEvents();
   const oc2 = computeOverviewCam();
   flight.flyTo({
-    camPos: oc2.camPos, target: oc2.target, duration: 3.0,
+    camPos: oc2.camPos, target: oc2.target, duration: 3.3,
     onDone: () => { flight.setRange(0.9, 18500); },
   });
 }
@@ -286,7 +296,7 @@ function goRealOverview() {
   flight.flyTo({
     camPos: new THREE.Vector3(0, Math.sin(BASE_PITCH) * D, Math.cos(BASE_PITCH) * D),
     target: new THREE.Vector3(0, 0, 0),     // 正对太阳
-    duration: 2.2,
+    duration: 2.7,
     onDone: () => flight.setRange(0.9, 18500),
   });
 }
@@ -446,7 +456,7 @@ function selectPlanet(id) {
   const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
   const shift = dist * _tanHalf() * camera.aspect * 0.30;
   const target = p.clone().add(camRight.multiplyScalar(shift));
-  flight.flyTo({ camPos, target, duration: 2.0, arc: 0, easing: easeOutQuint, onDone: () => flight.setRange(frameR * 1.2, 4000) });
+  flight.flyTo({ camPos, target, duration: 2.4, arc: 0, onDone: () => flight.setRange(frameR * 1.2, 4000) });
   flight.follow(b);
   ui.setRailActive(id);
 }
@@ -469,7 +479,7 @@ function setViewAngle(v) {
   flight.flyTo({
     camPos: p.clone().add(dir.multiplyScalar(dist)),
     target: p.clone(),
-    duration: 1.8, arc: 0.08,
+    duration: 2.1, arc: 0.08,
     onDone: () => flight.setRange(b.displayR * 12, 2000),
   });
 }
@@ -548,7 +558,7 @@ function setViewSpot(id) {
       ground: { cam: ep.clone().add(moonP.clone().sub(ep).normalize().multiplyScalar(0.455 * 1.015)), target: moonP.clone(), range: [0.25, 800] },
     };
     const v = spots[id];
-    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.2, arc: 0.12, onDone: () => flight.setRange(...v.range) });
+    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.5, arc: 0.12, onDone: () => flight.setRange(...v.range) });
   } else {
     const moonP = moon.worldPos;
     const toSun = ep.clone().negate().normalize();               // 地→日（太阳在原点，取反向）
@@ -564,7 +574,7 @@ function setViewSpot(id) {
       ground: { cam: ep.clone().add(toSun.clone().multiplyScalar(0.455 * 1.015)), target: ep.clone().add(toSun.clone().multiplyScalar(10)), range: [0.25, 800] },
     };
     const v = spots[id];
-    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.2, arc: 0.12, onDone: () => flight.setRange(...v.range) });
+    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.5, arc: 0.12, onDone: () => flight.setRange(...v.range) });
   }
 }
 
@@ -615,7 +625,7 @@ function jumpAlignment(ev) {
   flight.flyTo({
     camPos: earth.worldPos.clone().add(mean.clone().multiplyScalar(31)).add(perp.clone().multiplyScalar(58)).add(new THREE.Vector3(0, 24.8, 0)),
     target: earth.worldPos.clone().add(mean.clone().multiplyScalar(33)),
-    duration: 3.0, arc: 0.2, onDone: () => flight.setRange(2, 6000),
+    duration: 3.3, arc: 0.2, onDone: () => flight.setRange(2, 6000),
   });
 }
 
@@ -655,7 +665,7 @@ function flyToSky(dir) {
   flight.flyTo({
     camPos,
     target: target0.add(camRight.multiplyScalar(shift)),
-    duration: 2.4, arc: 0.1,
+    duration: 2.7, arc: 0.1,
     onDone: () => flight.setRange(2200, 14000),
   });
 }
@@ -682,7 +692,7 @@ function focusNebula(id) {
 function closeConst() {
   ui.hideConstPanel();
   flight.flyTo({
-    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 2.2, arc: 0.25,
+    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 2.5, arc: 0.25,
     onDone: () => flight.setRange(50, 16000),
   });
 }

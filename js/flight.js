@@ -11,6 +11,11 @@ import * as THREE from 'three';
 
 const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 export const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
+// 五次缓入缓出：起步与收尾都更软，长距离飞行（总览 ↔ 深空、星球间跳转）
+// 用它比三次的更"丝滑"，中途不会出现明显的加速顿点
+export const easeInOutQuint = t => t < 0.5
+  ? 16 * t * t * t * t * t
+  : 1 - Math.pow(-2 * t + 2, 5) / 2;
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
@@ -154,7 +159,7 @@ export class FlightController {
   }
 
   // ---------- 相机飞行 ----------
-  flyTo({ camPos, target, duration = 2.4, onDone, arc = 0, easing = easeInOut }) {
+  flyTo({ camPos, target, duration = 2.4, onDone, arc = 0, easing = easeInOutQuint }) {
     const to = this._poseFrom(camPos, target || this.target);
     this._flight = {
       from: { target: this.target.clone(), viewHeight: this.viewHeight, yaw: this.yaw, pitch: this.pitch },

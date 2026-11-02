@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=190';
+import { QUOTES, PLANETS } from './data.js?v=191';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=190';
-import { assetURL } from './assets.js?v=190';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=191';
+import { assetURL } from './assets.js?v=191';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -23,14 +23,21 @@ function el(tag, cls, html) {
   return e;
 }
 
+// 时间流速：0 = 暂停；其余都是"实时"基准的不同倍速
+// （v 的单位是 儒略日/秒：1/86400 = 1 秒对 1 秒真实时间）
 const SPEEDS = [
-  { v: 0, label: '∥ 暂停' },
-  { v: 1 / 86400, label: '实时' },
-  { v: 0.5, label: '半日/秒' },
-  { v: 2, label: '2天/秒' },
-  { v: 20, label: '20天/秒' },
-  { v: 120, label: '120天/秒' },
+  { v: 0,              label: '暂停',  mult: 0 },
+  { v: 1 / 86400,      label: '实时',  mult: 1 },
+  { v: 60 / 86400,     label: '实时',  mult: 60 },
+  { v: 3600 / 86400,   label: '实时',  mult: 3600 },
+  { v: 86400 / 86400,  label: '实时',  mult: 86400 },
+  { v: 864000 / 86400, label: '实时',  mult: 864000 },
 ];
+const MULT_LABEL = m => m === 1 ? '实时'
+  : m < 3600 ? `×${m}`
+  : m === 3600 ? '×3600（1时/秒）'
+  : m === 86400 ? '×86400（1天/秒）'
+  : '（10天/秒）';
 
 export class UI {
   constructor(root, callbacks) {
@@ -91,7 +98,6 @@ export class UI {
     this._buildConstPanel(root);
     this._buildRail(root);
     this._buildViewbar(root);
-    this._buildHint(root);
     this._buildAimTag(root);
     this._buildTip(root);
 
@@ -173,25 +179,68 @@ export class UI {
     bar.id = 'timebar';
     this.bigDate = el('div', '', `<span id="jd-main">—</span><small id="jd-sub"></small>`);
     this.bigDate.id = 'bigDate';
-    this.speedsEl = el('div');
-    this.speedsEl.id = 'speeds';
-    this.speedBtns = SPEEDS.map((s, i) => {
-      const b = el('button', '', s.label);
-      b.addEventListener('click', () => this.cb.onSpeed(i));
-      this.speedsEl.appendChild(b);
+
+    // ---- 暂停 / 实时（悬停调倍速）----
+    const group = el('div', 'spd-group');
+
+    this.pauseBtn = el('button', 'spd', '暂停');
+    this.pauseBtn.dataset.tip = '冻结模拟时间';
+    this.pauseBtn.addEventListener('click', () => this.cb.onSpeed(0));
+
+    this.realBtn = el('button', 'spd real', '实时');
+    this.realBtn.dataset.tip = '跳到现在，行星按真实历表就位并开始运行（悬停可调倍速）';
+    this.realBtn.addEventListener('click', () => this.cb.onRealtime());
+
+    // 悬停弹出的倍速面板
+    this.speedPop = el('div', 'spd-pop');
+    this.speedPopBtns = SPEEDS.map((s, i) => {
+      if (i === 0) return null;              // 暂停单独成按钮
+      const b = el('button', '', MULT_LABEL(s.mult));
+      b.dataset.idx = i;
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        this.cb.onSpeed(i);
+        this._hideSpeedPop();
+      });
+      this.speedPop.appendChild(b);
       return b;
     });
-    const today = el('button', '', '回到今天');
-    today.id = 'todayBtn';
-    today.addEventListener('click', () => this.cb.onToday());
+
+    this.realWrap = el('div', 'spd-wrap');
+    this.realWrap.append(this.realBtn, this.speedPop);
+    // 按钮与面板之间有几像素间隙，鼠标穿过时 mouseleave 会先触发——
+    // 所以收起延迟 180ms，进到面板里再取消，否则面板永远点不中
+    const openPop = () => { clearTimeout(this._popTimer); this._showSpeedPop(); };
+    const closePop = () => {
+      clearTimeout(this._popTimer);
+      this._popTimer = setTimeout(() => this._hideSpeedPop(), 180);
+    };
+    this.realWrap.addEventListener('mouseenter', openPop);
+    this.realWrap.addEventListener('mouseleave', closePop);
+    this.speedPop.addEventListener('mouseenter', openPop);
+    this.speedPop.addEventListener('mouseleave', closePop);
+
+    group.append(this.pauseBtn, this.realWrap);
+
     // 示意排布 / 实时轨道（对应参考站 SCHEMATIC / REAL）
     this.posBtn = el('button', 'posmode', '示意排布');
     this.posBtn.dataset.tip = '示意排布：行星按压缩距离排成一线，轨道线为同心导轨｜实时轨道：按 JPL 历表真实公转、散落各处，相机以太阳为中心取景，轨道线为真实椭圆';
     this.posBtn.addEventListener('click', () => this.cb.onTogglePosition());
-    bar.append(this.bigDate, this.speedsEl, this.posBtn, today);
+
+    bar.append(this.bigDate, group, this.posBtn);
     root.appendChild(bar);
     this.timebar = bar;
     this.SPEEDS = SPEEDS;
+  }
+
+  _showSpeedPop() { this.speedPop.classList.add('show'); }
+  _hideSpeedPop() { this.speedPop.classList.remove('show'); }
+  // 点「实时」后自动闪一下倍速面板：1:1 真实时间下行星几乎不动，
+  // 得让用户知道这里还能加速
+  flashSpeedPop(ms = 2200) {
+    this._showSpeedPop();
+    clearTimeout(this._popTimer);
+    this._popTimer = setTimeout(() => this._hideSpeedPop(), ms);
   }
 
   _buildFocusTitle(root) {
@@ -575,12 +624,6 @@ export class UI {
     });
   }
 
-  _buildHint(root) {
-    this.hint = el('div', '', '点击行星聚焦 · 拖动环视 · 滚轮缩放');
-    this.hint.id = 'hint';
-    root.appendChild(this.hint);
-  }
-
   // ---- 天象观景位 ----
   _buildViewbar(root) {
     const bar = el('div');
@@ -632,7 +675,6 @@ export class UI {
     this.tabs.style.opacity = '1';
     this.tabEls.deep.classList.toggle('active', mode === 'deep');
     this.tabEls.solar.classList.toggle('active', mode === 'solar');
-    this.hint.classList.toggle('show', mode === 'solar');
     this.hideConstPanel();
     if (mode === 'deep') { this.hideCard(); this.hideEvents(); }
   }
@@ -651,7 +693,13 @@ export class UI {
     main.textContent = fmtDateLocal(jd);
     sub.textContent = `${fmtTimeLocal(jd)} ${TZ_LABEL} · 模拟时间`;
   }
-  setActiveSpeed(i) { this.speedBtns.forEach((b, j) => b.classList.toggle('active', i === j)); }
+  setActiveSpeed(i) {
+    const sp = SPEEDS[i] || SPEEDS[0];
+    this.pauseBtn.classList.toggle('active', !i);
+    this.realBtn.classList.toggle('active', !!i);
+    this.realBtn.textContent = i ? (sp.mult === 1 ? '实时' : `实时 ×${sp.mult >= 86400 ? Math.round(sp.mult / 86400) + '天/秒' : sp.mult}`) : '实时';
+    if (this.speedPopBtns) this.speedPopBtns.forEach((b, j) => b && b.classList.toggle('active', (j + 1) === i));
+  }
   setPositionMode(m) {
     this.posBtn.textContent = m === 'real' ? '实时轨道' : '示意排布';
     this.posBtn.classList.toggle('on', m === 'real');
