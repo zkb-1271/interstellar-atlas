@@ -4,10 +4,10 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=192';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=192';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=192';
-import { assetURL } from './assets.js?v=192';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=193';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=193';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=193';
+import { assetURL } from './assets.js?v=193';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -18,6 +18,7 @@ const ZS = { sun: 8, mercury: 4, venus: 5.2, earth: 6.8, moon: 1.6, mars: 6, jup
 
 const texLoader = new THREE.TextureLoader();
 const _sunToCam = new THREE.Vector3();   // 太阳贴片朝相机偏移的复用向量
+const _sunProj = new THREE.Vector3();    // 太阳在屏幕上的投影（判断是否出画）
 function loadRealMap(url, mat) {
   texLoader.load(assetURL(url), t => {
     t.colorSpace = THREE.SRGBColorSpace;
@@ -582,10 +583,21 @@ export class SolarSystem {
     }
 
     // 太阳辉光（固定几何尺寸，不再随距离缩放）
+    // ⚠️ 必须按"太阳是否还在画面内"淡出：聚焦某颗行星时太阳往往就在画面外
+    // 不远，它那层 4.6R 的加性辉光会从画面边缘渗进来，看起来像一团
+    // 找不到来源的"神秘光晕"。
     if (this._glow1) {
-      const d = camera ? camera.position.distanceTo(this.bodies.get('sun').worldPos) : 200;
-      this._glow1.material.opacity = Math.min(1, 40 / Math.max(d, 1)) * 0.95;
-      this._glow2.material.opacity = Math.min(1, 120 / Math.max(d, 1)) * 0.8;
+      const sp = this.bodies.get('sun').worldPos;
+      const d = camera ? camera.position.distanceTo(sp) : 200;
+      let edge = 1;
+      if (camera) {
+        _sunProj.copy(sp).project(camera);
+        const off = Math.max(Math.abs(_sunProj.x), Math.abs(_sunProj.y));
+        // 1.05 倍 NDC 之内全亮，1.5 倍之外完全熄灭
+        edge = _sunProj.z > 1 ? 0 : Math.min(1, Math.max(0, (1.5 - off) / 0.45));
+      }
+      this._glow1.material.opacity = Math.min(1, 40 / Math.max(d, 1)) * 0.95 * edge;
+      this._glow2.material.opacity = Math.min(1, 120 / Math.max(d, 1)) * 0.8 * edge;
     }
 
     // 带粒子尺寸随相机高度微调（参考站 $z 同款）
