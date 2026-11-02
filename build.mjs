@@ -100,6 +100,9 @@ let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 let css = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8');
 const boot = fs.readFileSync(path.join(ROOT, 'js/loading-boot.js'), 'utf8');
 
+// 构建版本号：从 index.html 的 ?v= 取，用于右下角版本戳（离线版会标注"离线版"）
+const VER = (html.match(/\?v=(\d+)/) || [])[1] || '';
+
 // CSS 里的背景图（开屏银河）也内联——固定用压缩版，8K 只进 3D 天球
 css = css.replace(/url\('([^']+)'\)/g, (m, u) => {
   if (u.startsWith('data:')) return m;
@@ -125,14 +128,16 @@ html = html
     // 主线程被独占，加载屏的 rAF 直接停摆，进度条会卡在个位数百分比。
     // 按资源逐条内联，每条结束回报一次进度，浏览器在条目之间能继续渲染。
     const keys = Object.keys(assetMap);
-    const head = `<script>window.__ASSET_MAP={};window.__ASSET_TOTAL=${keys.length};</script>`;
+    const head = `<script>window.__ASSET_MAP={};window.__ASSET_TOTAL=${keys.length};` +
+                 `window.__BUILD="v${VER} · 离线版";</script>`;
     const parts = keys.map((k, i) =>
       `<script>window.__ASSET_MAP[${JSON.stringify(k)}]=${JSON.stringify(assetMap[k])};` +
       `if(window.__assetTick)window.__assetTick(${i + 1});</script>`);
     return [head, ...parts, `<script>\n${bundleJs}\n</script>`].join('\n');
   });
 
-// 加一条离线提示，双击打开时知道自己看的是便携版
+// 加一条离线提示 + 版本戳：双击打开时能一眼确认自己看的是哪一版。
+// 用户多次遇到"两个版本对不上/改了没生效"，右下角常显版本号是最省事的解法。
 html = html.replace('</body>', () => '<script>window.__PORTABLE__=true;</script>\n</body>');
 
 fs.mkdirSync(DIST, { recursive: true });

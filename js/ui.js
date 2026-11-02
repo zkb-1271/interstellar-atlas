@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=204';
+import { QUOTES, PLANETS } from './data.js?v=205';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=204';
-import { assetURL } from './assets.js?v=204';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=205';
+import { assetURL } from './assets.js?v=205';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -100,6 +100,7 @@ export class UI {
     this._buildViewbar(root);
     this._buildAimTag(root);
     this._buildTip(root);
+    this._buildBuildTag(root);
 
     // 准星跟随
     window.addEventListener('mousemove', e => {
@@ -573,6 +574,22 @@ export class UI {
     });
     root.appendChild(rail);
     this.rail = rail;
+  }
+
+  // 右下角版本戳：一串"改了没生效/两个版本对不上"多半是缓存或旧离线包，
+  // 把版本号常显出来，一眼就能确认当前跑的是哪一版。
+  _buildBuildTag(root) {
+    let label = window.__BUILD || '';
+    if (!label) {
+      const tag = document.querySelector('script[src*="loading-boot.js"]');
+      const m = tag && /[?&]v=(\d+)/.exec(tag.src);
+      label = m ? `v${m[1]} · 网页版` : '';
+    }
+    if (!label) return;
+    const d = el('div', '', label);
+    d.id = 'buildTag';
+    d.title = '当前构建版本';
+    root.appendChild(d);
   }
 
   _buildAimTag(root) {

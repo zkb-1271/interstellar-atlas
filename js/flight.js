@@ -57,17 +57,21 @@ export class FlightController {
     // 深空是"站在球心往外看"：俯仰不受地平线限制，可以翻过极点继续转。
     // 太阳系模式仍保留 ±1.35 的限制（别钻到黄道面下面）。
     this.freePitch = false;
-    // 拖拽语义：
-    //   深空（freePitch）— 你站在球心往外看，拖的是"天空"，视角跟手转（现状，手感对）
-    //   太阳系        — 银河只是背景，拖的是"太阳系这个物体"，方向必须反过来，
-    //                   否则向右拖太阳系反而往左跑，像在推着一块板子
-    this.dragInvert = false;
+    // 拖拽语义（由 freePitch 直接推导，不再单独存一份状态）：
+    //   深空（freePitch）— 站在球心往外看，拖的是"天空"，视角跟手转
+    //   太阳系        — 银河只是背景，拖的是"太阳系这个物体"，方向反号
+    // ⚠️ 以前 dragInvert 只在 setFreePitch() 里赋值，而首页 bootSolar() 没有调用它，
+    //    于是"刚打开页面"和"从深空飞回来"两种情况下手感相反——同一个版本里前后不一致。
+    //    改成 getter 派生后，只要 freePitch 对，方向就一定对。
     this._eul = new THREE.Euler(0, 0, 0, 'YXZ');
     this._quat = new THREE.Quaternion();
     this._off = new THREE.Vector3();
 
     this._bind();
   }
+
+  // 太阳系反号、深空不反号。派生值，不可能与 freePitch 脱钩。
+  get dragInvert() { return !this.freePitch; }
 
   // ---------- 数学：由 rig 求相机位姿 ----------
   get _dist() {
@@ -198,7 +202,6 @@ export class FlightController {
   }
   setFreePitch(on) {
     this.freePitch = !!on;
-    this.dragInvert = !on;      // 进太阳系→反转拖拽方向；回深空→恢复"拖天空"
     if (!on) {
       this.pitch = clamp(this.pitch, -1.35, 1.35);
       this._tPitch = clamp(this._tPitch, -1.35, 1.35);
