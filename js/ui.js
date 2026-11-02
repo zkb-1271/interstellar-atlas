@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=205';
+import { QUOTES, PLANETS } from './data.js?v=206';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=205';
-import { assetURL } from './assets.js?v=205';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=206';
+import { assetURL } from './assets.js?v=206';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -101,6 +101,7 @@ export class UI {
     this._buildAimTag(root);
     this._buildTip(root);
     this._buildBuildTag(root);
+    this._buildTimeline(root);
 
     // 准星跟随
     window.addEventListener('mousemove', e => {
@@ -574,6 +575,84 @@ export class UI {
     });
     root.appendChild(rail);
     this.rail = rail;
+  }
+
+  // ---------- 天象时间轴 ----------
+  // 日月食跳转只落在"食甚"这一个时刻，看不到前后过程。这条时间轴把
+  // 食甚前后各 ±N 分钟映射到滑杆上，拖动即改写模拟时刻。
+  _buildTimeline(root) {
+    const bar = el('div');
+    bar.id = 'evTimeline';
+    bar.innerHTML = `
+      <div class="et-head"><span id="et-label">天象 · 时间轴</span><span id="et-peak"></span></div>
+      <input id="et-range" type="range" min="-1" max="1" step="0.0015" value="0" aria-label="天象时间轴">
+      <div class="et-scale"><span id="et-l"></span><span class="mid" id="et-mid">食甚</span><span id="et-r"></span></div>
+      <div class="et-now" id="et-now"></div>`;
+    root.appendChild(bar);
+    this.evTimeline = bar;
+    this.tlRange = bar.querySelector('#et-range');
+    this.tlLabel = bar.querySelector('#et-label');
+    this.tlPeak = bar.querySelector('#et-peak');
+    this.tlNow = bar.querySelector('#et-now');
+    this.tlMid = bar.querySelector('#et-mid');
+    this.tlL = bar.querySelector('#et-l');
+    this.tlR = bar.querySelector('#et-r');
+
+    // 拖动期间不要被每帧的"同步滑杆位置"打断
+    this.tlDragging = false;
+    this.tlRange.addEventListener('pointerdown', () => { this.tlDragging = true; bar.classList.add('drag'); });
+    const endDrag = () => { this.tlDragging = false; bar.classList.remove('drag'); };
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    this.tlRange.addEventListener('input', () => {
+      this.cb.onScrubTimeline(parseFloat(this.tlRange.value));
+    });
+  }
+
+  static _span(min) {
+    if (min >= 1440) return `${(min / 1440).toFixed(min % 1440 ? 1 : 0)} 天`;
+    if (min >= 60) return `${(min / 60).toFixed(min % 60 ? 1 : 0)} 小时`;
+    return `${Math.round(min)} 分`;
+  }
+  static _clock(min) {
+    if (min >= 1440) return `${(min / 1440).toFixed(1)} 天`;
+    if (min >= 60) return `${Math.floor(min / 60)} 小时 ${String(Math.round(min % 60)).padStart(2, '0')} 分`;
+    return `${Math.round(min)} 分`;
+  }
+
+  showTimeline({ label, peakText, halfMin, mid = '食甚' }) {
+    this._tlHalf = halfMin;
+    this.tlLabel.textContent = `${label} · 时间轴`;
+    this.tlPeak.textContent = peakText;
+    this.tlMid.textContent = mid;
+    this.tlL.textContent = '−' + UI._span(halfMin);
+    this.tlR.textContent = '+' + UI._span(halfMin);
+    this.tlRange.value = '0';
+    this.tlNow.textContent = `${mid}　拖动查看前后过程`;
+    this.evTimeline.classList.add('show');
+  }
+  hideTimeline() {
+    this.evTimeline.classList.remove('show');
+    this.tlDragging = false;
+    this.evTimeline.classList.remove('drag');
+  }
+  updateTimeline(offMin) {
+    if (!this.evTimeline.classList.contains('show')) return;
+    const half = this._tlHalf || 150;
+    if (!this.tlDragging) {
+      this.tlRange.value = String(Math.max(-1, Math.min(1, offMin / half)));
+    }
+    // 用"← 距食甚 1 小时 36 分"这种写法：方向交给箭头，文字保持自然，
+    // 连珠（mid = 最近）也能套用同一句
+    const a = Math.abs(offMin);
+    let txt;
+    if (a < 0.6) {
+      txt = this.tlMid.textContent;
+    } else {
+      const body = `距${this.tlMid.textContent} ${UI._clock(a)}`;
+      txt = offMin < 0 ? `← ${body}` : `${body} →`;
+    }
+    if (this.tlNow.textContent !== txt) this.tlNow.textContent = txt;
   }
 
   // 右下角版本戳：一串"改了没生效/两个版本对不上"多半是缓存或旧离线包，

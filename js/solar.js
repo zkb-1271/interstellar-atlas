@@ -4,10 +4,10 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=205';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=205';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=205';
-import { assetURL } from './assets.js?v=205';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=206';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=206';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=206';
+import { assetURL } from './assets.js?v=206';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -579,7 +579,13 @@ export class SolarSystem {
       new THREE.CircleGeometry(0.022, 32),
       new THREE.MeshBasicMaterial({ color: 0x060403, transparent: true, opacity: 0.72, depthWrite: false }));
     this.shadowSpot.visible = false;
-    this.forceMoonOnAxis = false;
+    // 日月食演出状态（由 main 的时间轴驱动）
+    //   eclipseKind: 'solar' | 'lunar' | null
+    //   eclipsePhase: 0 = 食甚，±1 = 前后恰好接触（供拖动时间轴）
+    this.eclipseKind = null;
+    this.eclipsePhase = 0;
+    this.eclipseAnnular = false;   // 日环食：月面角径略小于太阳
+    this.eclipsePartial = false;   // 偏食：擦边而过，食甚也留缺口
     this.group.add(this.shadowSpot);
     this.group.add(this.earthUmbra, this.earthPenumbra, this.moonUmbra);
   }
@@ -588,8 +594,9 @@ export class SolarSystem {
     this.earthUmbra.visible = mode === 'lunar';
     this.earthPenumbra.visible = mode === 'lunar';
     this.shadowSpot.visible = mode === 'solar';
-    this.forceMoonOnAxis = mode === 'solar';
     this.moonUmbra.visible = mode === 'solar';
+    this.eclipseKind = (mode === 'solar' || mode === 'lunar') ? mode : null;
+    this.eclipsePhase = 0;
   }
 
   // 深空模式收起轨道线与小行星带，只留星野
@@ -707,14 +714,47 @@ export class SolarSystem {
     me.holder.position.set(m.pos[0], m.pos[1], m.pos[2]);   // 局部于地球 holder
     earth.holder.updateWorldMatrix(true, true);
     me.holder.getWorldPosition(me.worldPos);
-    // 日食视觉吸附：真实月地距离（10 单位）下月球角径只有太阳的 1/7，
-    // "吞日"不成立。日食演出时把月球贴到日地连线上 1.4 单位处——
-    // 那里月面角径恰好等于太阳角径，本影锥尖也刚好触地（与月食红月同级的夸张）
-    if (this.forceMoonOnAxis) {
-      // holder 局部于地球：偏移 = 地→日方向 ×1.4；worldPos = 地心 + 偏移
-      const toSun = earth.worldPos.clone().negate().normalize();
-      me.holder.position.copy(toSun.multiplyScalar(1.4));
-      me.worldPos.copy(earth.worldPos).add(me.holder.position);
+    // 日月食演出：按时间轴"合成"月球位置。
+    // 为什么不用真实历表：本模型是简化历表（月球只有平黄经+出差），实测四场月食的
+    // 食甚时刻月心离影轴 2.0～8.0 个单位，而本影半径只有 0.33 —— 也就是说按真实
+    // 位置摆，月食根本不会发生、拖动时间轴也看不到过程。所以这里改成：
+    //   phase = 0  → 正好对轴（食甚）
+    //   phase = ±1 → 前后恰好接触（初亏/复圆）
+    // 位置连续变化，拖动时间轴即可看到进入—食甚—退出的全过程。
+    if (this.eclipseKind) {
+      const ph = Math.max(-1, Math.min(1, this.eclipsePhase || 0));
+      const toSun = earth.worldPos.clone().negate().normalize();          // 地→日
+      const perp = new THREE.Vector3().crossVectors(toSun, new THREE.Vector3(0, 1, 0));
+      if (perp.lengthSq() < 1e-8) perp.set(1, 0, 0);
+      perp.normalize();                                                    // 扫过方向
+      let local;
+      if (this.eclipseKind === 'solar') {
+        // 月球放在「月面角径 = k × 日面角径」的距离上：
+        //   k>1 全食能吞日；k<1 环食留一圈金环。
+        // 距离按当前日地距反算——示意排布（日地 ~37）与真实轨道（日地更远）
+        // 两种布局下，日面的视角大小不同，写死 1.3 只对示意排布成立。
+        const E = Math.max(earth.worldPos.length(), SUN_RADIUS * 1.5);
+        const sunAng = SUN_RADIUS / E;
+        const k = this.eclipseAnnular ? 0.90 : 1.06;
+        const d = 0.124 / (sunAng * k);
+        const offMax = SUN_RADIUS * d / E + 0.124;        // 恰好接触时的横向偏移
+        // 偏食：食甚也停在 offMax 的 45% 处，日面永远留一块缺口
+        const base = this.eclipsePartial ? 0.45 : 0;
+        const off = offMax * (base + (1 - base) * Math.abs(ph));
+        local = toSun.clone().multiplyScalar(d).addScaledVector(perp, ph < 0 ? -off : off);
+        this._moonShadowLen = Math.max(0.3, d - 0.22);     // 本影锥要够长、能触地
+        this.eclipseCover = Math.max(0, 1 - Math.abs(ph)); // 0 = 刚接触，1 = 食甚
+      } else {
+        // 月食：月球留在真实视觉距离（10 单位）的背阳侧，横向穿过地影
+        const antiSun = toSun.clone().negate();
+        // 全食：从影轴中心穿过（|ph|<0.53 都在本影内 → 红月）
+        // 偏食：擦着本影边缘过，最近处也在本影外
+        const base = this.eclipsePartial ? 0.40 : 0;
+        const off = base + (0.62 - base) * Math.abs(ph);
+        local = antiSun.multiplyScalar(10).addScaledVector(perp, ph < 0 ? -off : off);
+      }
+      me.holder.position.copy(local);
+      me.worldPos.copy(earth.worldPos).add(local);
     }
 
     // 地影锥：贴地球、指向背阳面（锥体沿 -y 延伸，故把 +y 对准太阳方向）
@@ -728,6 +768,10 @@ export class SolarSystem {
     // 月影：粗端贴月球，锥体指向地球方向（-y 端朝 -moonDir = 月→地）
     this.moonUmbra.position.copy(mn.worldPos);
     this.moonUmbra.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), moonDir);
+    // 锥体原始长 1.45，日食时按实际月地距拉伸，保证锥尖落在地球上
+    if (this.eclipseKind === 'solar' && this._moonShadowLen) {
+      this.moonUmbra.scale.set(1, this._moonShadowLen / 1.45, 1);
+    }
 
     // 本影斑：月球→地球射线与地球球的交点（交不上则隐藏）
     if (this.shadowSpot.visible) {
@@ -746,7 +790,11 @@ export class SolarSystem {
           const nrm = p.clone().sub(earth.worldPos).normalize();
           this.shadowSpot.position.copy(earth.worldPos).add(nrm.clone().multiplyScalar(R * 1.006));
           this.shadowSpot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), nrm);
-          this.shadowSpot.visible = true;
+          // 斑的深浅/大小跟着食分走：刚接触时只是一粒淡影，食甚最浓最大
+          const cov = this.eclipseCover == null ? 1 : this.eclipseCover;
+          this.shadowSpot.scale.setScalar(0.55 + 0.65 * cov);
+          this.shadowSpot.material.opacity = 0.16 + 0.58 * cov;
+          this.shadowSpot.visible = cov > 0.02;
         } else this.shadowSpot.visible = false;
       } else this.shadowSpot.visible = false;
     }

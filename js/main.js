@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=205';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=205';
-import { createDeepSpace } from './starfield.js?v=205';
-import { SolarSystem } from './solar.js?v=205';
-import { FlightController } from './flight.js?v=205';
-import { UI } from './ui.js?v=205';
-import { initLoading } from './loading.js?v=205';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=206';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=206';
+import { createDeepSpace } from './starfield.js?v=206';
+import { SolarSystem } from './solar.js?v=206';
+import { FlightController } from './flight.js?v=206';
+import { UI } from './ui.js?v=206';
+import { initLoading } from './loading.js?v=206';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -139,9 +139,17 @@ const ui = new UI(document.body, {
   onOpenEvents: () => openEvents(),
   onCloseEvents: () => ui.hideEvents(),
   onSpeed: (i) => { speedIdx = i; ui.setActiveSpeed(i); },
+  // 拖动天象时间轴：把 -1..1 映射到「食甚 ±halfMin」的真实时刻
+  onScrubTimeline: (v) => {
+    if (!evTimeline) return;
+    jd = evTimeline.peakJd + (v * evTimeline.halfMin) / 1440;
+  },
   // 「实时」：跳到现在 → 切真实历表 → 从这一刻起按真实时间流动
   //（倍速在按钮的悬停面板里调，速度值仍是 SPEEDS 里的实时倍率）
   onRealtime: () => {
+    // 回到"现在"就不再是某场天象的放映了，时间轴一并收起
+    ui.hideTimeline();
+    evTimeline = null;
     jd = dateToJD(new Date());
     positionMode = 'real';
     ui.setPositionMode('real');
@@ -205,7 +213,9 @@ function goDeep() {
   flight.setFreePitch(true);      // 深空：没有地平线，随便往哪转
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
-  ui.showViewbar(null); flight.setAutoOrbit(false);
+  ui.showViewbar(null);
+  ui.hideTimeline();
+  evTimeline = null; flight.setAutoOrbit(false);
   // 关键：飞行过程中太阳系必须还在，否则就是"对着空星空拉远"
   // 落地（3.6s）后太阳系整体缩小退场、星座淡入，形成"退场—抵达"的层次
   solar.setOrbitsVisible(true);
@@ -250,7 +260,9 @@ function goOverview() {
   flight.setFreePitch(false);
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
-  ui.showViewbar(null); flight.setAutoOrbit(false);
+  ui.showViewbar(null);
+  ui.hideTimeline();
+  evTimeline = null; flight.setAutoOrbit(false);
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
   solar.group.scale.setScalar(1);
@@ -280,7 +292,9 @@ function goRealOverview() {
   flight.setFreePitch(false);
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
-  ui.showViewbar(null); flight.setAutoOrbit(false);
+  ui.showViewbar(null);
+  ui.hideTimeline();
+  evTimeline = null; flight.setAutoOrbit(false);
   solar.setOrbitsVisible(true);
   setSolarVisible(true);
   solar.group.scale.setScalar(1);
@@ -424,7 +438,9 @@ function selectPlanet(id) {
   selectedId = id;
   eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
-  ui.showViewbar(null); flight.setAutoOrbit(true);   // 特写默认缓慢环绕
+  ui.showViewbar(null);
+  ui.hideTimeline();
+  evTimeline = null; flight.setAutoOrbit(true);   // 特写默认缓慢环绕
   ui.setAutoOrbitView(true);
   const kind = b.info.kind || (id === 'sun' ? 'star' : 'planet');
   const cat = kind === 'star' ? '恒星' : kind === 'moon' ? '卫星' : kind === 'comet' ? '彗星' : '行星';
@@ -507,6 +523,8 @@ function parseUTC(date, time) {
 }
 
 let eclipseEvent = null;      // 当前观看的日月食事件
+// 天象时间轴：把"食甚/最近"前后一段时间映射到滑杆，拖动即改写模拟时刻
+let evTimeline = null;        // { peakJd, halfMin, kind }
 
 function jumpEclipse(ev) {
   ui.hideEvents();
@@ -524,6 +542,16 @@ function jumpEclipse(ev) {
   jd = parseUTC(ev.date, ev.time);
   eclipseEvent = ev;
   eclipseView = ev.kind;
+  // 日食 ±2.5 小时、月食 ±3.5 小时：足够覆盖初亏→食甚→复圆
+  const halfMin = ev.kind === 'solar' ? 150 : 210;
+  solar.eclipseAnnular = /环/.test(ev.label);
+  solar.eclipsePartial = /偏/.test(ev.label);
+  evTimeline = { peakJd: jd, halfMin, kind: ev.kind };
+  ui.showTimeline({
+    label: ev.label,
+    peakText: `食甚 ${ev.date.replace(/-/g, '.')} ${ev.time} UTC`,
+    halfMin,
+  });
   solar.setEclipseShadows(ev.kind);
   ui.showViewbar(ev.kind);
   flight.setAutoOrbit(true);
@@ -558,6 +586,9 @@ function setViewSpot(id) {
       ground: { cam: ep.clone().add(moonP.clone().sub(ep).normalize().multiplyScalar(0.455 * 1.015)), target: moonP.clone(), range: [0.25, 800] },
     };
     const v = spots[id];
+    // 近景贴月时相机跟着月球走：拖动时间轴月球会横向移动 ±0.6 单位，
+    // 若还锁在地球上，红月会直接飘出画面
+    flight.follow(id === 'close' ? moon : earth);
     flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.5, arc: 0.12, onDone: () => flight.setRange(...v.range) });
   } else {
     const moonP = moon.worldPos;
@@ -604,13 +635,23 @@ function jumpAlignment(ev) {
   ui.hideCard();
   selectedId = null; eclipseView = null; eclipseEvent = null;
   solar.setEclipseShadows(null);
-  ui.showViewbar(null); flight.setAutoOrbit(false);
+  ui.showViewbar(null);
+  ui.hideTimeline();
+  evTimeline = null; flight.setAutoOrbit(false);
   setSolarVisible(true);
   solar.group.scale.setScalar(1);
   applySkyFade(0);
   ui.hideConstPanel();
   speedIdx = 0; ui.setActiveSpeed(0);
   jd = ev.jd;
+  // 连珠是几天到几十天的过程，给 ±20 天的时间轴
+  evTimeline = { peakJd: ev.jd, halfMin: 20 * 1440, kind: 'align' };
+  ui.showTimeline({
+    label: '行星连珠',
+    peakText: `最接近 ${fmtDateLocal(ev.jd)}`,
+    halfMin: evTimeline.halfMin,
+    mid: '最近',
+  });
 
   const T = (jd - 2451545.0) / 36525;
   const earth = solar.get('earth');
@@ -709,6 +750,19 @@ function frame(dt) {
 
     const speed = ui.SPEEDS[speedIdx].v;
     jd += speed * dt;
+    // 天象时间轴：把当前时刻换算成"距食甚多少分钟"，驱动食相几何与滑杆
+    if (evTimeline) {
+      const offMin = (jd - evTimeline.peakJd) * 1440;
+      if (eclipseEvent) {
+        solar.eclipsePhase = Math.max(-1, Math.min(1, offMin / evTimeline.halfMin));
+        // 放映到头就自动停下，别让日期一路跑走、月面却卡在接触位置
+        if (speed && Math.abs(offMin) > evTimeline.halfMin) {
+          speedIdx = 0;
+          ui.setActiveSpeed(0);
+        }
+      }
+      ui.updateTimeline(offMin);
+    }
     solar.update(jd, speed, camera, elapsed, positionMode);
     solar.camLight.position.copy(camera.position);
     updateEclipseTint();

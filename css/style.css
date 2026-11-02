@@ -284,14 +284,14 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 
 /* ---------- 滚动条：面板统一暗金细滚动条（替代系统白条） ---------- */
 .sideCard::-webkit-scrollbar, #eventsPanel::-webkit-scrollbar,
-#knowPanel::-webkit-scrollbar, #dirPanel::-webkit-scrollbar { width: 7px; }
+#dirPanel::-webkit-scrollbar { width: 7px; }
 .sideCard::-webkit-scrollbar-track, #eventsPanel::-webkit-scrollbar-track,
-#knowPanel::-webkit-scrollbar-track, #dirPanel::-webkit-scrollbar-track { background: transparent; }
+#dirPanel::-webkit-scrollbar-track { background: transparent; }
 .sideCard::-webkit-scrollbar-thumb, #eventsPanel::-webkit-scrollbar-thumb,
-#knowPanel::-webkit-scrollbar-thumb, #dirPanel::-webkit-scrollbar-thumb {
+#dirPanel::-webkit-scrollbar-thumb {
   background: rgba(217,179,108,.18); border-radius: 4px; }
 .sideCard::-webkit-scrollbar-thumb:hover, #eventsPanel::-webkit-scrollbar-thumb:hover,
-#knowPanel::-webkit-scrollbar-thumb:hover, #dirPanel::-webkit-scrollbar-thumb:hover {
+#dirPanel::-webkit-scrollbar-thumb:hover {
   background: rgba(217,179,108,.34); }
 
 /* ---------- 天象观景位 ---------- */
@@ -679,4 +679,65 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   color: rgba(214, 204, 184, .26);
   pointer-events: none; user-select: none;
   transition: color .3s;
+}
+
+/* ---------- 天象时间轴（日月食/连珠的"前后过程"） ---------- */
+#evTimeline {
+  position: fixed; left: 50%; bottom: 104px; z-index: 26;
+  width: min(520px, 46vw);
+  padding: 12px 18px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: rgba(9, 9, 11, .74);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 20px 48px -24px rgba(0, 0, 0, .85);
+  opacity: 0; pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition: opacity .45s var(--ease), transform .45s var(--ease);
+}
+#evTimeline.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+
+#evTimeline .et-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+  font-size: 11px; letter-spacing: .16em; color: var(--ink-dim);
+}
+#evTimeline .et-head #et-label { color: var(--gold); }
+#evTimeline .et-head #et-peak {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  color: rgba(205, 196, 178, .55); white-space: nowrap;
+}
+
+#evTimeline input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 3px; margin: 13px 0 8px;
+  border-radius: 2px; outline: none; cursor: none;
+  /* 中心那道浅金刻度 = 食甚位置 */
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1px), rgba(240, 217, 168, .55) 50%, transparent calc(50% + 1px)),
+    rgba(255, 255, 255, .14);
+}
+#evTimeline input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+  background: #f8ecd2; border: 1px solid rgba(217, 179, 108, .85);
+  box-shadow: 0 0 10px rgba(240, 217, 168, .75), 0 0 22px rgba(240, 217, 168, .28);
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+#evTimeline input[type=range]::-moz-range-thumb {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #f8ecd2; border: 1px solid rgba(217, 179, 108, .85);
+  box-shadow: 0 0 10px rgba(240, 217, 168, .75);
+}
+#evTimeline.drag input[type=range]::-webkit-slider-thumb { transform: scale(1.18); }
+
+#evTimeline .et-scale {
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  color: rgba(200, 190, 170, .42);
+}
+#evTimeline .et-scale .mid { color: rgba(240, 217, 168, .72); }
+
+#evTimeline .et-now {
+  margin-top: 7px; text-align: center;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+  color: var(--gold-bright);
 }
