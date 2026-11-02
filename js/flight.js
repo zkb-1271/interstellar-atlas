@@ -57,6 +57,11 @@ export class FlightController {
     // 深空是"站在球心往外看"：俯仰不受地平线限制，可以翻过极点继续转。
     // 太阳系模式仍保留 ±1.35 的限制（别钻到黄道面下面）。
     this.freePitch = false;
+    // 拖拽语义：
+    //   深空（freePitch）— 你站在球心往外看，拖的是"天空"，视角跟手转（现状，手感对）
+    //   太阳系        — 银河只是背景，拖的是"太阳系这个物体"，方向必须反过来，
+    //                   否则向右拖太阳系反而往左跑，像在推着一块板子
+    this.dragInvert = false;
     this._eul = new THREE.Euler(0, 0, 0, 'YXZ');
     this._quat = new THREE.Quaternion();
     this._off = new THREE.Vector3();
@@ -119,6 +124,8 @@ export class FlightController {
       this._drag.y = e.clientY;
       this._drag.t = now;
 
+      // 太阳系里反号：拖拽感觉像"抓住太阳系转"，而不是"转动相机看天空"
+      const sgn = this.dragInvert ? -1 : 1;
       const k = this.freePitch ? DRAG.yawDeep : DRAG.yaw;
       // 太阳系里相机离目标很近（视高 ~128、距离 ~144），纵向稍微一动画面就起伏很大，
       // 所以纵向单独给一个更弱的系数；深空是"球心往外看"，纵向保持 1:1。
@@ -126,15 +133,15 @@ export class FlightController {
       // 统一成"抓住天空拖"：往哪拖，天空往哪走。
       //   横向 dx → yaw（向右拖，背景右移）
       //   纵向 -dy → pitch（向下拖，背景下移；深空里翻过极点也继续）
-      this._tYaw += dx * k;
-      const dp = -dy * kPitch;
+      this._tYaw += sgn * dx * k;
+      const dp = sgn * (-dy) * kPitch;
       this._tPitch = this.freePitch ? this._tPitch + dp
                                     : clamp(this._tPitch + dp, -1.35, 1.35);
 
       // 记录瞬时角速度（低通一下，避免抖动），松手后靠它滑行
       const a = Math.min(1, dtm * 14);
-      this._inertia.yaw += ((dx * k) / dtm - this._inertia.yaw) * a;
-      this._inertia.pitch += (((-dy) * kPitch) / dtm - this._inertia.pitch) * a;
+      this._inertia.yaw += ((sgn * dx * k) / dtm - this._inertia.yaw) * a;
+      this._inertia.pitch += ((sgn * (-dy) * kPitch) / dtm - this._inertia.pitch) * a;
     });
 
     const end = () => {
@@ -191,6 +198,7 @@ export class FlightController {
   }
   setFreePitch(on) {
     this.freePitch = !!on;
+    this.dragInvert = !on;      // 进太阳系→反转拖拽方向；回深空→恢复"拖天空"
     if (!on) {
       this.pitch = clamp(this.pitch, -1.35, 1.35);
       this._tPitch = clamp(this._tPitch, -1.35, 1.35);
