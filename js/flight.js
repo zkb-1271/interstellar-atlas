@@ -57,6 +57,10 @@ export class FlightController {
     // 深空是"站在球心往外看"：俯仰不受地平线限制，可以翻过极点继续转。
     // 太阳系模式仍保留 ±1.35 的限制（别钻到黄道面下面）。
     this.freePitch = false;
+    // 过渡锁：太阳系 ↔ 深空的大过渡期间禁用画布拖拽/滚轮。
+    // 这些过渡承载着场景状态切换（太阳系缩放退场、星座淡入、range 改写），
+    // 被拖拽打断会留下半吊子状态（星座不显示等），所以干脆不可打断。
+    this.inputLock = false;
     // 拖拽语义（由 freePitch 直接推导，不再单独存一份状态）：
     //   深空（freePitch）— 站在球心往外看，拖的是"天空"，视角跟手转
     //   太阳系        — 银河只是背景，拖的是"太阳系这个物体"，方向反号
@@ -112,6 +116,7 @@ export class FlightController {
     const dom = this.dom;
 
     dom.addEventListener('pointerdown', e => {
+      if (this.inputLock) return;          // 过渡进行中：拖拽不响应
       if (this._flight) this.cancelFlight();
       this._drag = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now() };
       this._inertia.yaw = 0; this._inertia.pitch = 0;      // 按下即刹车
@@ -161,6 +166,7 @@ export class FlightController {
     window.addEventListener('wheel', e => {
       if (e.target.closest && e.target.closest('.pc-sec, #planetCard, #eventsPanel, #constPanel, #planetRail, #timebar, #evTimeline')) return;
       e.preventDefault();
+      if (this.inputLock) return;          // 过渡进行中：滚轮不响应
       if (this._flight) this.cancelFlight();
       const dy = clamp(e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1), -180, 180);
       // 参考站原式：viewHeight *= exp(deltaY × 0.0011)
@@ -178,6 +184,9 @@ export class FlightController {
     };
     this.onFlightDone = onDone || null;
     this.onFlightCancel = null;   // 新飞行取代旧飞行：旧的中断钩子一并作废
+    // 过渡锁同步解除：否则过渡途中点导航轨/天象跳转，新飞行会带着一把
+    // 永远解不开的锁（画布输入永久失灵）。模式切换函数上锁都在 flyTo 之后。
+    this.inputLock = false;
   }
 
   cancelFlight() {

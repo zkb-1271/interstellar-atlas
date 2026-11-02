@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=207';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=207';
-import { createDeepSpace } from './starfield.js?v=207';
-import { SolarSystem } from './solar.js?v=207';
-import { FlightController } from './flight.js?v=207';
-import { UI } from './ui.js?v=207';
-import { initLoading } from './loading.js?v=207';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=208';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=208';
+import { createDeepSpace } from './starfield.js?v=208';
+import { SolarSystem } from './solar.js?v=208';
+import { FlightController } from './flight.js?v=208';
+import { UI } from './ui.js?v=208';
+import { initLoading } from './loading.js?v=208';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -81,6 +81,14 @@ function applySkyFade(f) {
 const tweens = [];
 const easeInOutT = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 function addTween(dur, fn, done) { tweens.push({ t: 0, dur, fn, done }); }
+// 立即把所有未完成补间推到终态并触发回调——模式切换用它兜底，
+// 保证 skyFade / 太阳系缩放这类状态永远不会停在半路
+function finishTweens() {
+  for (const tw of tweens.splice(0)) {
+    tw.fn(1);
+    if (tw.done) tw.done();
+  }
+}
 function stepTweens(dt) {
   for (let i = tweens.length - 1; i >= 0; i--) {
     const tw = tweens[i];
@@ -191,6 +199,7 @@ function arriveDeep() {
   if (deepArrived) return;
   deepArrived = true;
   deepReady = true;
+  flight.inputLock = false;       // 过渡结束，恢复输入
   flight.onFlightCancel = null;   // 已落地，中断钩子作废，避免之后误触发
   // 太阳系退场：轨道盘跟着整体一起缩小，渐隐到看不见再收——
   // 以前先瞬间收掉轨道盘再做缩放，缩的是几个看不见的点，等于没做
@@ -208,7 +217,7 @@ function arriveDeep() {
 
 function goDeep() {
   mode = 'deep';
-  tweens.length = 0;              // 换模式时作废未完成的过渡补间
+  finishTweens();                 // 未完成的过渡立即落到终态（而不是丢在半路）
   deepArrived = false;
   flight.setFreePitch(true);      // 深空：没有地平线，随便往哪转
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
@@ -227,16 +236,18 @@ function goDeep() {
   ui.setMode('deep');
   ui.hideCard();
   deepReady = false;
-  flight.onFlightCancel = arriveDeep;
+  flight.onFlightCancel = arriveDeep;   // 兜底：万一被取消也要完成收尾
   flight.flyTo({
     camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.8,
     onDone: arriveDeep,
   });
+  // 过渡不可打断：拖拽/滚轮在此期间不响应，杜绝"半路拖拽 → 星座不显示"
+  flight.inputLock = true;
 }
 
 function enterSolar() {
   mode = 'solar';
-  tweens.length = 0;
+  finishTweens();
   deepReady = false;
   flight.setFreePitch(false);
   solar.setOrbitsVisible(true);
@@ -249,13 +260,15 @@ function enterSolar() {
   const oc = computeOverviewCam();
   flight.flyTo({
     camPos: oc.camPos, target: oc.target, duration: 3.3,
-    onDone: () => { flight.setRange(60, 18500); },
+    onDone: () => { flight.inputLock = false; flight.setRange(60, 18500); },
   });
+  flight.onFlightCancel = () => { flight.inputLock = false; flight.setRange(60, 18500); };
+  flight.inputLock = true;
 }
 
 function goOverview() {
   mode = 'solar';
-  tweens.length = 0;
+  finishTweens();
   deepReady = false;
   flight.setFreePitch(false);
   selectedId = null; hoverId = null; eclipseView = null; eclipseEvent = null;
@@ -277,8 +290,12 @@ function goOverview() {
   const oc2 = computeOverviewCam();
   flight.flyTo({
     camPos: oc2.camPos, target: oc2.target, duration: 3.3,
-    onDone: () => { flight.setRange(0.9, 18500); },
+    onDone: () => { flight.inputLock = false; flight.setRange(0.9, 18500); },
   });
+  // 返回过渡同样不可打断；以前这条路上连中断收尾钩子都没有，
+  // 打断后 setRange / 淡出全停在半路
+  flight.onFlightCancel = () => { flight.inputLock = false; flight.setRange(0.9, 18500); };
+  flight.inputLock = true;
 }
 
 // 实时轨道总览：行星按真实历表散落各处（不再是一条直线），
