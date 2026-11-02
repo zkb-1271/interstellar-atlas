@@ -399,7 +399,19 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 }
 #loading .track {
   position: relative; width: 268px; height: 2px; border-radius: 2px;
-  background: rgba(255, 255, 255, .16); overflow: visible;
+  background: rgba(255, 255, 255, .16); overflow: hidden;
+}
+/* 一条始终在流动的微光：即使主线程被大段脚本占住、rAF 停摆，
+   合成层的动画仍会继续，条子看起来"在干活"而不是死住 */
+#loading .track::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 243, 214, .45), transparent);
+  transform: translateX(-100%);
+  animation: trackSweep 2.2s linear infinite;
+}
+@keyframes trackSweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(200%); }
 }
 #loading .track i {
   display: block; height: 100%; width: 0%; border-radius: 2px; position: relative;

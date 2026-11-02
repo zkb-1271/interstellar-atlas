@@ -55,10 +55,22 @@
     target = Math.max(target, Math.min(1, Number.isFinite(v) ? v : 0));
   };
 
+
   const render = v => {
     const p = Math.round(v * 100);
     if (track) track.style.width = (v * 100).toFixed(2) + '%';
     if (pctEl) pctEl.textContent = p + '%';
+  };
+
+  // 离线单文件把图片按条切成多个 <script> 内联，每载入一条回报一次。
+  // 这里直接写 DOM（不依赖 rAF）：万一主线程正忙着解析下一条脚本，
+  // 条子也至少会按真实条数往前跳，而不是原地不动。
+  window.__assetTick = n => {
+    if (finished) return;
+    const tot = window.__ASSET_TOTAL || 51;
+    const p = Math.min(0.86, (n / tot) * 0.9);
+    paint(p);
+    if (p > shown) { shown = p; render(shown); }
   };
 
   // 进度条动画：指数趋近真实值（不跳变）；真实进度停滞时也缓慢爬升，

@@ -120,8 +120,17 @@ html = html
   .replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, () => '')
   .replace(/<script src="js\/loading-boot\.js[^"]*"><\/script>/,
            () => `<script>\n${boot}\n</script>`)
-  .replace(/<script type="module" src="js\/main\.js[^"]*"><\/script>/,
-           () => `<script>window.__ASSET_MAP=${JSON.stringify(assetMap)};</script>\n<script>\n${bundleJs}\n</script>`);
+  .replace(/<script type="module" src="js\/main\.js[^"]*"><\/script>/, () => {
+    // ⚠️ 不要把 40MB+ 的图片压成一个巨大的 <script>：那样浏览器要一口气解析完，
+    // 主线程被独占，加载屏的 rAF 直接停摆，进度条会卡在个位数百分比。
+    // 按资源逐条内联，每条结束回报一次进度，浏览器在条目之间能继续渲染。
+    const keys = Object.keys(assetMap);
+    const head = `<script>window.__ASSET_MAP={};window.__ASSET_TOTAL=${keys.length};</script>`;
+    const parts = keys.map((k, i) =>
+      `<script>window.__ASSET_MAP[${JSON.stringify(k)}]=${JSON.stringify(assetMap[k])};` +
+      `if(window.__assetTick)window.__assetTick(${i + 1});</script>`);
+    return [head, ...parts, `<script>\n${bundleJs}\n</script>`].join('\n');
+  });
 
 // 加一条离线提示，双击打开时知道自己看的是便携版
 html = html.replace('</body>', () => '<script>window.__PORTABLE__=true;</script>\n</body>');
