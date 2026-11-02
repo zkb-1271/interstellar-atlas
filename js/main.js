@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=206';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=206';
-import { createDeepSpace } from './starfield.js?v=206';
-import { SolarSystem } from './solar.js?v=206';
-import { FlightController } from './flight.js?v=206';
-import { UI } from './ui.js?v=206';
-import { initLoading } from './loading.js?v=206';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=207';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=207';
+import { createDeepSpace } from './starfield.js?v=207';
+import { SolarSystem } from './solar.js?v=207';
+import { FlightController } from './flight.js?v=207';
+import { UI } from './ui.js?v=207';
+import { initLoading } from './loading.js?v=207';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -339,17 +339,29 @@ canvas.addEventListener('pointermove', e => {
 const _hv = new THREE.Vector3();
 function updateHover() {
   if (mode !== 'solar' || flight.isFlying) { setHover(null); return; }
-  let bestId = null, bestD = Infinity;
+  // 先收集所有投影在指针附近的候选，再做遮挡剔除：
+  // 候选天体的中心若被"更近、且屏幕上更大"的天体圆面盖住，就不该被点到——
+  // 否则月球特写时，藏在它背后的金星也会莫名其妙跳出锁定环。
+  const cands = [];
   for (const [id, b] of solar.bodies) {
     _hv.copy(b.worldPos).project(camera);
     if (_hv.z > 1 || Math.abs(_hv.x) > 1.2 || Math.abs(_hv.y) > 1.2) continue;
     const dx = (_hv.x - pointer.x) * innerWidth / 2;
     const dy = (_hv.y - pointer.y) * innerHeight / 2;
-    const d = Math.hypot(dx, dy);
     const dist = camera.position.distanceTo(b.worldPos);
     const rpx = (b.displayR / (dist * Math.tan(camera.fov * Math.PI / 360))) * (innerHeight / 2);
     if (b.isMoon && rpx < 3) continue;      // 总览时别误点到贴在行星上的卫星
-    if (d < Math.max(rpx + 6, 14) && d < bestD) { bestD = d; bestId = id; }
+    cands.push({ id, d: Math.hypot(dx, dy), dist, rpx,
+                 sx: (_hv.x * 0.5 + 0.5) * innerWidth,
+                 sy: (-_hv.y * 0.5 + 0.5) * innerHeight });
+  }
+  let bestId = null, bestD = Infinity;
+  for (const c of cands) {
+    if (c.d >= Math.max(c.rpx + 6, 14) || c.d >= bestD) continue;
+    const occluded = cands.some(o => o !== c && o.dist < c.dist * 0.999 && o.rpx > c.rpx &&
+      Math.hypot(o.sx - c.sx, o.sy - c.sy) < o.rpx * 0.96);
+    if (occluded) continue;
+    bestD = c.d; bestId = c.id;
   }
   setHover(bestId);
 }

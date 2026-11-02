@@ -80,14 +80,16 @@
   const tick = now => {
     const elapsed = (now - t0) / 1000;
     if (finished) {
-      shown += (1 - shown) * 0.18;
+      shown += (1 - shown) * 0.12;
       if (1 - shown < 0.004) shown = 1;
     } else {
-      // 下限：随时间推进的最低进度（封顶 92%）——加载很快时也有连续的动画，
-      // 加载很慢时也不会卡着不动；只有真正结束才允许走到 100%
-      const floor = Math.min(0.92, Math.max(0, elapsed) * 0.42);
+      // 下限：随时间缓慢渐近的最低进度（渐近 86%）。
+      // ⚠️ 以前是线性 0.42/秒——2 秒出头就冲到 92% 封顶，之后真实加载还没完，
+      // 条子就一直"卡"在那儿，finish 时再猛跳 100。改成指数渐近后：
+      // 1s≈24%、3s≈57%、6s≈77%，永远给真实进度留出前进空间，节奏均匀不跳变。
+      const floor = 0.86 * (1 - Math.exp(-Math.max(0, elapsed) / 3.5));
       const goal = Math.max(target, floor);
-      shown += (goal - shown) * 0.12;
+      shown += (goal - shown) * 0.10;
       // ⚠️ 吸附只在"还没追上目标"时做：以前写成 target - shown < 0.003，
       // target 还是 0 的时候每帧都把进度吸回 0，爬升全被抹掉（条子不动的原因）
       if (goal > shown && goal - shown < 0.002) shown = goal;

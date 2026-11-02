@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=206';
+import { QUOTES, PLANETS } from './data.js?v=207';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=206';
-import { assetURL } from './assets.js?v=206';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=207';
+import { assetURL } from './assets.js?v=207';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -502,6 +502,7 @@ export class UI {
       cn: c.cn, en: c.en,
       sub: c.season ? `最佳观测 ${c.season}　·　占天球 ${c.area} 平方度（第 ${c.rank}）` : '',
       img: c.img, desc: c.desc,
+      sections: c.sections, facts: c.facts,
       credit: '影像：NASA / Spitzer 银河全景，按真实赤经赤纬裁切　·　金色连线为本项目依星表绘制',
       rows: [
         ['亮星', c.star || '—'],
