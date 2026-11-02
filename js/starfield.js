@@ -3,9 +3,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=202';
-import { CONSTELLATIONS, NEBULAE } from './data.js?v=202';
-import { assetURL } from './assets.js?v=202';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=203';
+import { CONSTELLATIONS, NEBULAE } from './data.js?v=203';
+import { assetURL } from './assets.js?v=203';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
