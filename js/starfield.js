@@ -3,9 +3,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=196';
-import { CONSTELLATIONS, NEBULAE } from './data.js?v=196';
-import { assetURL } from './assets.js?v=196';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=197';
+import { CONSTELLATIONS, NEBULAE } from './data.js?v=197';
+import { assetURL } from './assets.js?v=197';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -172,8 +172,10 @@ export function createDeepSpace() {
     g2.globalCompositeOperation = 'lighter';
     g2.drawImage(cv, 0, 0, 360, 360);
     g2.drawImage(cv, 0, 0, 360, 360);
+    // 卡片配图：优先用真实天文照片（data 里的 img），没有才退回画布合成
+    const realImg = n.img ? assetURL(n.img) : null;
     const rec = { id: n.id, info: n, center: pos.clone(), size: n.size,
-                  sprite: sp, baseOp, img: card.toDataURL('image/jpeg', 0.88) };
+                  sprite: sp, baseOp, img: realImg || card.toDataURL('image/jpeg', 0.88) };
     nebRecs.push(rec);
     window.__nebData.push(rec);
   }

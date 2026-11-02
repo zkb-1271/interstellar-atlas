@@ -552,6 +552,10 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   border-radius: 12px; border: 1px solid rgba(255,255,255,.07);
 }
 #constPanel .stats b { font-size: 11.5px; text-align: right; line-height: 1.5; }
+#constPanel .cp-credit {
+  margin-top: 8px; font-size: 10px; line-height: 1.7; letter-spacing: .04em;
+  color: rgba(151, 145, 127, .62);
+}
 
 /* ---------- 档案卡分节 ---------- */
 .pc-sec h4 {

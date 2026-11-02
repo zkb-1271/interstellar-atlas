@@ -36,6 +36,7 @@ function collectAssets(dir) {
 const assetFiles = [
   ...collectAssets(path.join(ROOT, 'assets/tex')),
   ...collectAssets(path.join(ROOT, 'assets/constellations')),
+  ...collectAssets(path.join(ROOT, 'assets/nebulae')),
 ];
 
 const assetMap = {};

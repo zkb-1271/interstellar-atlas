@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=196';
+import { QUOTES, PLANETS } from './data.js?v=197';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=196';
-import { assetURL } from './assets.js?v=196';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=197';
+import { assetURL } from './assets.js?v=197';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -462,6 +462,7 @@ export class UI {
       <div class="pc-en" id="cp-en"></div>
       <div class="pc-sub" id="cp-sub"></div>
       <div class="cp-img" id="cp-img"></div>
+      <div class="cp-credit" id="cp-credit"></div>
       <div class="pc-desc" id="cp-desc"></div>
       <div class="stats" id="cp-stats"></div>
       <div class="pc-facts" id="cp-facts"></div>`;
@@ -480,6 +481,7 @@ export class UI {
     const img = q('#cp-img');
     img.style.backgroundImage = o.img ? `url(${assetURL(o.img)})` : 'none';
     img.style.display = o.img ? '' : 'none';
+    q('#cp-credit').textContent = o.credit || '';
     q('#cp-desc').innerHTML = (o.sections && o.sections.length
       ? [{ t: '概览', text: o.desc }, ...o.sections]
       : [{ t: '概览', text: o.desc }])
@@ -498,6 +500,7 @@ export class UI {
       cn: c.cn, en: c.en,
       sub: c.season ? `最佳观测 ${c.season}　·　占天球 ${c.area} 平方度（第 ${c.rank}）` : '',
       img: c.img, desc: c.desc,
+      credit: '影像：NASA / Spitzer 银河全景，按真实赤经赤纬裁切　·　金色连线为本项目依星表绘制',
       rows: [
         ['亮星', c.star || '—'],
         ['深空天体', c.dso || '—'],
@@ -511,6 +514,7 @@ export class UI {
       cn: n.cn, en: n.en,
       sub: `${n.type}　·　${n.distance}`,
       img: n.img, desc: n.desc, sections: n.sections, facts: n.facts,
+      credit: '影像：NASA / JPL-Caltech（Spitzer 红外 / Hubble 可见光公开影像）',
       rows: [
         ['类型', n.type],
         ['距离', n.distance],

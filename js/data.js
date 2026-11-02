@@ -186,7 +186,8 @@ export const COMETS = [
 // ============================================================
 export const NEBULAE = [
   {
-    id: 'm42', cn: '猎户座大星云', en: 'ORION NEBULA', abbr: 'M42', type: '发射星云',
+    id: 'm42',
+    img: 'assets/nebulae/m42.jpg', cn: '猎户座大星云', en: 'ORION NEBULA', abbr: 'M42', type: '发射星云',
     ra: 5.588, dec: -5.39, size: 4200, hue: 330, rgb: [186, 92, 104],
     distance: '1344 光年', span: '约 24 光年', where: '猎户座（猎户腰带下方）',
     desc: '银河系里最亮的恒星形成区之一，也是肉眼能看见的少数星云——猎户腰带下方那一小团雾。中央的四合星是四颗年轻炽热的 O/B 型星，它们的紫外辐射把周围氢气电离，让整片云发出暗红色光。哈勃在这里拍到过一批"原行星盘"，每一个都可能是一个正在成形的太阳系。',
@@ -200,7 +201,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'm1', cn: '蟹状星云', en: 'CRAB NEBULA', abbr: 'M1', type: '超新星遗迹',
+    id: 'm1',
+    img: 'assets/nebulae/m1.jpg', cn: '蟹状星云', en: 'CRAB NEBULA', abbr: 'M1', type: '超新星遗迹',
     ra: 5.575, dec: 22.01, size: 2600, hue: 40, rgb: [200, 150, 96],
     distance: '6500 光年', span: '约 11 光年', where: '金牛座（金牛角附近）',
     desc: '公元 1054 年 7 月，宋代天文学家记录了一颗"天关客星"，白天都能看见，持续了 23 天。那就是一次超新星爆发。九百多年后，它留下的残骸仍在以每秒 1500 公里的速度向外膨胀——这就是蟹状星云，人类历史上第一颗被确认身份的超新星遗迹。',
@@ -214,7 +216,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'm45', cn: '昴星团', en: 'PLEIADES', abbr: 'M45', type: '疏散星团 · 反射星云',
+    id: 'm45',
+    img: 'assets/nebulae/m45.jpg', cn: '昴星团', en: 'PLEIADES', abbr: 'M45', type: '疏散星团 · 反射星云',
     ra: 3.783, dec: 24.11, size: 3400, hue: 210, rgb: [96, 132, 200],
     distance: '444 光年', span: '约 8 光年', where: '金牛座（牛肩上的"七姊妹"）',
     desc: '中国古人叫它昴宿，日本叫"昴"（Subaru），希腊神话里是七位姐妹。视力好的人在暗夜里能数出 6–7 颗，实际上这个星团有上千颗恒星，年龄都只有 1 亿岁左右。它们的蓝白色光被周围的尘埃散射，形成一片淡蓝色的反射星云。',
@@ -228,7 +231,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'm57', cn: '环状星云', en: 'RING NEBULA', abbr: 'M57', type: '行星状星云',
+    id: 'm57',
+    img: 'assets/nebulae/m57.jpg', cn: '环状星云', en: 'RING NEBULA', abbr: 'M57', type: '行星状星云',
     ra: 18.893, dec: 33.03, size: 2200, hue: 130, rgb: [86, 190, 150],
     distance: '2570 光年', span: '约 1 光年', where: '天琴座（织女星与天琴平行四边形之间）',
     desc: '一颗和太阳差不多重的恒星走到生命尽头时，会抛掉外层气体，露出中心的白矮星。环状星云就是这样的遗骸：中心那颗白矮星的紫外光让外圈的气体发亮，形成一个直径约 1 光年的发光圆环。它正在以每秒 20–30 公里膨胀，约 2 万年后会彻底散入星际空间。',
@@ -242,7 +246,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'ngc7000', cn: '北美洲星云', en: 'NORTH AMERICA NEBULA', abbr: 'NGC 7000', type: '发射星云',
+    id: 'ngc7000',
+    img: 'assets/nebulae/ngc7000.jpg', cn: '北美洲星云', en: 'NORTH AMERICA NEBULA', abbr: 'NGC 7000', type: '发射星云',
     ra: 20.983, dec: 44.53, size: 4600, hue: 20, rgb: [196, 108, 90],
     distance: '2590 光年', span: '约 100 光年', where: '天鹅座（天津四东侧）',
     desc: '轮廓酷似北美大陆的发射星云，紧挨着天鹅座最亮的天津四。它的实际跨度约 100 光年，但因为表面亮度极低，肉眼几乎看不见，需要广角望远镜配合滤镜才能拍出那块"大陆"。中间那道深色的"墨西哥湾"，是一层挡在前面的冷尘埃。',
@@ -256,7 +261,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'veil', cn: '面纱星云', en: 'VEIL NEBULA', abbr: 'NGC 6960/6992', type: '超新星遗迹',
+    id: 'veil',
+    img: 'assets/nebulae/veil.jpg', cn: '面纱星云', en: 'VEIL NEBULA', abbr: 'NGC 6960/6992', type: '超新星遗迹',
     ra: 20.76, dec: 30.7, size: 5200, hue: 150, rgb: [92, 176, 170],
     distance: '2400 光年', span: '约 110 光年', where: '天鹅座（天津四西南）',
     desc: '一万年前的一次超新星爆发，把一颗大质量恒星的外层炸成了现在这张网。它的视直径约 3 度——六个满月连起来那么大，是全天最大的超新星遗迹之一。气体以每秒上百公里的速度撞进星际介质，被压缩、加热，形成极其纤细的丝状结构。',
@@ -270,7 +276,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'heart', cn: '心脏星云', en: 'HEART NEBULA', abbr: 'IC 1805', type: '发射星云',
+    id: 'heart',
+    img: 'assets/nebulae/heart.jpg', cn: '心脏星云', en: 'HEART NEBULA', abbr: 'IC 1805', type: '发射星云',
     ra: 2.55, dec: 61.4, size: 4800, hue: 340, rgb: [200, 84, 118],
     distance: '7500 光年', span: '约 200 光年', where: '仙后座',
     desc: '一片横跨 200 光年的巨大氢气云，形状像一颗心。它中心的年轻星团只有 1500 万岁，星团里最热的几颗恒星正用星风和紫外线把整片云点亮、吹散。',
@@ -284,7 +291,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'rosette', cn: '玫瑰星云', en: 'ROSETTE NEBULA', abbr: 'NGC 2237', type: '发射星云',
+    id: 'rosette',
+    img: 'assets/nebulae/rosette.jpg', cn: '玫瑰星云', en: 'ROSETTE NEBULA', abbr: 'NGC 2237', type: '发射星云',
     ra: 6.53, dec: 5.03, size: 3600, hue: 330, rgb: [196, 88, 110],
     distance: '5200 光年', span: '约 130 光年', where: '麒麟座（猎户座东南）',
     desc: '中心星团 NGC 2244 的星风吹出了一个直径数十光年的空洞，把外围的气体压成一圈层的"花瓣"，整片云因此得名玫瑰。星团里最亮的几颗 O 型星只有几百万岁。',
@@ -298,7 +306,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'm8', cn: '泻湖星云', en: 'LAGOON NEBULA', abbr: 'M8', type: '发射星云',
+    id: 'm8',
+    img: 'assets/nebulae/m8.jpg', cn: '泻湖星云', en: 'LAGOON NEBULA', abbr: 'M8', type: '发射星云',
     ra: 18.06, dec: -24.38, size: 3800, hue: 350, rgb: [200, 92, 116],
     distance: '4100 光年', span: '约 110 光年', where: '人马座（银河中心方向）',
     desc: '在暗夜里，肉眼能在人马座看到银河上一道明显的"裂口"，那就是泻湖星云——它是少数肉眼可见的发射星云。中间那条暗带把星云隔成两半，像一片被沙洲分开的泻湖。',
@@ -312,7 +321,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'm20', cn: '三叶星云', en: 'TRIFID NEBULA', abbr: 'M20', type: '发射 + 反射 + 暗星云',
+    id: 'm20',
+    img: 'assets/nebulae/m20.jpg', cn: '三叶星云', en: 'TRIFID NEBULA', abbr: 'M20', type: '发射 + 反射 + 暗星云',
     ra: 18.045, dec: -22.97, size: 3000, hue: 320, rgb: [180, 96, 150],
     distance: '4100 光年', span: '约 40 光年', where: '人马座',
     desc: '三种星云挤在同一个天区：红色的发射星云、蓝色的反射星云，以及把前者切成三瓣的黑色暗尘埃带——"三叶"指的就是这三道裂口。中心有一颗年轻的大质量恒星，它的星光照亮了周围的尘埃。',
@@ -326,7 +336,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'b33', cn: '马头星云', en: 'HORSEHEAD NEBULA', abbr: 'B33', type: '暗星云',
+    id: 'b33',
+    img: 'assets/nebulae/b33.jpg', cn: '马头星云', en: 'HORSEHEAD NEBULA', abbr: 'B33', type: '暗星云',
     ra: 5.683, dec: -2.46, size: 2000, hue: 12, rgb: [150, 76, 70],
     distance: '1375 光年', span: '约 3.5 光年', where: '猎户座（参宿一附近）',
     desc: '它本身不发一点光——你看到的"马头"，是一团浓稠的冷尘埃挡住了背后的红色发射星云，剪出的一个剪影。整块尘埃长约 3.5 光年，正在被附近的紫外线缓慢蒸发。',
@@ -340,7 +351,8 @@ export const NEBULAE = [
     ],
   },
   {
-    id: 'm16', cn: '鹰状星云', en: 'EAGLE NEBULA', abbr: 'M16', type: '发射星云',
+    id: 'm16',
+    img: 'assets/nebulae/m16.jpg', cn: '鹰状星云', en: 'EAGLE NEBULA', abbr: 'M16', type: '发射星云',
     ra: 18.313, dec: -13.79, size: 3400, hue: 30, rgb: [190, 128, 84],
     distance: '5700 光年', span: '约 70 光年', where: '巨蛇座（人马座以北）',
     desc: '1995 年哈勃在这里拍下了"创生之柱"：三根被紫外线侵蚀出的气体柱，高达数光年，柱内正在孕育新的恒星。这张照片成了天文史上最著名的影像之一，也第一次让公众直观看到恒星是怎么诞生的。',
