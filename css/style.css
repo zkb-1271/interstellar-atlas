@@ -397,16 +397,25 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 #loading .meters {
   display: flex; align-items: center; justify-content: center; gap: 14px;
 }
-#loading .track { width: 220px; height: 1px; background: rgba(255,255,255,.09); overflow: hidden; }
+#loading .track {
+  position: relative; width: 268px; height: 2px; border-radius: 2px;
+  background: rgba(255, 255, 255, .16); overflow: visible;
+}
 #loading .track i {
-  display: block; height: 100%; width: 0%;
-  background: linear-gradient(90deg, rgba(217,179,108,.5), #f0d9a8);
-  box-shadow: 0 0 10px rgba(240,217,168,.6);
-  transition: width .45s cubic-bezier(.25,.8,.3,1);
+  display: block; height: 100%; width: 0%; border-radius: 2px; position: relative;
+  background: linear-gradient(90deg, rgba(217,179,108,.55), #f6e6c2);
+  box-shadow: 0 0 12px rgba(240,217,168,.75), 0 0 3px rgba(255,245,220,.9);
+  transition: width .18s linear;
+}
+/* 进度前端的小光点：让 1px 级别的进度也能被看见 */
+#loading .track i::after {
+  content: ''; position: absolute; right: -3px; top: 50%;
+  width: 6px; height: 6px; margin-top: -3px; border-radius: 50%;
+  background: #fff6dd; box-shadow: 0 0 12px 2px rgba(240,217,168,.85);
 }
 #loading .pct {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
-  color: rgba(217,179,108,.8); min-width: 34px; text-align: right;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em;
+  color: rgba(240,217,168,.92); min-width: 42px; text-align: right;
 }
 #loading .status {
   margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 9px;

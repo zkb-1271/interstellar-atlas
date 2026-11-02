@@ -65,14 +65,20 @@
   // 但封顶 92%——只有真正加载完才允许到 100%，不假装完成。
   // 之前进度条"完全不动"就是因为只在回调里一次性设宽度：本地/缓存
   // 命中时贴图几百毫秒就加载完，条子要么卡在 0%，要么瞬间跳满。
-  const tick = () => {
+  const tick = now => {
+    const elapsed = (now - t0) / 1000;
     if (finished) {
-      shown += (1 - shown) * 0.2;
+      shown += (1 - shown) * 0.18;
       if (1 - shown < 0.004) shown = 1;
     } else {
-      shown += (target - shown) * 0.14;
-      if (target - shown < 0.003) shown = target;
-      if (shown < 0.92 && target < 0.92) shown = Math.min(0.92, shown + 0.0035);
+      // 下限：随时间推进的最低进度（封顶 92%）——加载很快时也有连续的动画，
+      // 加载很慢时也不会卡着不动；只有真正结束才允许走到 100%
+      const floor = Math.min(0.92, Math.max(0, elapsed) * 0.42);
+      const goal = Math.max(target, floor);
+      shown += (goal - shown) * 0.12;
+      // ⚠️ 吸附只在"还没追上目标"时做：以前写成 target - shown < 0.003，
+      // target 还是 0 的时候每帧都把进度吸回 0，爬升全被抹掉（条子不动的原因）
+      if (goal > shown && goal - shown < 0.002) shown = goal;
     }
     render(shown);
     if (!(finished && shown >= 1)) requestAnimationFrame(tick);
