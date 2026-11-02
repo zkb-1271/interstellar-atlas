@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=203';
+import { QUOTES, PLANETS } from './data.js?v=204';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=203';
-import { assetURL } from './assets.js?v=203';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=204';
+import { assetURL } from './assets.js?v=204';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -539,11 +539,14 @@ export class UI {
       }
       v.copy(c.center).project(camera);
       const ok = active && c.id !== this.aimId && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
-      div.style.opacity = ok ? '0.85' : '0';
+      // 状态没变就不写样式：每帧重写 opacity 会打断过渡，看起来一闪一闪
+      const op = ok ? '0.85' : '0';
+      if (div._op !== op) { div.style.opacity = op; div._op = op; }
       div.style.pointerEvents = ok ? 'auto' : 'none';
       if (ok) {
-        div.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px';
-        div.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px';
+        // 取整到像素：亚像素定位会让文字在缓慢移动时持续发虚、发颤
+        div.style.left = Math.round((v.x * 0.5 + 0.5) * innerWidth) + 'px';
+        div.style.top = Math.round((-v.y * 0.5 + 0.5) * innerHeight) + 'px';
       }
     }
   }
@@ -716,6 +719,7 @@ export class UI {
     let ringShown = false;
 
     const shown = [];   // 可见标签，用于重叠避让
+    const nowMs = performance.now();
     for (const [id, b] of bodies) {
       let rec = this.labelMap.get(id);
       if (!rec) {
@@ -731,51 +735,103 @@ export class UI {
       const rpx0 = (b.displayR / (dist0 * Math.tan(fov0 / 2))) * (height / 2);
       // 卫星标签只在贴近母星时才显示；太阳太显眼交给左侧导航轨；彗星给足曝光
       const minR = b.isMoon ? 3 : (b.isComet ? 0.3 : (id === 'sun' ? 40 : 0.5));
-      const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15 && rpx0 < 110 && rpx0 >= minR;
-      if (!visible) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; rec._vis = false; continue; }
+      // ⚠️ 迟滞：已经显示的标签用更宽的阈值才允许退出。原先进出用同一组阈值，
+      // 天体大小停在临界值附近时就会逐帧 显示→隐藏→显示，看起来像名字在抽搐。
+      const lim = rec._vis ? 1.18 : 1.15;
+      const maxR = rec._vis ? 118 : 110;
+      const visible = mode === 'solar' && v.z < 1 && Math.abs(v.x) < lim && Math.abs(v.y) < lim
+        && rpx0 < maxR && rpx0 >= minR;
+      if (!visible) {
+        if (rec._vis) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; rec._op = 0; }
+        rec._vis = false;
+        continue;
+      }
       const sx = (v.x * 0.5 + 0.5) * width, sy = (-v.y * 0.5 + 0.5) * height;
-      shown.push({ id, rec, sx, sy, rpx: rpx0, dist: dist0 });
+      shown.push({ id, rec, sx, sy, rpx: rpx0,
+                   ring: id === hoverId && rpx0 > 2 && rpx0 < 90 });
       rec._vis = true;
-      rec._sx = sx; rec._sy = sy; rec._rpx = rpx0;
     }
 
-    // 标签避让：默认放上方；和已放置的标签框冲突就翻到下方；两边都挤就隐藏
+    // 标签避让：默认放上方；与已放置的标签冲突就翻到下方；连续几帧都挤才隐藏。
+    // ⚠️ "名字抽搐"的两个成因都在这里：
+    //   ① 尺寸每帧读 offsetWidth/offsetHeight —— 强制同步重排，量到的框会随
+    //      字体加载、缩放在小范围内跳动，判定跟着抖。现在只在第一次量。
+    //   ② 上下两侧每帧重新裁决 —— 两个挨得近的标签会逐帧互相把对方挤到另一侧。
+    //      现在只有「当前位确实冲突 + 另一位干净 + 距上次翻面 >320ms」才翻。
     shown.sort((a, b) => a.sx - b.sx);
     const boxes = [];
     const pad = 10;
+    const FLIP_HOLD = 480;
     for (const item of shown) {
-      const r = Math.max(item.rpx, 4), gap = r + 10;
-      const lx = item.sx + r + 14;
-      const w = (item.rec.div.offsetWidth || 96), h = (item.rec.div.offsetHeight || 34);
-      const hit = (above) => {
+      const rec = item.rec;
+      // 标签偏移固定为「天体半径 + 14」，不要因为悬停而临时变远——
+      // 那会在指针进入的一瞬间把名字弹开一大截，看起来同样像抽搐。
+      // 锁定环改为紧贴天体（见下方 rr），环线自然落在名字左侧。
+      const off = Math.max(item.rpx, 4);
+      item._off = off;
+      const gap = off + 10;
+      const lx = Math.round(item.sx + off + 14);
+      item._lx = lx;
+
+      if (rec.w == null) {
+        const w0 = rec.div.offsetWidth, h0 = rec.div.offsetHeight;
+        if (w0 && h0) { rec.w = w0; rec.h = h0; }
+      }
+      const w = rec.w || 96, h = rec.h || 34;
+
+      // inflate > 0 = 需要"压得更深"才算冲突；< 0 = 需要留出余量才算干净。
+      // 用一正一负造一个死区：位置在临界线上时既不满足"当前位很挤"、
+      // 也不满足"另一侧很空"，于是保持原样，不会被相邻标签推着来回跳。
+      const clash = (above, inflate = 0) => {
         const ly = above ? item.sy - gap : item.sy + gap;
         const top = above ? ly - h : ly;
-        return boxes.some(b => lx < b.x + b.w + pad && lx + w + pad > b.x &&
-                               top < b.y + b.h + pad && top + h + pad > b.y);
+        return boxes.some(b => lx < b.x + b.w + pad + inflate && lx + w + pad + inflate > b.x &&
+                               top < b.y + b.h + pad + inflate && top + h + pad + inflate > b.y);
       };
-      let above = !hit(true);
-      item._hide = false;
-      if (!above && hit(false)) { item._hide = true; continue; }
+
+      let above = rec._above;
+      if (above === undefined) {
+        above = !clash(true);                                   // 首选上方
+      } else if (clash(above, 4) && !clash(!above, -4) &&
+                 nowMs - (rec._flipAt || -1e9) > FLIP_HOLD) {
+        // 只在「当前位明显被压住 + 另一侧明显更空 + 距上次翻面够久」时才翻
+        above = !above;
+        rec._flipAt = nowMs;
+      }
+      rec._above = above;
       item._above = above;
+
+      if (clash(above)) {
+        rec._bad = (rec._bad || 0) + 1;
+        if (rec._bad > 4) { item._hide = true; continue; }       // 连续 5 帧都挤才隐藏
+      } else {
+        rec._bad = 0;
+      }
       const ly = above ? item.sy - gap : item.sy + gap;
       boxes.push({ x: lx, y: above ? ly - h : ly, w, h });
     }
 
     for (const item of shown) {
       const { id, rec, sx, sy, rpx } = item;
-      if (item._hide) { rec.div.style.opacity = '0'; rec.div.style.pointerEvents = 'none'; continue; }
-      rec.div.style.opacity = id === selectedId ? '1' : (id === hoverId ? '1' : '0.86');
+      if (item._hide) {
+        if (rec._op !== 0) { rec.div.style.opacity = '0'; rec._op = 0; }
+        rec.div.style.pointerEvents = 'none';
+        continue;
+      }
+      const op = (id === selectedId || id === hoverId) ? 1 : 0.86;
+      if (rec._op !== op) { rec.div.style.opacity = String(op); rec._op = op; }
       rec.div.style.pointerEvents = 'auto';
-      // 标签放在天体上方，横向拥挤时自动改到下方（参考站 MERCURY 上 / VENUS 下）
-      const gap = Math.max(rpx, 4) + 10;
-      const lx = sx + Math.max(rpx, 4) + 14;
-      const ly = item._above ? sy - gap : sy + gap;
-      rec.div.style.left = lx + 'px';
+      // 整数像素定位：亚像素坐标会让文字在缓慢移动时发虚、发颤
+      const gap = item._off + 10;
+      const ly = Math.round(item._above ? sy - gap : sy + gap);
+      rec.div.style.left = item._lx + 'px';
       rec.div.style.top = ly + 'px';
       rec.div.style.transform = item._above ? 'translate(0,-100%)' : 'translate(0,0)';
 
-      if (id === hoverId && rpx > 2 && rpx < 90) {
-        const rr = Math.max(rpx * 1.45 + 8, 16);
+      if (item.ring) {
+        // 环紧贴天体边缘：外沿 = rr+14 ≈ rpx+16，仍在标签（rpx+14 起）之前的
+        // 一点点余量内不会压字；以前的 1.45r+8 会把环线画到名字正中。
+        const rr = Math.max(rpx + 2, 10);
         const tk = rr + 7;
         this.hoverRing.style.opacity = '1';
         this.hoverRing.setAttribute('transform', `translate(${sx},${sy})`);
@@ -790,6 +846,7 @@ export class UI {
         ringShown = true;
       }
     }
+
     if (!ringShown) {
       this.hoverRing.style.opacity = '0';
       this.leader.style.display = 'none';
