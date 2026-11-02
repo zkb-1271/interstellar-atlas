@@ -2,10 +2,10 @@
 //  ui.js — HUD：顶栏/标签页/时间栏/行星档案/天象面板/准星/标签
 // ============================================================
 
-import { QUOTES, PLANETS } from './data.js?v=191';
+import { QUOTES, PLANETS } from './data.js?v=192';
 const PLANET_NAV = PLANETS;
-import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=191';
-import { assetURL } from './assets.js?v=191';
+import { fmtDateLocal, fmtTimeLocal } from './astro.js?v=192';
+import { assetURL } from './assets.js?v=192';
 
 // 时区标签：中国用户显示"北京时间"，其他时区显示 UTC±X
 const TZ_OFF = -new Date().getTimezoneOffset() / 60;
@@ -224,7 +224,7 @@ export class UI {
 
     // 示意排布 / 实时轨道（对应参考站 SCHEMATIC / REAL）
     this.posBtn = el('button', 'posmode', '示意排布');
-    this.posBtn.dataset.tip = '示意排布：行星按压缩距离排成一线，轨道线为同心导轨｜实时轨道：按 JPL 历表真实公转、散落各处，相机以太阳为中心取景，轨道线为真实椭圆';
+    this.posBtn.dataset.tip = '示意排布：行星按压缩距离排成一线，轨道线为同心导轨｜真实轨道：按 JPL 历表真实公转、散落各处，相机以太阳为中心取景，轨道线为真实椭圆';
     this.posBtn.addEventListener('click', () => this.cb.onTogglePosition());
 
     bar.append(this.bigDate, group, this.posBtn);
@@ -701,7 +701,8 @@ export class UI {
     if (this.speedPopBtns) this.speedPopBtns.forEach((b, j) => b && b.classList.toggle('active', (j + 1) === i));
   }
   setPositionMode(m) {
-    this.posBtn.textContent = m === 'real' ? '实时轨道' : '示意排布';
+    // 用"真实轨道"而非"实时轨道"，避免和左邻的时间按钮"实时"重名
+    this.posBtn.textContent = m === 'real' ? '真实轨道' : '示意排布';
     this.posBtn.classList.toggle('on', m === 'real');
   }
 
