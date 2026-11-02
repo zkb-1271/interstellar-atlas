@@ -584,86 +584,6 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
   background: rgba(217,179,108,.55); box-shadow: 0 0 6px rgba(217,179,108,.5);
 }
 
-/* ---------- 知识库 ---------- */
-#knowPanel {
-  position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%) scale(.97); z-index: 40;
-  width: 760px; max-height: 82vh; overflow-y: auto;
-  background: rgba(9,9,10,.93); border: 1px solid var(--panel-border); border-radius: 22px;
-  backdrop-filter: blur(20px); padding: 34px 38px 30px;
-  opacity: 0; pointer-events: none; transition: opacity .4s, transform .4s;
-}
-#knowPanel.show { opacity: 1; pointer-events: auto; transform: translate(-50%,-50%) scale(1); }
-#knowClose { position: absolute; top: 20px; right: 24px; background: none; border: none;
-  color: var(--ink-dim); font-size: 17px; cursor: none; }
-#knowClose:hover { color: var(--gold-bright); }
-#knowPanel .kp-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: .5em; color: rgba(217,179,108,.6); }
-#knowPanel h2 { font-family: var(--serif); font-size: 27px; font-weight: 500; margin-top: 10px; }
-#knowPanel .sub { font-family: var(--mono); font-size: 10px; letter-spacing: .34em; color: var(--ink-dim); margin-top: 6px; }
-
-#knowPanel .kp-list { margin-top: 24px; display: flex; flex-direction: column; }
-#knowPanel .kp-item {
-  display: flex; align-items: flex-start; gap: 16px; width: 100%; text-align: left;
-  padding: 15px 14px; border-radius: 14px; border: 1px solid transparent; background: none;
-  cursor: none; transition: all .22s; font-family: var(--sans);
-}
-#knowPanel .kp-item:hover { background: rgba(217,179,108,.05); border-color: var(--panel-border); }
-#knowPanel .kp-item + .kp-item { border-top: 1px solid rgba(255,255,255,.05); border-top-left-radius: 0; border-top-right-radius: 0; }
-#knowPanel .kp-item .no { font-family: var(--mono); font-size: 10.5px; color: rgba(151,145,127,.55); padding-top: 4px; min-width: 18px; }
-#knowPanel .kp-item .body { flex: 1; }
-#knowPanel .kp-item .tt { display: block; font-size: 15px; color: var(--ink); letter-spacing: .06em; }
-#knowPanel .kp-item .en { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .26em; color: rgba(151,145,127,.7); margin-top: 4px; }
-#knowPanel .kp-item .lead { display: block; font-size: 12.5px; line-height: 1.75; color: #a9a394; margin-top: 7px; }
-#knowPanel .kp-item .arrow { color: var(--gold-dim); font-size: 13px; padding-top: 2px; transition: transform .22s, color .22s; }
-#knowPanel .kp-item:hover .tt { color: var(--gold-bright); }
-#knowPanel .kp-item:hover .arrow { transform: translateX(3px); color: var(--gold); }
-
-/* 详情 */
-#knowPanel .kp-detail { display: none; }
-#knowPanel.detail .kp-list, #knowPanel.detail .kp-head { display: none; }
-#knowPanel.detail .kp-detail { display: block; }
-#knowPanel #knowBack {
-  background: none; border: 1px solid var(--panel-border); border-radius: 999px;
-  color: var(--ink-dim); font-size: 11.5px; letter-spacing: .18em;
-  padding: 6px 15px; cursor: none; margin-bottom: 22px; transition: all .22s; font-family: var(--sans);
-}
-#knowPanel #knowBack:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
-#knowPanel .kp-detail h3 { font-family: var(--serif); font-size: 30px; font-weight: 500; margin-top: 10px; }
-#knowPanel .kp-detail .lead {
-  font-size: 14px; line-height: 1.9; color: #cfc9ba; margin-top: 16px;
-  padding-left: 14px; border-left: 2px solid var(--gold-dim);
-}
-#knowPanel .kp-stats {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
-  margin-top: 22px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.06); border-radius: 12px;
-  overflow: hidden;
-}
-#knowPanel .kp-stats div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
-  padding: 12px 16px; background: rgba(9,9,10,.72); }
-#knowPanel .kp-stats span { font-size: 11.5px; letter-spacing: .14em; color: var(--ink-dim); }
-#knowPanel .kp-stats b { font-family: var(--mono); font-size: 12.5px; font-weight: 400; color: var(--gold-bright); text-align: right; }
-#knowPanel .kp-sec h4 {
-  font-size: 11px; letter-spacing: .34em; color: var(--gold); font-weight: 400;
-  margin: 22px 0 9px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.07);
-}
-#knowPanel .kp-sec p { font-size: 13.5px; line-height: 1.95; color: #c1bbac; }
-#knowPanel .kp-body { margin-top: 6px; }
-
-/* 档案卡：关键数字 chips */
-.sideCard .pc-explore { display: flex; flex-wrap: wrap; gap: 8px; }
-.sideCard .pc-explore .chip {
-  display: inline-flex; align-items: baseline; gap: 7px;
-  padding: 5px 11px; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.02);
-}
-.sideCard .pc-explore .chip i { font-style: normal; font-size: 10px; letter-spacing: .16em; color: var(--ink-dim); }
-.sideCard .pc-explore .chip b { font-family: var(--mono); font-size: 11.5px; font-weight: 400; color: var(--gold-bright); }
-
-/* 档案卡：资料来源 */
-.sideCard .pc-src { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.07); }
-.sideCard .pc-src .ps-k { font-size: 10px; letter-spacing: .3em; color: var(--ink-dim); margin-bottom: 8px; }
-.sideCard .pc-src p { font-size: 11.5px; line-height: 1.8; color: rgba(151,145,127,.9); }
-.sideCard .pc-src .ps-note { margin-top: 6px; color: rgba(151,145,127,.62); }
-
 /* ---------- 自定义提示框（替代原生 title） ---------- */
 #tip {
   position: fixed; left: 0; top: 0; z-index: 70; max-width: 300px;
@@ -678,3 +598,60 @@ svg#overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-even
 
 /* 长名字（猎户座大星云、67P 楚留莫夫-格拉西缅科）自动缩字号，避免撑成两行 */
 .sideCard h1.long { font-size: 34px; line-height: 1.18; letter-spacing: .01em; }
+
+/* ============================================================
+   交互反馈：按压 / 键盘焦点 / 悬停微光 / 降低动态
+   用独立的 scale、translate 属性做动效，避免覆盖元素自身的
+   transform（导航轨圆点、面板定位都依赖 transform）。
+   ============================================================ */
+:root { --ease: cubic-bezier(.22, .68, .24, 1); }
+
+#homeBtn, #enterBtn, #tabs .tab, .spd, .spd-pop button, #timebar .posmode,
+#viewbar .vbtn, #eventsPanel .row .go, #eventsClose, .sideCard .card-close,
+.sideCard .pc-views button, .sideCard .pc-navrow button, #dirPanel li,
+#planetRail .rail-dot {
+  transition: color .28s var(--ease), background-color .28s var(--ease),
+              border-color .28s var(--ease), opacity .28s var(--ease),
+              box-shadow .28s var(--ease), transform .28s var(--ease),
+              scale .16s var(--ease), translate .24s var(--ease);
+}
+
+/* 按下时轻微内缩：自定义指针下这是最直接的"点到了"提示 */
+#homeBtn:active, #enterBtn:active, #tabs .tab:active, .spd:active,
+.spd-pop button:active, #timebar .posmode:active, #viewbar .vbtn:active,
+#eventsPanel .row .go:active, #eventsClose:active, .sideCard .card-close:active,
+.sideCard .pc-views button:active, .sideCard .pc-navrow button:active,
+#dirPanel li:active, #planetRail .rail-dot:active {
+  scale: .955;
+}
+
+/* 悬停时按钮上浮一像素 + 极淡金光 */
+#homeBtn:hover, #enterBtn:hover, #timebar .posmode:hover,
+#eventsPanel .row .go:hover {
+  translate: 0 -1px;
+  box-shadow: 0 6px 20px -10px rgba(240, 217, 168, .55);
+}
+#tabs .tab:hover { text-shadow: 0 0 20px rgba(240, 217, 168, .35); }
+#viewbar .vbtn:hover, .sideCard .pc-views button:hover,
+.sideCard .pc-navrow button:hover, .spd-pop button:hover {
+  box-shadow: inset 0 0 0 1px rgba(217, 179, 108, .18);
+}
+#planetRail .rail-dot:hover { translate: 3px 0; }
+#planetRail .rail-dot:hover i { box-shadow: 0 0 0 3px rgba(240, 217, 168, .12); }
+
+/* 键盘焦点：金色细环（鼠标点击不显示） */
+:focus-visible {
+  outline: 1px solid rgba(240, 217, 168, .7);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* 系统开启"减少动态效果"时，关掉位移动画与长过渡 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

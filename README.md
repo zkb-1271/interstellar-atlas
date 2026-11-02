@@ -167,8 +167,12 @@ lib/                three r160 + addons（本地，离线可用）
 
 ## 素材与授权
 
-- **行星 / 卫星 / 太阳表面贴图**：[Solar System Scope](https://www.solarsystemscope.com/textures/)（CC BY 4.0），
-  原始 8K 素材降采样为 4K 使用（天王星、海王星、金星云顶官方最高为 2K，已做对比增强以显出淡带纹）。
+- **行星 / 太阳表面贴图**：[Solar System Scope](https://www.solarsystemscope.com/textures/)（CC BY 4.0），
+  原始 8K 素材降采样为 4K 使用（天王星、海王星、金星云顶官方最高为 2K）。
+- **卫星表面贴图**：USGS Astrogeology 与 NASA/JPL 公开的全球影像镶嵌（公共领域）——
+  木卫一/三/四为 Galileo–Voyager 彩色镶嵌，土卫六为 Cassini ISS 938nm 地表图，
+  木卫二、土卫一/二/四/五、土卫八为 Voyager/Cassini 影像；天卫三、天卫四、火卫一、火卫二
+  目前只有局部影像，使用同类天体的真实影像按真实反照率着色（详见 `js/data.js` 中的 `tex` / `tint`）。
 - **银河全景**：NASA/Spitzer GLIMPSE 全景合成，降采样为 4096×2048，同时用作场景天球与开屏背景。
 - **星座配图**：由本项目从上述 4K 银河全景按各星座真实赤经赤纬做透视投影裁切（1280×720），
   再叠加依星表绘制的星点与连线 —— 背景是真实天空照片，不是插画或徽章。
