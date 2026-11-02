@@ -396,7 +396,7 @@ export const QUOTES = [
 //           月球这类极端值在 solar.js 里单独处理）
 export const MOONS = {
   mars: [
-    { id: 'phobos', tex: 'moons/phoebe.jpg', tint: '#b3a48d', r: 0.035, orbit: 3.0, period: 0.32,
+    { id: 'phobos', tex: 'moons/phobos.jpg', r: 0.035, orbit: 3.0, period: 0.32,
       info: { kind: 'moon', en: 'PHOBOS', cn: '火卫一', radiusKm: 11, gravity: '0.0006', periodDays: 0.32, rotationHours: 7.66, tempC: '-40', moons: '—',
         desc: '火星最大的卫星，也是一颗"正在坠落"的卫星。',
         sections: [
