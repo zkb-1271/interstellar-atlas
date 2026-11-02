@@ -39,16 +39,34 @@ const assetFiles = [
   ...collectAssets(path.join(ROOT, 'assets/nebulae')),
 ];
 
+// assets/full/ 下放"全尺寸版"：同名同路径、分辨率/质量更高。
+// 离线包默认用它（双击本地打开，不受带宽限制）；
+// 加 --web 参数则只用压缩版，与 GitHub Pages 上的资源完全一致。
+const FULL_DIR = path.join(ROOT, 'assets/full');
+const USE_FULL = !process.argv.includes('--web');
+
 const assetMap = {};
-let rawBytes = 0;
+let rawBytes = 0, fullCount = 0;
 for (const abs of assetFiles) {
   const rel = path.relative(ROOT, abs).split(path.sep).join('/');
-  const buf = fs.readFileSync(abs);
+  let override = path.join(FULL_DIR, rel.replace(/^assets\//, ''));
+  // 银河全景的全尺寸版就是项目里的 8K 原图，不另存副本（省 18MB 仓库体积）
+  if (rel === 'assets/tex/sky/milky-way-4k.jpg') {
+    const big = path.join(ROOT, 'assets/tex/sky/milky-way-8k.jpg');
+    if (fs.existsSync(big)) override = big;
+  }
+  const useOverride = USE_FULL && fs.existsSync(override);
+  const src = useOverride ? override : abs;
+  if (useOverride) fullCount++;
+
+  const buf = fs.readFileSync(src);
   rawBytes += buf.length;
-  const mime = MIME[path.extname(abs).toLowerCase()];
-  assetMap[rel] = `data:${mime};base64,${buf.toString('base64')}`;
+  const mime = MIME[path.extname(src).toLowerCase()];
+  const data = `data:${mime};base64,${buf.toString('base64')}`;
+  assetMap[rel] = data;
 }
-console.log(`内联资源：${assetFiles.length} 个文件，原始 ${(rawBytes / 1048576).toFixed(1)} MB`);
+console.log(`内联资源：${assetFiles.length} 个文件，原始 ${(rawBytes / 1048576).toFixed(1)} MB` +
+            (USE_FULL ? `（其中 ${fullCount} 个使用全尺寸版）` : '（压缩模式）'));
 
 // ---------- 2) esbuild 打包（剥离 ?v= 查询、别名 three） ----------
 const resolvePlugin = {
@@ -82,12 +100,16 @@ let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 let css = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8');
 const boot = fs.readFileSync(path.join(ROOT, 'js/loading-boot.js'), 'utf8');
 
-// CSS 里的背景图（开屏银河）也内联
+// CSS 里的背景图（开屏银河）也内联——固定用压缩版，8K 只进 3D 天球
 css = css.replace(/url\('([^']+)'\)/g, (m, u) => {
   if (u.startsWith('data:')) return m;
   const rel = path.normalize(path.join('css', u)).split(path.sep).join('/');
-  const data = assetMap[rel];
-  return data ? `url('${data}')` : m;
+  // 直接从磁盘读压缩版：assets/full 里的 8K 银河只该进 3D 天球，不能在这里再内联一遍
+  const disk = path.join(ROOT, rel);
+  if (!fs.existsSync(disk)) return m;
+  const buf = fs.readFileSync(disk);
+  const mime = MIME[path.extname(disk).toLowerCase()] || 'image/jpeg';
+  return `url('data:${mime};base64,${buf.toString('base64')}')`;
 });
 
 // ⚠️ 必须用函数式替换：压缩后的 JS 里含有 `$&` 等序列，

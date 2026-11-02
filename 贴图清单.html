@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>星际模拟 · 贴图清单</title>
+<style>
+  :root {
+    --bg:#08080a; --panel:rgba(20,20,24,.72); --line:rgba(217,179,108,.18);
+    --gold:#d9b36c; --gold-b:#f3e2bd; --ink:#e8e2d6; --dim:#948e80; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:
+      radial-gradient(1200px 600px at 20% -10%, rgba(70,80,140,.18), transparent 60%),
+      radial-gradient(900px 500px at 90% 0%, rgba(150,110,60,.14), transparent 65%),
+      var(--bg);
+    color:var(--ink); font-family:"PingFang SC","Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  header { padding:56px 48px 28px; border-bottom:1px solid var(--line); }
+  .kicker { font-family:var(--mono); font-size:11px; letter-spacing:.42em; color:var(--gold); opacity:.8; }
+  h1 { font-size:38px; font-weight:400; letter-spacing:.18em; margin:14px 0 6px; }
+  .sub { color:var(--dim); font-size:13px; letter-spacing:.06em; }
+  .stats { display:flex; gap:38px; margin-top:26px; flex-wrap:wrap; }
+  .stat b { display:block; font-size:26px; font-weight:400; color:var(--gold-b); font-family:var(--mono); }
+  .stat span { font-size:11px; letter-spacing:.2em; color:var(--dim); }
+  nav {
+    position:sticky; top:0; z-index:9; display:flex; gap:6px; flex-wrap:wrap;
+    padding:14px 48px; background:rgba(8,8,10,.86); backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  nav a {
+    color:var(--dim); text-decoration:none; font-size:12.5px; letter-spacing:.12em;
+    padding:7px 14px; border-radius:999px; transition:.25s;
+  }
+  nav a:hover { color:var(--gold-b); background:rgba(217,179,108,.08); }
+  main { padding:10px 48px 80px; }
+  section { padding-top:44px; }
+  .sec-head { display:flex; align-items:baseline; gap:14px; }
+  h2 { font-size:20px; font-weight:400; letter-spacing:.16em; margin:0; }
+  .count { font-family:var(--mono); font-size:12px; color:var(--gold); opacity:.8; }
+  .sec-note { color:var(--dim); font-size:12.5px; line-height:1.8; margin:10px 0 22px; max-width:900px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
+  .card {
+    background:var(--panel); border:1px solid rgba(255,255,255,.055); border-radius:14px;
+    overflow:hidden; transition:border-color .25s, transform .25s;
+  }
+  .card:hover { border-color:var(--line); transform:translateY(-2px); }
+  .thumb { position:relative; display:block; aspect-ratio:16/9; background:#0e0e11; overflow:hidden; }
+  .thumb img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s cubic-bezier(.22,.68,.24,1); }
+  .card:hover .thumb img { transform:scale(1.03); }
+  .grade {
+    position:absolute; top:10px; right:10px; font-family:var(--mono); font-size:11px;
+    padding:3px 8px; border-radius:6px; backdrop-filter:blur(6px);
+  }
+  .g-s { background:rgba(110,200,140,.2); color:#a8e6bd; border:1px solid rgba(110,200,140,.4); }
+  .g-a { background:rgba(217,179,108,.2); color:var(--gold-b); border:1px solid rgba(217,179,108,.4); }
+  .g-b { background:rgba(120,150,210,.18); color:#b8cdf0; border:1px solid rgba(120,150,210,.35); }
+  .g-c { background:rgba(210,110,90,.18); color:#f0b8a8; border:1px solid rgba(210,110,90,.35); }
+  .meta { padding:12px 14px 14px; }
+  .name { font-family:var(--mono); font-size:13px; color:var(--gold-b); letter-spacing:.03em; }
+  .nums { display:flex; flex-wrap:wrap; gap:10px; margin:7px 0 8px; font-family:var(--mono); font-size:11px; color:var(--dim); }
+  .nums b { color:var(--ink); font-weight:500; }
+  .src { font-size:11.5px; line-height:1.6; color:#b9b2a2; }
+  .note { font-size:11.5px; line-height:1.6; color:var(--dim); margin-top:4px; }
+  .tags { display:flex; gap:6px; margin-top:9px; }
+  .tags span {
+    font-size:10px; font-family:var(--mono); color:var(--dim);
+    border:1px solid rgba(255,255,255,.07); border-radius:5px; padding:2px 6px;
+  }
+  footer { padding:30px 48px 60px; color:var(--dim); font-size:12px; line-height:2; border-top:1px solid var(--line); }
+  .legend { display:flex; gap:20px; flex-wrap:wrap; margin-top:10px; }
+  .legend span { font-size:11.5px; color:var(--dim); }
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">ASSET INVENTORY</div>
+  <h1>星际模拟 · 贴图清单</h1>
+  <div class="sub">项目内全部 52 张图片资产 · 尺寸 / 体积 / 像素密度 / 来源逐张标注</div>
+  <div class="stats">
+    <div class="stat"><b>52</b><span>图片总数</span></div>
+    <div class="stat"><b>34.7 MB</b><span>磁盘占用</span></div>
+    <div class="stat"><b>12</b><span>行星与太阳</span></div>
+    <div class="stat"><b>13</b><span>卫星</span></div>
+    <div class="stat"><b>12</b><span>星云</span></div>
+    <div class="stat"><b>13</b><span>星座</span></div>
+  </div>
+</header>
+<nav><a href="#planets">行星 · 太阳 · 土星环</a><a href="#moons">卫星</a><a href="#sky">星空全景</a><a href="#nebulae">深空天体</a><a href="#constellations">星座</a></nav>
+<main><section id="planets"><div class="sec-head"><h2>行星 · 太阳 · 土星环</h2><span class="count">12 张</span></div><p class="sec-note">全部为等距圆柱投影的球面贴图，直接贴在 SphereGeometry 上；尺寸越大越经得起近距离特写。</p><div class="grid">
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/earth-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/earth-4k.jpg" loading="lazy" alt="earth-4k.jpg">
+          <span class="grade g-s">S</span>
+        </a>
+        <div class="meta">
+          <div class="name">earth-4k.jpg</div>
+          <div class="nums"><b>4096×2048</b><span>8.4 MP</span><span>708 KB</span><span>0.09 B/px</span></div>
+          <div class="src">Solar System Scope 8K 源 → 4K</div>
+          <div class="note">真实地表：海洋、陆地、沙漠与极冰细节完整</div>
+          <div class="tags"><span>彩色</span><span>亮度 105</span><span>反差 64</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/earth-clouds-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/earth-clouds-4k.jpg" loading="lazy" alt="earth-clouds-4k.jpg">
+          <span class="grade g-a">A</span>
+        </a>
+        <div class="meta">
+          <div class="name">earth-clouds-4k.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>505 KB</span><span>0.25 B/px</span></div>
+          <div class="src">Solar System Scope 8K 云图 → 2K</div>
+          <div class="note">灰度云量图，作为 alphaMap 叠加，不直接显示</div>
+          <div class="tags"><span>灰度</span><span>亮度 71</span><span>反差 63</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/jupiter-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/jupiter-4k.jpg" loading="lazy" alt="jupiter-4k.jpg">
+          <span class="grade g-s">S</span>
+        </a>
+        <div class="meta">
+          <div class="name">jupiter-4k.jpg</div>
+          <div class="nums"><b>4096×2048</b><span>8.4 MP</span><span>736 KB</span><span>0.09 B/px</span></div>
+          <div class="src">Solar System Scope 8K → 4K</div>
+          <div class="note">大红斑与湍流云带清晰</div>
+          <div class="tags"><span>彩色</span><span>亮度 158</span><span>反差 28</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/mars-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/mars-4k.jpg" loading="lazy" alt="mars-4k.jpg">
+          <span class="grade g-s">S</span>
+        </a>
+        <div class="meta">
+          <div class="name">mars-4k.jpg</div>
+          <div class="nums"><b>4096×2048</b><span>8.4 MP</span><span>1.1 MB</span><span>0.13 B/px</span></div>
+          <div class="src">Solar System Scope 8K → 4K</div>
+          <div class="note">水手谷、奥林帕斯山、极冠均可见</div>
+          <div class="tags"><span>彩色</span><span>亮度 118</span><span>反差 44</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/mercury-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/mercury-4k.jpg" loading="lazy" alt="mercury-4k.jpg">
+          <span class="grade g-s">S</span>
+        </a>
+        <div class="meta">
+          <div class="name">mercury-4k.jpg</div>
+          <div class="nums"><b>4096×2048</b><span>8.4 MP</span><span>1.9 MB</span><span>0.24 B/px</span></div>
+          <div class="src">Solar System Scope 8K → 4K</div>
+          <div class="note">陨击坑密集；真实水星反照率本就低反差</div>
+          <div class="tags"><span>灰度</span><span>亮度 132</span><span>反差 25</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/moon-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/moon-4k.jpg" loading="lazy" alt="moon-4k.jpg">
+          <span class="grade g-b">B+</span>
+        </a>
+        <div class="meta">
+          <div class="name">moon-4k.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>636 KB</span><span>0.31 B/px</span></div>
+          <div class="src">Solar System Scope 2K（4K 源多次下载截断）</div>
+          <div class="note">月海与环形山清楚，拉到特写略软</div>
+          <div class="tags"><span>灰度</span><span>亮度 148</span><span>反差 38</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/neptune-2k.jpg" target="_blank">
+          <img src="assets/tex/planets/neptune-2k.jpg" loading="lazy" alt="neptune-2k.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">neptune-2k.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>91 KB</span><span>0.04 B/px</span></div>
+          <div class="src">Solar System Scope 2K + 保色对比</div>
+          <div class="note">官方最高即 2K；大暗斑可见</div>
+          <div class="tags"><span>彩色</span><span>亮度 104</span><span>反差 24</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/saturn-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/saturn-4k.jpg" loading="lazy" alt="saturn-4k.jpg">
+          <span class="grade g-s">S-</span>
+        </a>
+        <div class="meta">
+          <div class="name">saturn-4k.jpg</div>
+          <div class="nums"><b>4096×2048</b><span>8.4 MP</span><span>288 KB</span><span>0.04 B/px</span></div>
+          <div class="src">Solar System Scope 4K（原生）</div>
+          <div class="note">土星本身低反差，云带柔和是真实样貌</div>
+          <div class="tags"><span>彩色</span><span>亮度 187</span><span>反差 25</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/saturn-ring.png" target="_blank">
+          <img src="assets/tex/planets/saturn-ring.png" loading="lazy" alt="saturn-ring.png">
+          <span class="grade g-a">A</span>
+        </a>
+        <div class="meta">
+          <div class="name">saturn-ring.png</div>
+          <div class="nums"><b>2048×125</b><span>0.3 MP</span><span>12 KB</span><span>0.05 B/px</span></div>
+          <div class="src">Solar System Scope 2K 环带 RGBA</div>
+          <div class="note">2048×125 环径向剖面，含透明通道</div>
+          <div class="tags"><span>灰度</span><span>亮度 91</span><span>反差 49</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/sun-4k.jpg" target="_blank">
+          <img src="assets/tex/planets/sun-4k.jpg" loading="lazy" alt="sun-4k.jpg">
+          <span class="grade g-s">S</span>
+        </a>
+        <div class="meta">
+          <div class="name">sun-4k.jpg</div>
+          <div class="nums"><b>4096×2048</b><span>8.4 MP</span><span>954 KB</span><span>0.12 B/px</span></div>
+          <div class="src">Solar System Scope 4K（原生）</div>
+          <div class="note">米粒组织与活动区</div>
+          <div class="tags"><span>彩色</span><span>亮度 139</span><span>反差 39</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/uranus-2k.jpg" target="_blank">
+          <img src="assets/tex/planets/uranus-2k.jpg" loading="lazy" alt="uranus-2k.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">uranus-2k.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>48 KB</span><span>0.02 B/px</span></div>
+          <div class="src">Solar System Scope 2K + 保色对比</div>
+          <div class="note">官方最高即 2K；可见光下本就近乎无特征</div>
+          <div class="tags"><span>彩色</span><span>亮度 188</span><span>反差 27</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/planets/venus-2k.jpg" target="_blank">
+          <img src="assets/tex/planets/venus-2k.jpg" loading="lazy" alt="venus-2k.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">venus-2k.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>162 KB</span><span>0.08 B/px</span></div>
+          <div class="src">Solar System Scope 2K 云顶 + 保色对比</div>
+          <div class="note">乳金色硫酸云顶，细节天然极淡</div>
+          <div class="tags"><span>彩色</span><span>亮度 180</span><span>反差 17</span></div>
+        </div>
+      </article></div></section><section id="moons"><div class="sec-head"><h2>卫星</h2><span class="count">13 张</span></div><p class="sec-note">卫星半径只有行星的 3%–6%，但特写时仍按真实比例铺满画面，因此统一做到 2048 宽。</p><div class="grid">
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/callisto.jpg" target="_blank">
+          <img src="assets/tex/moons/callisto.jpg" loading="lazy" alt="callisto.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">callisto.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>219 KB</span><span>0.11 B/px</span></div>
+          <div class="src">USGS 灰度镶嵌（1024 → 2048）+ 暗灰着色</div>
+          <div class="note">陨击坑最密集的表面</div>
+          <div class="tags"><span>彩色</span><span>亮度 46</span><span>反差 18</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/dione.jpg" target="_blank">
+          <img src="assets/tex/moons/dione.jpg" loading="lazy" alt="dione.jpg">
+          <span class="grade g-b">B+</span>
+        </a>
+        <div class="meta">
+          <div class="name">dione.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>615 KB</span><span>0.30 B/px</span></div>
+          <div class="src">Cassini 镶嵌 2048</div>
+          <div class="note">冰崖网络</div>
+          <div class="tags"><span>灰度</span><span>亮度 148</span><span>反差 36</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/enceladus.jpg" target="_blank">
+          <img src="assets/tex/moons/enceladus.jpg" loading="lazy" alt="enceladus.jpg">
+          <span class="grade g-b">B+</span>
+        </a>
+        <div class="meta">
+          <div class="name">enceladus.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>569 KB</span><span>0.28 B/px</span></div>
+          <div class="src">Cassini 镶嵌 2048</div>
+          <div class="note">虎纹裂缝与高反照率冰面</div>
+          <div class="tags"><span>灰度</span><span>亮度 147</span><span>反差 32</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/europa.jpg" target="_blank">
+          <img src="assets/tex/moons/europa.jpg" loading="lazy" alt="europa.jpg">
+          <span class="grade g-b">B+</span>
+        </a>
+        <div class="meta">
+          <div class="name">europa.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>261 KB</span><span>0.13 B/px</span></div>
+          <div class="src">Voyager/Galileo 镶嵌 2048 + 米色着色</div>
+          <div class="note">线状地形完整；原始为灰度</div>
+          <div class="tags"><span>彩色</span><span>亮度 167</span><span>反差 45</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/ganymede.jpg" target="_blank">
+          <img src="assets/tex/moons/ganymede.jpg" loading="lazy" alt="ganymede.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">ganymede.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>265 KB</span><span>0.13 B/px</span></div>
+          <div class="src">USGS 灰度镶嵌（1024 → 2048）+ 灰褐着色</div>
+          <div class="note">明暗地貌与沟槽可见</div>
+          <div class="tags"><span>彩色</span><span>亮度 114</span><span>反差 33</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/io.jpg" target="_blank">
+          <img src="assets/tex/moons/io.jpg" loading="lazy" alt="io.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">io.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>289 KB</span><span>0.14 B/px</span></div>
+          <div class="src">USGS Galileo/Voyager 彩色镶嵌（1024 → 2048）</div>
+          <div class="note">硫黄黄橙与火山沉积；USGS 公开预览仅 1024</div>
+          <div class="tags"><span>彩色</span><span>亮度 124</span><span>反差 25</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/mimas.jpg" target="_blank">
+          <img src="assets/tex/moons/mimas.jpg" loading="lazy" alt="mimas.jpg">
+          <span class="grade g-b">B+</span>
+        </a>
+        <div class="meta">
+          <div class="name">mimas.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>436 KB</span><span>0.21 B/px</span></div>
+          <div class="src">Cassini 镶嵌 2048</div>
+          <div class="note">赫歇尔坑清晰</div>
+          <div class="tags"><span>灰度</span><span>亮度 137</span><span>反差 46</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/phobos.jpg" target="_blank">
+          <img src="assets/tex/moons/phobos.jpg" loading="lazy" alt="phobos.jpg">
+          <span class="grade g-a">A</span>
+        </a>
+        <div class="meta">
+          <div class="name">phobos.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>313 KB</span><span>0.15 B/px</span></div>
+          <div class="src">Mars Express HRSC/SRC 全球镶嵌（5760×2880 → 2048）</div>
+          <div class="note">斯蒂克尼坑与平行沟槽</div>
+          <div class="tags"><span>彩色</span><span>亮度 141</span><span>反差 41</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/phoebe.jpg" target="_blank">
+          <img src="assets/tex/moons/phoebe.jpg" loading="lazy" alt="phoebe.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">phoebe.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>188 KB</span><span>0.09 B/px</span></div>
+          <div class="src">Cassini 镶嵌 2048</div>
+          <div class="note">暗色坑洞表面（兼作天卫四参考）</div>
+          <div class="tags"><span>灰度</span><span>亮度 80</span><span>反差 51</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/rhea.jpg" target="_blank">
+          <img src="assets/tex/moons/rhea.jpg" loading="lazy" alt="rhea.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">rhea.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>181 KB</span><span>0.09 B/px</span></div>
+          <div class="src">Cassini 镶嵌 2048</div>
+          <div class="note">明亮冰面，反差偏低</div>
+          <div class="tags"><span>灰度</span><span>亮度 175</span><span>反差 36</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/tethys.jpg" target="_blank">
+          <img src="assets/tex/moons/tethys.jpg" loading="lazy" alt="tethys.jpg">
+          <span class="grade g-b">B+</span>
+        </a>
+        <div class="meta">
+          <div class="name">tethys.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>511 KB</span><span>0.25 B/px</span></div>
+          <div class="src">Cassini 镶嵌 2048</div>
+          <div class="note">奥德修斯坑与伊萨卡峡谷</div>
+          <div class="tags"><span>灰度</span><span>亮度 148</span><span>反差 30</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/titan.jpg" target="_blank">
+          <img src="assets/tex/moons/titan.jpg" loading="lazy" alt="titan.jpg">
+          <span class="grade g-a">A-</span>
+        </a>
+        <div class="meta">
+          <div class="name">titan.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>245 KB</span><span>0.12 B/px</span></div>
+          <div class="src">Cassini ISS 938nm 地表图（4040×2020 → 2048）</div>
+          <div class="note">真实地表按可见光橙雾压平</div>
+          <div class="tags"><span>彩色</span><span>亮度 138</span><span>反差 23</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/moons/triton.jpg" target="_blank">
+          <img src="assets/tex/moons/triton.jpg" loading="lazy" alt="triton.jpg">
+          <span class="grade g-c">C+</span>
+        </a>
+        <div class="meta">
+          <div class="name">triton.jpg</div>
+          <div class="nums"><b>2048×1024</b><span>2.1 MP</span><span>243 KB</span><span>0.12 B/px</span></div>
+          <div class="src">Voyager 2 影像 2048</div>
+          <div class="note">带夜面黑角，公开无可用全球底图</div>
+          <div class="tags"><span>彩色</span><span>亮度 125</span><span>反差 64</span></div>
+        </div>
+      </article></div></section><section id="sky"><div class="sec-head"><h2>星空全景</h2><span class="count">2 张</span></div><p class="sec-note">银河全景同时用于场景天球（半径 19700）与开屏背景；4K 版随包发布，8K 原图仅本地保留。</p><div class="grid">
+      <article class="card">
+        <a class="thumb" href="assets/tex/sky/milky-way-4k.jpg" target="_blank">
+          <img src="assets/tex/sky/milky-way-4k.jpg" loading="lazy" alt="milky-way-4k.jpg">
+          <span class="grade g-a">A</span>
+        </a>
+        <div class="meta">
+          <div class="name">milky-way-4k.jpg</div>
+          <div class="nums"><b>4096×2048</b><span>8.4 MP</span><span>2.6 MB</span><span>0.33 B/px</span></div>
+          <div class="src">NASA/Spitzer GLIMPSE → 4096×2048</div>
+          <div class="note">场景天球与开屏背景，随包发布</div>
+          <div class="tags"><span>灰度</span><span>亮度 20</span><span>反差 27</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/tex/sky/milky-way-8k.jpg" target="_blank">
+          <img src="assets/tex/sky/milky-way-8k.jpg" loading="lazy" alt="milky-way-8k.jpg">
+          <span class="grade g-s">S</span>
+        </a>
+        <div class="meta">
+          <div class="name">milky-way-8k.jpg</div>
+          <div class="nums"><b>8192×4096</b><span>33.6 MP</span><span>17.5 MB</span><span>0.55 B/px</span></div>
+          <div class="src">NASA/Spitzer GLIMPSE 原始 8192×4096</div>
+          <div class="note">未打包（18MB），本地保留</div>
+          <div class="tags"><span>灰度</span><span>亮度 20</span><span>反差 31</span></div>
+        </div>
+      </article></div></section><section id="nebulae"><div class="sec-head"><h2>深空天体（星云 / 星团 / 超新星遗迹）</h2><span class="count">12 张</span></div><p class="sec-note">卡片展示尺寸 1280×720，源图来自 NASA 公开影像，按卡片比例居中裁切。</p><div class="grid">
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/b33.jpg" target="_blank">
+          <img src="assets/nebulae/b33.jpg" loading="lazy" alt="b33.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">b33.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>85 KB</span><span>0.10 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 60</span><span>反差 60</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/heart.jpg" target="_blank">
+          <img src="assets/nebulae/heart.jpg" loading="lazy" alt="heart.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">heart.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>192 KB</span><span>0.21 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 42</span><span>反差 40</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/m1.jpg" target="_blank">
+          <img src="assets/nebulae/m1.jpg" loading="lazy" alt="m1.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">m1.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>121 KB</span><span>0.14 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 39</span><span>反差 64</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/m16.jpg" target="_blank">
+          <img src="assets/nebulae/m16.jpg" loading="lazy" alt="m16.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">m16.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>157 KB</span><span>0.17 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 38</span><span>反差 43</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/m20.jpg" target="_blank">
+          <img src="assets/nebulae/m20.jpg" loading="lazy" alt="m20.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">m20.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>221 KB</span><span>0.24 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 54</span><span>反差 54</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/m42.jpg" target="_blank">
+          <img src="assets/nebulae/m42.jpg" loading="lazy" alt="m42.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">m42.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>62 KB</span><span>0.07 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 62</span><span>反差 73</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/m45.jpg" target="_blank">
+          <img src="assets/nebulae/m45.jpg" loading="lazy" alt="m45.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">m45.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>97 KB</span><span>0.11 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 42</span><span>反差 47</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/m57.jpg" target="_blank">
+          <img src="assets/nebulae/m57.jpg" loading="lazy" alt="m57.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">m57.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>52 KB</span><span>0.06 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 12</span><span>反差 26</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/m8.jpg" target="_blank">
+          <img src="assets/nebulae/m8.jpg" loading="lazy" alt="m8.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">m8.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>119 KB</span><span>0.13 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 117</span><span>反差 61</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/ngc7000.jpg" target="_blank">
+          <img src="assets/nebulae/ngc7000.jpg" loading="lazy" alt="ngc7000.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">ngc7000.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>173 KB</span><span>0.19 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 49</span><span>反差 56</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/rosette.jpg" target="_blank">
+          <img src="assets/nebulae/rosette.jpg" loading="lazy" alt="rosette.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">rosette.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>136 KB</span><span>0.15 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 24</span><span>反差 32</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/nebulae/veil.jpg" target="_blank">
+          <img src="assets/nebulae/veil.jpg" loading="lazy" alt="veil.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">veil.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>131 KB</span><span>0.15 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 58</span><span>反差 48</span></div>
+        </div>
+      </article></div></section><section id="constellations"><div class="sec-head"><h2>星座（真实银河裁切 + 星表连线）</h2><span class="count">13 张</span></div><p class="sec-note">背景是从 4K 银河全景按真实赤经赤纬做球面透视裁切得到的真实天区，金色连线由本项目按星表绘制。</p><div class="grid">
+      <article class="card">
+        <a class="thumb" href="assets/constellations/aquila.jpg" target="_blank">
+          <img src="assets/constellations/aquila.jpg" loading="lazy" alt="aquila.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">aquila.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>119 KB</span><span>0.13 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 8</span><span>反差 12</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/canis-major.jpg" target="_blank">
+          <img src="assets/constellations/canis-major.jpg" loading="lazy" alt="canis-major.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">canis-major.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>127 KB</span><span>0.14 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 19</span><span>反差 22</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/cassiopeia.jpg" target="_blank">
+          <img src="assets/constellations/cassiopeia.jpg" loading="lazy" alt="cassiopeia.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">cassiopeia.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>134 KB</span><span>0.15 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 12</span><span>反差 12</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/crux.jpg" target="_blank">
+          <img src="assets/constellations/crux.jpg" loading="lazy" alt="crux.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">crux.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>128 KB</span><span>0.14 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 10</span><span>反差 11</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/cygnus.jpg" target="_blank">
+          <img src="assets/constellations/cygnus.jpg" loading="lazy" alt="cygnus.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">cygnus.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>132 KB</span><span>0.15 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 7</span><span>反差 11</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/gemini.jpg" target="_blank">
+          <img src="assets/constellations/gemini.jpg" loading="lazy" alt="gemini.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">gemini.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>148 KB</span><span>0.17 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 23</span><span>反差 20</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/leo.jpg" target="_blank">
+          <img src="assets/constellations/leo.jpg" loading="lazy" alt="leo.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">leo.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>135 KB</span><span>0.15 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 5</span><span>反差 11</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/lyra.jpg" target="_blank">
+          <img src="assets/constellations/lyra.jpg" loading="lazy" alt="lyra.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">lyra.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>127 KB</span><span>0.14 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 11</span><span>反差 13</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/orion.jpg" target="_blank">
+          <img src="assets/constellations/orion.jpg" loading="lazy" alt="orion.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">orion.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>136 KB</span><span>0.15 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 46</span><span>反差 30</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/scorpius.jpg" target="_blank">
+          <img src="assets/constellations/scorpius.jpg" loading="lazy" alt="scorpius.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">scorpius.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>176 KB</span><span>0.20 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 36</span><span>反差 24</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/taurus.jpg" target="_blank">
+          <img src="assets/constellations/taurus.jpg" loading="lazy" alt="taurus.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">taurus.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>163 KB</span><span>0.18 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>彩色</span><span>亮度 45</span><span>反差 28</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/ursa-major.jpg" target="_blank">
+          <img src="assets/constellations/ursa-major.jpg" loading="lazy" alt="ursa-major.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">ursa-major.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>199 KB</span><span>0.22 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 10</span><span>反差 13</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <a class="thumb" href="assets/constellations/virgo.jpg" target="_blank">
+          <img src="assets/constellations/virgo.jpg" loading="lazy" alt="virgo.jpg">
+          <span class="grade g-b">B</span>
+        </a>
+        <div class="meta">
+          <div class="name">virgo.jpg</div>
+          <div class="nums"><b>1280×720</b><span>0.9 MP</span><span>121 KB</span><span>0.14 B/px</span></div>
+          <div class="src">—</div>
+          <div class="note"></div>
+          <div class="tags"><span>灰度</span><span>亮度 5</span><span>反差 10</span></div>
+        </div>
+      </article></div></section></main>
+<footer>
+  <div>评级：<b>S</b> 4K 级真实影像 · <b>A</b> ≥2K 真实影像或高质量镶嵌 · <b>B</b> 1–2K / 卡片尺寸 · <b>C</b> 仅有局部影像，暂用替代</div>
+  <div>B/px = 每像素字节数，越高压缩越轻；「反差」为亮度标准差，可粗略反映表面细节强弱。</div>
+  <div>点击任意图片可查看原图（新标签页）。全部图片素材来源见项目 README「素材与授权」。</div>
+</footer>
+</body>
+</html>

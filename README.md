@@ -31,11 +31,21 @@ open http://127.0.0.1:8823
 ### 二、双击即开的离线单文件
 
 ```bash
-npm install     # 首次：安装 esbuild
-npm run build
+npm install       # 首次：安装 esbuild
+npm run build     # 全尺寸版（默认）
+npm run build:web # 压缩版，与网页版资源一致
 ```
 
-产出 `dist/星际模拟-离线版.html`（约 20MB）：双击即可在浏览器打开，无需服务器、无需联网。
+两种画质档：
+
+| 命令 | 行星贴图 | 银河天球 | 卫星 | 体积 |
+|---|---|---|---|---|
+| `npm run build` | 4096×2048 / q95 | **8192×4096 原图** | 火卫一·土卫六 4096，其余 2048 | ≈62 MB |
+| `npm run build:web` | 4096×2048 / q84 | 4096×2048 | 2048 | ≈27 MB |
+
+全尺寸版从 `assets/full/` 取同名的高质量版本（分辨率更高、JPEG 质量 95），
+8K 银河直接引用 `assets/tex/sky/milky-way-8k.jpg`（不进 Git，需本地存在）。
+网页版只用 `assets/` 下的压缩资源，两者代码完全一致，只是内联的图片不同。
 原理：file:// 下浏览器会拦截 ES 模块与本地图片请求，所以构建时把 JS 打成传统脚本、
 所有贴图转成 data URI 内联进同一个 HTML（`js/assets.js` 的 `assetURL` 负责路径映射）。
 

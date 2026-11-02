@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "python3 serve.py 8823",
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "build:web": "node build.mjs --web"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
