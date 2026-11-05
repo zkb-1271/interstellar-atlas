@@ -114,16 +114,37 @@ export class FlightController {
   // ---------- 输入 ----------
   _bind() {
     const dom = this.dom;
+    // 触屏：活跃指针表。1 指 = 旋转，2 指 = 捏合缩放（等效滚轮），都走同一套惯性/锁逻辑
+    const pointers = new Map();
 
     dom.addEventListener('pointerdown', e => {
       if (this.inputLock) return;          // 过渡进行中：拖拽不响应
       if (this._flight) this.cancelFlight();
+      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pointers.size === 2) {           // 第二根手指落下 → 进入捏合
+        const [a, b] = [...pointers.values()];
+        this._pinch = { d0: Math.max(20, Math.hypot(a[0] - b[0], a[1] - b[1])), vh0: this._tViewHeight };
+        this._drag = null;                 // 双指期间停用旋转
+        this._inertia.yaw = 0; this._inertia.pitch = 0;
+        return;
+      }
+      if (pointers.size > 2) return;       // 三指及以上不参与
       this._drag = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now() };
       this._inertia.yaw = 0; this._inertia.pitch = 0;      // 按下即刹车
       dom.setPointerCapture?.(e.pointerId);
     });
 
     dom.addEventListener('pointermove', e => {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      if (this._pinch) {                   // 双指张开 = 拉近（视高变小），捏拢 = 拉远
+        if (pointers.size >= 2) {
+          const [a, b] = [...pointers.values()];
+          const d = Math.max(20, Math.hypot(a[0] - b[0], a[1] - b[1]));
+          this._tViewHeight = clamp(this._pinch.vh0 * this._pinch.d0 / d, ...this.viewHeightRange);
+          this._zoomTouched = performance.now();
+        }
+        return;
+      }
       if (!this._drag || e.pointerId !== this._drag.id) return;
       const dx = e.clientX - this._drag.x;
       const dy = e.clientY - this._drag.y;
@@ -153,7 +174,19 @@ export class FlightController {
       this._inertia.pitch += ((sgn * (-dy) * kPitch) / dtm - this._inertia.pitch) * a;
     });
 
-    const end = () => {
+    const end = e => {
+      pointers.delete(e?.pointerId);
+      if (this._pinch) {                   // 捏合结束：抬起一根后剩的那根无缝续接旋转
+        if (pointers.size < 2) {
+          this._pinch = null;
+          if (!this.inputLock && pointers.size === 1) {
+            const [id, pos] = [...pointers.entries()][0];
+            this._drag = { x: pos[0], y: pos[1], id, t: performance.now() };
+            this._inertia.yaw = 0; this._inertia.pitch = 0;
+          }
+        }
+        return;
+      }
       if (!this._drag) return;
       this._drag = null;
       // 甩动上限：别让一下滑出去半圈

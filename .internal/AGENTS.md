@@ -82,3 +82,12 @@ git add -A && git commit -F /tmp/commit-msg.txt
 ## 版本
 
 当前 v208。版本戳在页面右下角；`?v=` 与 `window.__BUILD` 必须一致。
+
+## 触屏 / 平板适配（2026-11-05，v=209）
+
+- 检测：`matchMedia('(pointer: coarse)')`，各模块各自判（main.js `IS_TOUCH`、ui.js、flight.js 经指针计数），**不弹任何提示，静默生效**
+- flight.js：`_bind()` 里有 `pointers` Map——1 指=旋转（原逻辑），2 指=捏合缩放（`_pinch`，d0/vh0 基准，vh0×d0/d，等效滚轮的 viewHeight）；抬一根后剩指无缝续接旋转；三指以上忽略
+- main.js：`updateHover()` 触屏直接 `setHover(null)`（无悬停环）；拾取核心拆成 `pickAt()`；canvas pointerup 触屏分支——落点写回 `pointer` → `updateAim()`（深空）+ `pickAt()`（太阳系）→ 走原 selectPlanet/focus 流程
+- ui.js：触屏隐藏 #reticle 与跟随提示；倍速面板无 mouseenter 可用——点「实时」→ onRealtime → flashSpeedPop（触屏 4800ms，桌面 2200ms），window pointerdown 捕获阶段点外部收起
+- CSS：`canvas#scene { touch-action: none }`（必须，否则浏览器抢手势）+ `@media (pointer: coarse)` 隐藏准星/恢复 cursor；index.html viewport 加了 `maximum-scale=1, user-scalable=no, viewport-fit=cover`
+- 验证：Playwright `hasTouch+isMobile` + CDP `Input.dispatchTouchEvent` 派发双指；点按命中注意行星本体在标签文字附近 ±25px 内

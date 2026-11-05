@@ -103,8 +103,11 @@ export class UI {
     this._buildBuildTag(root);
     this._buildTimeline(root);
 
-    // 准星跟随
-    window.addEventListener('mousemove', e => {
+    // 准星跟随（触屏无鼠标：准星与跟随提示整体隐藏，静默降级）
+    if (matchMedia('(pointer: coarse)').matches) {
+      this.reticle.style.display = 'none';
+      if (this.tip) this.tip.style.display = 'none';
+    } else window.addEventListener('mousemove', e => {
       this.reticle.style.left = e.clientX + 'px';
       this.reticle.style.top = e.clientY + 'px';
       if (this.tip && this.tip.classList.contains('show')) {
@@ -221,6 +224,15 @@ export class UI {
     this.realWrap.addEventListener('mouseleave', closePop);
     this.speedPop.addEventListener('mouseenter', openPop);
     this.speedPop.addEventListener('mouseleave', closePop);
+    // 触屏：没有悬停，点「实时」弹出倍速面板（flashSpeedPop 由 onRealtime 触发），
+    // 点面板外任意处收起
+    if (matchMedia('(pointer: coarse)').matches) {
+      window.addEventListener('pointerdown', e => {
+        if (!this.speedPop.classList.contains('show')) return;
+        if (e.target.closest?.('.spd-wrap')) return;
+        this._hideSpeedPop();
+      }, { capture: true });
+    }
 
     group.append(this.pauseBtn, this.realWrap);
 
@@ -238,11 +250,12 @@ export class UI {
   _showSpeedPop() { this.speedPop.classList.add('show'); }
   _hideSpeedPop() { this.speedPop.classList.remove('show'); }
   // 点「实时」后自动闪一下倍速面板：1:1 真实时间下行星几乎不动，
-  // 得让用户知道这里还能加速
-  flashSpeedPop(ms = 2200) {
+  // 得让用户知道这里还能加速。触屏没有悬停回看，停留给长一倍
+  flashSpeedPop(ms) {
+    const wait = ms ?? (matchMedia('(pointer: coarse)').matches ? 4800 : 2200);
     this._showSpeedPop();
     clearTimeout(this._popTimer);
-    this._popTimer = setTimeout(() => this._hideSpeedPop(), ms);
+    this._popTimer = setTimeout(() => this._hideSpeedPop(), wait);
   }
 
   _buildFocusTitle(root) {

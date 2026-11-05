@@ -335,6 +335,9 @@ function goRealOverview() {
 // ---------- 拾取 ----------
 const pointer = new THREE.Vector2();
 let downXY = null;
+// 触屏 / 平板（静默适配）：没有"悬停"，锁定环不跟随手指，
+// 点按瞬间用落点现场拾取；不加任何模式提示
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches;
 
 canvas.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; });
 canvas.addEventListener('pointerup', e => {
@@ -342,6 +345,13 @@ canvas.addEventListener('pointerup', e => {
   const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
   downXY = null;
   if (moved >= 5 || flight.isFlying) return;
+  if (IS_TOUCH) {
+    // 指尖落点即指针：先现场拾取，再走同一套选择逻辑
+    pointer.x = (e.clientX / innerWidth) * 2 - 1;
+    pointer.y = -(e.clientY / innerHeight) * 2 + 1;
+    updateAim();                                       // 深空：星座 / 星云瞄准
+    if (mode === 'solar') setHover(pickAt());
+  }
   if (hoverId && mode === 'solar') selectPlanet(hoverId);
   else if (aimNeb && mode === 'deep') focusNebula(aimNeb.info.id);
   else if (aimConst && mode === 'deep') focusConst(aimConst.id);
@@ -352,10 +362,14 @@ canvas.addEventListener('pointermove', e => {
 }, { passive: true });
 
 // 屏幕空间容差拾取：总览时行星只有几个像素，几何射线点不中，
-// 改为"鼠标到天体屏幕投影点的距离 < max(行星屏幕半径+6, 14px)"判定
+// 改为"指针到天体屏幕投影点的距离 < max(行星屏幕半径+6, 14px)"判定
 const _hv = new THREE.Vector3();
 function updateHover() {
-  if (mode !== 'solar' || flight.isFlying) { setHover(null); return; }
+  if (IS_TOUCH) { setHover(null); return; }   // 触屏无悬停：锁定环只出现在点按瞬间
+  setHover(pickAt());
+}
+function pickAt() {
+  if (mode !== 'solar' || flight.isFlying) return null;
   // 先收集所有投影在指针附近的候选，再做遮挡剔除：
   // 候选天体的中心若被"更近、且屏幕上更大"的天体圆面盖住，就不该被点到——
   // 否则月球特写时，藏在它背后的金星也会莫名其妙跳出锁定环。
@@ -380,7 +394,7 @@ function updateHover() {
     if (occluded) continue;
     bestD = c.d; bestId = c.id;
   }
-  setHover(bestId);
+  return bestId;
 }
 function setHover(id) {
   if (hoverId === id) return;
