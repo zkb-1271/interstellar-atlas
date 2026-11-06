@@ -91,3 +91,12 @@ git add -A && git commit -F /tmp/commit-msg.txt
 - ui.js：触屏隐藏 #reticle 与跟随提示；倍速面板无 mouseenter 可用——点「实时」→ onRealtime → flashSpeedPop（触屏 4800ms，桌面 2200ms），window pointerdown 捕获阶段点外部收起
 - CSS：`canvas#scene { touch-action: none }`（必须，否则浏览器抢手势）+ `@media (pointer: coarse)` 隐藏准星/恢复 cursor；index.html viewport 加了 `maximum-scale=1, user-scalable=no, viewport-fit=cover`
 - 验证：Playwright `hasTouch+isMobile` + CDP `Input.dispatchTouchEvent` 派发双指；点按命中注意行星本体在标签文字附近 ±25px 内
+
+## 特写拖拽行星钉死（2026-11-06，v=211）
+
+- 旧做法：selectPlanet / flyToSky 把 target 沿"相机右方向"搬走 0.30 半屏（世界空间固定方向），拖拽绕的是偏移点 → 天体满屏跑，且偏移方向不随视角更新
+- 新做法：flight.screenShift（半屏宽比例）+ `camera.setViewOffset(w, h, shift*w/2, 0, w, h)` 投影层镜头偏移；target 始终钉在天体上
+- flyTo 新增 `shift` 参数（不传=维持当前值，所以退出特写的过渡飞行都显式传 `shift: 0`；setViewAngle 不传→保持 0.30，卡片还开着）
+- 屏幕位置恒定的原理：偏移在投影矩阵上，与 yaw/pitch/视高无关，像素偏移 = shift×半屏宽
+- 实测：拖 260×120px，木星标签位移 0.0px；构图 = 行星在 960-288≈672px 处（1920 宽）
+- 模块间 import 的 `?v=N` 缓存键这次统一升到 v=211（此前几轮只换了入口，内部模块的键从 208 就没动过——Pages 10 分钟缓存掩盖了问题，但 Safari 自己的缓存会更久）

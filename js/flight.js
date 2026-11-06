@@ -43,6 +43,12 @@ export class FlightController {
 
     this.viewHeightRange = [0.45, 1520];   // 对应参考站 clamp(.45, 1520)
     this.followBody = null;
+    // 镜头横向偏移（半屏宽的比例，正 = 主体左移给右侧卡片让位）。
+    // 旧做法把 target 沿相机右方向搬走，拖拽绕的是偏移点，天体会满屏跑；
+    // 现在用 setViewOffset 在投影层做镜头偏移，target 始终钉在天体上，
+    // 拖拽 / 环绕 / 缩放时天体在画面里纹丝不动
+    this.screenShift = 0;
+    this._tScreenShift = 0;
     this._lastFollow = new THREE.Vector3();
 
     this._flight = null;      // {from, to, dur, t, easing}
@@ -91,6 +97,12 @@ export class FlightController {
     this._off.set(0, 0, 1).applyQuaternion(this._quat).multiplyScalar(d);
     this.camera.position.copy(this.target).add(this._off);
     this.camera.quaternion.copy(this._quat);
+    // 镜头偏移：投影层平移视口，不改变相机位姿（天体的屏幕位置恒定）
+    if (Math.abs(this.screenShift) > 0.0005) {
+      this.camera.setViewOffset(innerWidth, innerHeight, this.screenShift * innerWidth / 2, 0, innerWidth, innerHeight);
+    } else if (this.camera.view && this.camera.view.enabled) {
+      this.camera.clearViewOffset();
+    }
   }
 
   // 由世界坐标反解 rig（给 flyTo 用，兼容旧调用）
@@ -209,10 +221,11 @@ export class FlightController {
   }
 
   // ---------- 相机飞行 ----------
-  flyTo({ camPos, target, duration = 2.4, onDone, arc = 0, easing = easeInOutQuint }) {
+  flyTo({ camPos, target, duration = 2.4, onDone, arc = 0, easing = easeInOutQuint, shift }) {
     const to = this._poseFrom(camPos, target || this.target);
+    to.shift = shift ?? this._tScreenShift;      // 不传 shift = 维持当前偏移
     this._flight = {
-      from: { target: this.target.clone(), viewHeight: this.viewHeight, yaw: this.yaw, pitch: this.pitch },
+      from: { target: this.target.clone(), viewHeight: this.viewHeight, yaw: this.yaw, pitch: this.pitch, shift: this.screenShift },
       to, dur: Math.max(duration, 0.05), t: 0, easing,
     };
     this.onFlightDone = onDone || null;
@@ -236,6 +249,7 @@ export class FlightController {
     this.followBody = bodyEntry || null;
     if (bodyEntry) this._lastFollow.copy(bodyEntry.worldPos);
   }
+  setScreenShift(f = 0) { this._tScreenShift = f; }
   setTarget(v) { this.target.copy(v); this._tTarget.copy(v); }
   setRange(min, max) {
     // 兼容旧 API：传入相机距离，换算成可视高度
@@ -265,6 +279,8 @@ export class FlightController {
       const dy = Math.atan2(Math.sin(f.to.yaw - f.from.yaw), Math.cos(f.to.yaw - f.from.yaw));
       this.yaw = f.from.yaw + dy * e;
       this.pitch = f.from.pitch + (f.to.pitch - f.from.pitch) * e;
+      this.screenShift = f.from.shift + (f.to.shift - f.from.shift) * e;
+      this._tScreenShift = this.screenShift;
       this._syncTargets();
 
       if (f.t >= 1) {
@@ -302,6 +318,7 @@ export class FlightController {
       this.pitch += (this._tPitch - this.pitch) * k;
       this.viewHeight = Math.exp(
         Math.log(this.viewHeight) * (1 - k) + Math.log(this._tViewHeight) * k);
+      this.screenShift += (this._tScreenShift - this.screenShift) * k;
     }
     // 视角跟着取景走：全景 60°、特写 40°（必须在 _applyCamera 之前，距离由 fov 反推）
     if (this.fovForVH) {

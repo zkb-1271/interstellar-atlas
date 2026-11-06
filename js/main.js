@@ -8,13 +8,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=208';
-import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=208';
-import { createDeepSpace } from './starfield.js?v=208';
-import { SolarSystem } from './solar.js?v=208';
-import { FlightController } from './flight.js?v=208';
-import { UI } from './ui.js?v=208';
-import { initLoading } from './loading.js?v=208';
+import { PLANETS, ECLIPSES, CONSTELLATIONS, MOONS } from './data.js?v=211';
+import { dateToJD, jdToDate, planetPosition, moonPosition, geocentricLon, findAlignments, fmtDateLocal, OVERVIEW_WIDTH, OVERVIEW_CX } from './astro.js?v=211';
+import { createDeepSpace } from './starfield.js?v=211';
+import { SolarSystem } from './solar.js?v=211';
+import { FlightController } from './flight.js?v=211';
+import { UI } from './ui.js?v=211';
+import { initLoading } from './loading.js?v=211';
 
 // ---------- 渲染基础 ----------
 const canvas = document.getElementById('scene');
@@ -238,7 +238,7 @@ function goDeep() {
   deepReady = false;
   flight.onFlightCancel = arriveDeep;   // 兜底：万一被取消也要完成收尾
   flight.flyTo({
-    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.8,
+    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 3.8, shift: 0,
     onDone: arriveDeep,
   });
   // 过渡不可打断：拖拽/滚轮在此期间不响应，杜绝"半路拖拽 → 星座不显示"
@@ -259,7 +259,7 @@ function enterSolar() {
   ui.setMode('solar');
   const oc = computeOverviewCam();
   flight.flyTo({
-    camPos: oc.camPos, target: oc.target, duration: 3.3,
+    camPos: oc.camPos, target: oc.target, duration: 3.3, shift: 0,
     onDone: () => { flight.inputLock = false; flight.setRange(60, 18500); },
   });
   flight.onFlightCancel = () => { flight.inputLock = false; flight.setRange(60, 18500); };
@@ -289,7 +289,7 @@ function goOverview() {
   ui.hideEvents();
   const oc2 = computeOverviewCam();
   flight.flyTo({
-    camPos: oc2.camPos, target: oc2.target, duration: 3.3,
+    camPos: oc2.camPos, target: oc2.target, duration: 3.3, shift: 0,
     onDone: () => { flight.inputLock = false; flight.setRange(0.9, 18500); },
   });
   // 返回过渡同样不可打断；以前这条路上连中断收尾钩子都没有，
@@ -327,7 +327,7 @@ function goRealOverview() {
   flight.flyTo({
     camPos: new THREE.Vector3(0, Math.sin(BASE_PITCH) * D, Math.cos(BASE_PITCH) * D),
     target: new THREE.Vector3(0, 0, 0),     // 正对太阳
-    duration: 2.7,
+    duration: 2.7, shift: 0,
     onDone: () => flight.setRange(0.9, 18500),
   });
 }
@@ -510,12 +510,9 @@ function selectPlanet(id) {
     .add(side.clone().multiplyScalar(dist * 0.62))
     .add(new THREE.Vector3(0, dist * 0.26, 0));
 
-  // 目标点沿"相机右方向"偏移，让行星落在画面左侧、不被档案卡遮住
-  const viewDir = p.clone().sub(camPos).normalize();
-  const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
-  const shift = dist * _tanHalf() * camera.aspect * 0.30;
-  const target = p.clone().add(camRight.multiplyScalar(shift));
-  flight.flyTo({ camPos, target, duration: 2.4, arc: 0, onDone: () => flight.setRange(frameR * 1.2, 4000) });
+  // 行星钉在画面固定位置（左侧 30% 半屏，给右侧档案卡让位）：
+  // 用镜头偏移实现，target 始终钉在行星上——拖拽/环绕/缩放时行星纹丝不动
+  flight.flyTo({ camPos, target: p.clone(), shift: 0.30, duration: 2.4, arc: 0, onDone: () => flight.setRange(frameR * 1.2, 4000) });
   flight.follow(b);
   ui.setRailActive(id);
 }
@@ -632,7 +629,7 @@ function setViewSpot(id) {
     // 近景贴月时相机跟着月球走：拖动时间轴月球会横向移动 ±0.6 单位，
     // 若还锁在地球上，红月会直接飘出画面
     flight.follow(id === 'close' ? moon : earth);
-    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.5, arc: 0.12, onDone: () => flight.setRange(...v.range) });
+    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.5, arc: 0.12, shift: 0, onDone: () => flight.setRange(...v.range) });
   } else {
     const moonP = moon.worldPos;
     const toSun = ep.clone().negate().normalize();               // 地→日（太阳在原点，取反向）
@@ -648,7 +645,7 @@ function setViewSpot(id) {
       ground: { cam: ep.clone().add(toSun.clone().multiplyScalar(0.455 * 1.015)), target: ep.clone().add(toSun.clone().multiplyScalar(10)), range: [0.25, 800] },
     };
     const v = spots[id];
-    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.5, arc: 0.12, onDone: () => flight.setRange(...v.range) });
+    flight.flyTo({ camPos: v.cam, target: v.target, duration: 2.5, arc: 0.12, shift: 0, onDone: () => flight.setRange(...v.range) });
   }
 }
 
@@ -709,7 +706,7 @@ function jumpAlignment(ev) {
   flight.flyTo({
     camPos: earth.worldPos.clone().add(mean.clone().multiplyScalar(31)).add(perp.clone().multiplyScalar(58)).add(new THREE.Vector3(0, 24.8, 0)),
     target: earth.worldPos.clone().add(mean.clone().multiplyScalar(33)),
-    duration: 3.3, arc: 0.2, onDone: () => flight.setRange(2, 6000),
+    duration: 3.3, arc: 0.2, shift: 0, onDone: () => flight.setRange(2, 6000),
   });
 }
 
@@ -741,14 +738,12 @@ function flyToSky(dir) {
   const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
   const camPos = dir.clone().multiplyScalar(6200).add(side.clone().multiplyScalar(900)).add(new THREE.Vector3(0, 400, 0));
   const target0 = dir.clone().multiplyScalar(18500);
-  // 目标点沿"相机右方向"偏移，让天体落在画面左侧、不被右边的档案卡压住
-  const viewDir = target0.clone().sub(camPos).normalize();
-  const camRight = new THREE.Vector3().crossVectors(viewDir, new THREE.Vector3(0, 1, 0)).normalize();
-  const shift = camPos.distanceTo(target0) * _tanHalf() * camera.aspect * 0.30;
+  // 天体钉在画面左侧 30% 半屏（同行星特写，给右侧面板让位）：镜头偏移实现
   flight.follow(null);
   flight.flyTo({
     camPos,
-    target: target0.add(camRight.multiplyScalar(shift)),
+    target: target0,
+    shift: 0.30,
     duration: 2.7, arc: 0.1,
     onDone: () => flight.setRange(2200, 14000),
   });
@@ -776,7 +771,7 @@ function focusNebula(id) {
 function closeConst() {
   ui.hideConstPanel();
   flight.flyTo({
-    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 2.5, arc: 0.25,
+    camPos: DEEP_CAM.clone(), target: ORIGIN.clone(), duration: 2.5, arc: 0.25, shift: 0,
     onDone: () => flight.setRange(50, 16000),
   });
 }
