@@ -100,3 +100,12 @@ git add -A && git commit -F /tmp/commit-msg.txt
 - 屏幕位置恒定的原理：偏移在投影矩阵上，与 yaw/pitch/视高无关，像素偏移 = shift×半屏宽
 - 实测：拖 260×120px，木星标签位移 0.0px；构图 = 行星在 960-288≈672px 处（1920 宽）
 - 模块间 import 的 `?v=N` 缓存键这次统一升到 v=211（此前几轮只换了入口，内部模块的键从 208 就没动过——Pages 10 分钟缓存掩盖了问题，但 Safari 自己的缓存会更久）
+
+## 老设备黑屏修复：esbuild 兼容包分轨（2026-11-08，v=212）
+
+- 症状：老 iPad Safari 打开 = 纯黑（加载屏 9 秒兜底退场后 canvas 无内容）。es-module-shims 只补 import map 不转译语法，老 Safari 上模块照样死
+- 方案：设备分轨——`HTMLScriptElement.supports('importmap')` false（Safari<16.4）→ document.write 注入 `js/main.compat.js`（esbuild --bundle --format=iife --target=safari15 --alias:three=./lib/three.module.js --alias:three/addons=./lib/addons，646KB）；现代浏览器 → 原生模块，零影响
+- 为什么 target=safari15：three r160 硬性要求 WebGL2（Safari 15 才有），更老设备救不活；且 esbuild 不支持向 safari13 降级解构
+- loading-boot.js 新增启动失败可见化：WebGL2 探测 + window error/unhandledrejection 捕获 → 原因写进状态栏、进度条变红、**加载屏不再自动退场**（finish/assetTick/tick 全加 failed 守卫）——下次出问题截图即可诊断
+- 验证：WebKit 双轨（模块路径 8s / 强制兼容路径 12s）都进场景 0 错误
+- 维护提醒：改了 js/* 记得重打兼容包（命令见上），否则老设备跑的是旧逻辑

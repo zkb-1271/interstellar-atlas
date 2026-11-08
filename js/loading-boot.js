@@ -49,6 +49,40 @@
   let target = 0;      // 真实加载进度（THREE LoadingManager 推过来）
   let shown = 0;       // 屏幕上正在动画的进度
   let finished = false;
+  let failed = false;  // 启动失败：加载屏不再自动退场，把原因留在屏幕上
+
+  // ---- 启动失败可见化 ----
+  // 之前模块一旦挂掉，加载屏 9 秒后照样退场，用户只看到一块纯黑——
+  // 完全无从下手。现在：捕获到启动错误就把原因写进状态栏，并且不再自动退场。
+  const fail = msg => {
+    if (finished) return;
+    failed = true;
+    if (stZh) stZh.textContent = '启动失败 · ' + String(msg).slice(0, 60);
+    if (stEn) stEn.textContent = 'BOOT ERROR';
+    if (track) track.style.background = '#a33';
+  };
+  window.addEventListener('error', e => {
+    if (finished) return;
+    // 脚本资源加载失败（404 等）与运行时异常都算启动失败
+    if (e.target && e.target.tagName) {
+      const src = e.target.src || e.target.href || '';
+      if (src) fail('资源加载失败 ' + src.split('/').pop().slice(0, 40));
+    } else if (e.message) {
+      fail(e.message);
+    }
+  }, true);
+  window.addEventListener('unhandledrejection', e => {
+    if (!finished) fail((e.reason && e.reason.message) || e.reason || 'Promise 异常');
+  });
+
+  // WebGL2 是 three r160 的硬底线（Safari 15 才有）。没有就直说，别让人等 9 秒黑屏
+  try {
+    if (!document.createElement('canvas').getContext('webgl2')) {
+      paint(1); render(1);
+      fail('此设备的浏览器缺少 WebGL2，无法渲染三维场景');
+      return;
+    }
+  } catch (e) { /* 探测失败不拦路，交给后续真实初始化 */ }
 
   // 只记录真实目标值，渲染交给下方的 rAF 平滑循环
   const paint = v => {
@@ -66,7 +100,7 @@
   // 这里直接写 DOM（不依赖 rAF）：万一主线程正忙着解析下一条脚本，
   // 条子也至少会按真实条数往前跳，而不是原地不动。
   window.__assetTick = n => {
-    if (finished) return;
+    if (finished || failed) return;
     const tot = window.__ASSET_TOTAL || 51;
     const p = Math.min(0.86, (n / tot) * 0.9);
     paint(p);
@@ -78,6 +112,7 @@
   // 之前进度条"完全不动"就是因为只在回调里一次性设宽度：本地/缓存
   // 命中时贴图几百毫秒就加载完，条子要么卡在 0%，要么瞬间跳满。
   const tick = now => {
+    if (failed) return;                     // 启动失败：停在错误信息上，不再演进度
     const elapsed = (now - t0) / 1000;
     if (finished) {
       shown += (1 - shown) * 0.12;
@@ -112,7 +147,7 @@
   const phraseTimer = setInterval(sayPhrase, 1900);
 
   const finish = () => {
-    if (finished) return;
+    if (finished || failed) return;         // 失败态不退场：让原因留在屏幕上
     finished = true;
     clearInterval(phraseTimer);
     if (stZh) stZh.textContent = '准备就绪';
