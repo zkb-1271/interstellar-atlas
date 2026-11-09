@@ -25,7 +25,7 @@ function collectAssets(dir) {
       const p = path.join(d, ent.name);
       if (ent.isDirectory()) { walk(p); continue; }
       if (!MIME[path.extname(ent.name).toLowerCase()]) continue;
-      if (ent.name.includes('-8k')) continue;          // 8K 原图不参与打包（已用 4K 版）
+      // 8K 银河原图也参与打包（网页/离线统一满血版）
       out.push(p);
     }
   };
@@ -39,9 +39,8 @@ const assetFiles = [
   ...collectAssets(path.join(ROOT, 'assets/nebulae')),
 ];
 
-// assets/full/ 下放"全尺寸版"：同名同路径、分辨率/质量更高。
-// 离线包默认用它（双击本地打开，不受带宽限制）；
-// 加 --web 参数则只用压缩版，与 GitHub Pages 上的资源完全一致。
+// assets/full/ 已退役：网页与离线包统一满血贴图（assets/ 本体即满血版），
+// 此处覆盖逻辑保留兼容（本地存在同名文件时结果相同）。
 const FULL_DIR = path.join(ROOT, 'assets/full');
 const USE_FULL = !process.argv.includes('--web');
 
@@ -50,11 +49,6 @@ let rawBytes = 0, fullCount = 0;
 for (const abs of assetFiles) {
   const rel = path.relative(ROOT, abs).split(path.sep).join('/');
   let override = path.join(FULL_DIR, rel.replace(/^assets\//, ''));
-  // 银河全景的全尺寸版就是项目里的 8K 原图，不另存副本（省 18MB 仓库体积）
-  if (rel === 'assets/tex/sky/milky-way-4k.jpg') {
-    const big = path.join(ROOT, 'assets/tex/sky/milky-way-8k.jpg');
-    if (fs.existsSync(big)) override = big;
-  }
   const useOverride = USE_FULL && fs.existsSync(override);
   const src = useOverride ? override : abs;
   if (useOverride) fullCount++;
@@ -103,7 +97,7 @@ const boot = fs.readFileSync(path.join(ROOT, 'js/loading-boot.js'), 'utf8');
 // 构建版本号：从 index.html 的 ?v= 取，用于右下角版本戳（离线版会标注"离线版"）
 const VER = (html.match(/\?v=(\d+)/) || [])[1] || '';
 
-// CSS 里的背景图（开屏银河）也内联——固定用压缩版，8K 只进 3D 天球
+// CSS 里的背景图（开屏银河）也内联——开屏背景保持 4K（cover 裁切下与 8K 无视觉差），8K 进 3D 天球
 css = css.replace(/url\('([^']+)'\)/g, (m, u) => {
   if (u.startsWith('data:')) return m;
   const rel = path.normalize(path.join('css', u)).split(path.sep).join('/');

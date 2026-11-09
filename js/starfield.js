@@ -66,7 +66,7 @@ export function createDeepSpace() {
   const group = new THREE.Group();
 
   // 真实银河全景天球（NASA/Spitzer GLIMPSE 全景，合成 8192×4096）
-  const skyTex = new THREE.TextureLoader().load(assetURL('assets/tex/sky/milky-way-4k.jpg'));
+  const skyTex = new THREE.TextureLoader().load(assetURL('assets/tex/sky/milky-way-8k.jpg'));
   skyTex.colorSpace = THREE.SRGBColorSpace;
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(R * 0.985, 64, 40),
