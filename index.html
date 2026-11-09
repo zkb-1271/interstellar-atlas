@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>星际模拟 · Interstellar Atlas</title>
-<link rel="stylesheet" href="css/style.css?v=212">
+<link rel="stylesheet" href="css/style.css?v=213">
 <script type="importmap">
 {
   "imports": {
-    "three": "./lib/three.module.js?v=212",
+    "three": "./lib/three.module.js?v=213",
     "three/addons/": "./lib/addons/"
   }
 }
@@ -37,16 +37,16 @@
 </div>
 
 <!-- 启动屏动画：普通脚本，解析到这里立刻开始转，不等 three.js 模块链 -->
-<script src="js/loading-boot.js?v=212"></script>
+<script src="js/loading-boot.js?v=213"></script>
 <script>
   // 设备分轨：不支持 import map 的老 Safari（<16.4）→ esbuild 转译兼容包；
   // 现代浏览器 → 原生 ES 模块
   (function () {
     var ok = false;
     try { ok = !!(window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('importmap')); } catch (e) {}
-    if (!ok) document.write('<script src="js/main.compat.js?v=212"><\/script>');
+    if (!ok) document.write('<script src="js/main.compat.js?v=213"><\/script>');
   })();
 </script>
-<script type="module" src="js/main.js?v=212"></script>
+<script type="module" src="js/main.js?v=213"></script>
 </body>
 </html>

@@ -3,9 +3,9 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { makeStarSprite, makeNebulaSprite } from './textures.js?v=212';
-import { CONSTELLATIONS, NEBULAE } from './data.js?v=212';
-import { assetURL } from './assets.js?v=212';
+import { makeStarSprite, makeNebulaSprite } from './textures.js?v=213';
+import { CONSTELLATIONS, NEBULAE } from './data.js?v=213';
+import { assetURL } from './assets.js?v=213';
 
 const R = 20000;   // 星球半径（远景球壳）
 const TILT = 0.5;  // 银道面倾角（与银河带一致）
@@ -66,8 +66,16 @@ export function createDeepSpace() {
   const group = new THREE.Group();
 
   // 真实银河全景天球（NASA/Spitzer GLIMPSE 全景，合成 8192×4096）
-  const skyTex = new THREE.TextureLoader().load(assetURL('assets/tex/sky/milky-way-8k.jpg'));
+  // 18MB 大图，弱网下单次请求可能失败 → 指数退避重试（最多 6 次）
+  const skyTex = new THREE.Texture();
   skyTex.colorSpace = THREE.SRGBColorSpace;
+  const loadSky = (attempt = 0) => {
+    new THREE.TextureLoader().load(assetURL('assets/tex/sky/milky-way-8k.jpg'),
+      t => { skyTex.image = t.image; skyTex.needsUpdate = true; },
+      undefined,
+      () => { if (attempt < 6) setTimeout(() => loadSky(attempt + 1), 900 * Math.pow(2, attempt)); });
+  };
+  loadSky();
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(R * 0.985, 64, 40),
     new THREE.MeshBasicMaterial({

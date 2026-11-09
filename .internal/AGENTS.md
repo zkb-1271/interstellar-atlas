@@ -109,3 +109,11 @@ git add -A && git commit -F /tmp/commit-msg.txt
 - loading-boot.js 新增启动失败可见化：WebGL2 探测 + window error/unhandledrejection 捕获 → 原因写进状态栏、进度条变红、**加载屏不再自动退场**（finish/assetTick/tick 全加 failed 守卫）——下次出问题截图即可诊断
 - 验证：WebKit 双轨（模块路径 8s / 强制兼容路径 12s）都进场景 0 错误
 - 维护提醒：改了 js/* 记得重打兼容包（命令见上），否则老设备跑的是旧逻辑
+
+## 贴图加载重试（2026-11-09，v=213）
+
+- 满血贴图后单张 0.3–3.8MB（8K 银河 18MB），弱网下单次失败 = 材质无 map = 行星白球（用户截图复现）
+- solar.js：loadRealMap 改走 loadTexRetry（指数退避 700ms×2^n，最多 5 次）
+- starfield.js：8K 天球 loadSky 重试（最多 6 次），成功后 skyTex.image = t.image + needsUpdate
+- 验证：Playwright route.abort 拦首次请求 → 重试成功拉到，0 错误
+- 改 js/* 后必须重打 main.compat.js（命令在"老设备黑屏修复"节），否则老设备跑旧逻辑

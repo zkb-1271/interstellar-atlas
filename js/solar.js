@@ -4,10 +4,10 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=212';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=212';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=212';
-import { assetURL } from './assets.js?v=212';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=213';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=213';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=213';
+import { assetURL } from './assets.js?v=213';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -19,8 +19,15 @@ const ZS = { sun: 8, mercury: 4, venus: 5.2, earth: 6.8, moon: 1.6, mars: 6, jup
 const texLoader = new THREE.TextureLoader();
 const _sunToCam = new THREE.Vector3();   // 太阳贴片朝相机偏移的复用向量
 const _sunProj = new THREE.Vector3();    // 太阳在屏幕上的投影（判断是否出画）
+// 贴图加载重试：满血贴图单张 0.3–3.8MB，弱网/抖动下单次请求失败，
+// 材质就没有 map → 行星变白球。自动重试（指数退避，最多 5 次），全败才放弃
+function loadTexRetry(url, onLoad, attempt = 0) {
+  texLoader.load(assetURL(url), t => onLoad(t), undefined, () => {
+    if (attempt < 5) setTimeout(() => loadTexRetry(url, onLoad, attempt + 1), 700 * Math.pow(2, attempt));
+  });
+}
 function loadRealMap(url, mat) {
-  texLoader.load(assetURL(url), t => {
+  loadTexRetry(url, t => {
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     mat.map = t;
