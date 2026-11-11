@@ -117,3 +117,11 @@ git add -A && git commit -F /tmp/commit-msg.txt
 - starfield.js：8K 天球 loadSky 重试（最多 6 次），成功后 skyTex.image = t.image + needsUpdate
 - 验证：Playwright route.abort 拦首次请求 → 重试成功拉到，0 错误
 - 改 js/* 后必须重打 main.compat.js（命令在"老设备黑屏修复"节），否则老设备跑旧逻辑
+
+## 地球白球真凶（2026-11-11，v=214）
+
+- 白球不是地表贴图失败：地表有程序化蓝绿兜底；真凶是**云壳球**——初始材质 map:null + 白色 + opacity 0.9（几乎不透明白球），云图 JPG 加载成功才切成 alphaMap 透明云雾；而这条加载路径是裸 texLoader.load 没重试，弱网失败一次 = 白球永驻（蓝边是大气辉光，地表全被盖住）
+- 修复：云壳初始 visible=false + opacity 0；loadTexRetry 重试；全败保持隐形（程序化/真实地表可见）
+- 顺手把太阳表面、土星环两处裸加载也换成 loadTexRetry——全项目已无裸贴图加载
+- 回归：route.abort 永久屏蔽云图 → 地球正常渲染 NASA 地表，0 错误
+- 教训：加重试时只扫了 loadRealMap，漏了同文件里另外三处裸 texLoader.load——"贴图加载"必须全文 grep texLoader.load/TextureLoader 而不是只改一条

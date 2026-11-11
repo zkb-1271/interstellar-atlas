@@ -4,10 +4,10 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=213';
-import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=213';
-import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=213';
-import { assetURL } from './assets.js?v=213';
+import { PLANETS, SUN_INFO, MOON_INFO, MOONS, COMETS, AU } from './data.js?v=214';
+import { planetPosition, bodyPosition, orbitPointsFrom, ringPoints, moonPosition, jdToCenturies, planetOrbitPoints, auToScene, planetSchematic, displayRadius, SCHEMATIC } from './astro.js?v=214';
+import { makePlanetTexture, addCraters, makeCloudTexture, makeRingTexture, makeGlowSprite, makeSunTexture, makeTailTexture } from './textures.js?v=214';
+import { assetURL } from './assets.js?v=214';
 
 // 太阳显示半径：参考站 0.0115×696000^0.42 ≈ 3.27（与行星同一公式，不是另设常量）
 export const SUN_RADIUS = displayRadius(696000);
@@ -161,7 +161,7 @@ export class SolarSystem {
   _buildSun() {
     const geo = new THREE.SphereGeometry(SUN_RADIUS, 64, 32);
     const mat = new THREE.MeshBasicMaterial({ map: tex(makeSunTexture()) });
-    texLoader.load(assetURL('assets/tex/planets/sun-4k.jpg'), t => {
+    loadTexRetry('assets/tex/planets/sun-4k.jpg', t => {
       t.colorSpace = THREE.SRGBColorSpace;
       mat.map = t; mat.needsUpdate = true;
     });
@@ -255,10 +255,14 @@ export class SolarSystem {
     entry.moonOuter = entry.moons.reduce((m, o) => Math.max(m, o.orbitR), 0);
 
     if (p.id === 'earth') {
+      // 云壳初始必须隐形：map: null + 白色 + 0.9 透明度 = 纯白球盖住地表。
+      // 旧版在这里裸调 texLoader.load，云图一旦加载失败（弱网很常见），
+      // 白壳就永远留在那里——这就是"地球白球"的根因。
       const clouds = new THREE.Mesh(
         new THREE.SphereGeometry(R * 1.018, 48, 32),
-        new THREE.MeshStandardMaterial({ map: null, transparent: true, depthWrite: false, roughness: 1, opacity: 0.9 }));
-      texLoader.load(assetURL('assets/tex/planets/earth-clouds-4k.jpg'), t => {
+        new THREE.MeshStandardMaterial({ map: null, transparent: true, depthWrite: false, roughness: 1, opacity: 0 }));
+      clouds.visible = false;
+      const applyClouds = t => {
         t.colorSpace = THREE.SRGBColorSpace;
         // 参考站的云图是灰度 JPG：只能当 alphaMap 用，否则会变成不透明外壳盖住地表
         clouds.material.map = null;
@@ -266,7 +270,9 @@ export class SolarSystem {
         clouds.material.color.set(0xffffff);
         clouds.material.opacity = 0.92;
         clouds.material.needsUpdate = true;
-      });
+        clouds.visible = true;
+      };
+      loadTexRetry('assets/tex/planets/earth-clouds-4k.jpg', applyClouds);
       mesh.add(clouds);
       entry.clouds = clouds;
     }
@@ -283,7 +289,7 @@ export class SolarSystem {
       }
       const ring = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
         map: tex(makeRingTexture()), side: THREE.DoubleSide, transparent: true, depthWrite: false }));
-      texLoader.load(assetURL('assets/tex/planets/saturn-ring.png'), t => {
+      loadTexRetry('assets/tex/planets/saturn-ring.png', t => {
         t.colorSpace = THREE.SRGBColorSpace;
         ring.material.map = t; ring.material.needsUpdate = true;
       });
